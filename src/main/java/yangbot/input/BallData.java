@@ -13,6 +13,7 @@ import yangbot.vector.Vector3;
 public class BallData {
     public Vector3 position;
     public Vector3 velocity;
+    @SuppressWarnings({"WeakerAccess", "unused"})
     public Vector3 spin;
 
     public BallData(final BallInfo ball) {

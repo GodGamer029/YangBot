@@ -12,7 +12,8 @@ import java.awt.*;
  * This class can help you get started with ball prediction. Feel free to change it as much as you want,
  * this is part of your bot, not part of the framework!
  */
-public class BallPredictionHelper {
+@SuppressWarnings("unused")
+class BallPredictionHelper {
 
     public static void drawTillMoment(BallPrediction ballPrediction, float gameSeconds, Color color, Renderer renderer) {
         Vector3 previousLocation = null;

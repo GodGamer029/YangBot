@@ -11,9 +11,9 @@ import yangbot.vector.Vector3;
 public class RecoverToGroundManuver extends Manuver {
 
     public Vector2 orientationTarget = new Vector2(0, 0);
-    private TurnManuver turnManuver;;
-    public RecoverToGroundManuver() {
+    private TurnManuver turnManuver;
 
+    public RecoverToGroundManuver() {
         turnManuver = new TurnManuver();
     }
 

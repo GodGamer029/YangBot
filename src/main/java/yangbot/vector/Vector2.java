@@ -50,6 +50,7 @@ public class Vector2 {
         return new Vector2(x * scale, y * scale);
     }
 
+    @SuppressWarnings("SuspiciousNameCombination")
     public Vector2 cross(){
         return new Vector2(-y, x);
     }

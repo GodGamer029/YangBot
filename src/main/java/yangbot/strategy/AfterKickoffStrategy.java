@@ -21,9 +21,9 @@ public class AfterKickoffStrategy extends Strategy {
         BAD,
         GOOD,
         NEUTRAL
-    };
+    }
 
-    private static List<Strategy> suggestedStrat = null;
+    private static List<Strategy> suggestedStrat;
     private KickoffQuality kickoffQuality = KickoffQuality.NEUTRAL;
 
     @Override

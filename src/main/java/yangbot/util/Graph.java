@@ -66,6 +66,7 @@ public class Graph {
         return bestParents;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     private boolean bellman_ford_iteration(IntArrayList frontier, int[] bestParents, float[] bestWeights){
         final int nbits = 64;
         final long one = 1;

@@ -86,6 +86,7 @@ public class CarData {
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
     }
 
+    @SuppressWarnings("CopyConstructorMissesField")
     public CarData(CarData o){
         this.position = new Vector3(o.position);
         this.velocity = new Vector3(o.velocity);

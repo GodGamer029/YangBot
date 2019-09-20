@@ -27,7 +27,7 @@ public class DribbleManuver extends Manuver {
         FINDBALL,
         GOTOBALL,
         DRIBBLING
-    };
+    }
 
     public DribbleManuver(){
         recoverToGroundManuver = new RecoverToGroundManuver();
@@ -132,11 +132,8 @@ public class DribbleManuver extends Manuver {
             if(car.hasWheelContact && car.up().angle(new Vector3(0, 0, 1)) < Math.PI / 10)
             {
 
-                float targetVelocity = (float) ball.velocity.flatten().magnitude() - 30;
-                Vector3 targetPosition = new Vector3(ball.position.flatten().add(ball.velocity.flatten().mul(dt)), car.position.z);
-
-                driveToPointManuver.targetPosition = targetPosition;
-                driveToPointManuver.targetVelocity = targetVelocity;
+                driveToPointManuver.targetPosition = new Vector3(ball.position.flatten().add(ball.velocity.flatten().mul(dt)), car.position.z);
+                driveToPointManuver.targetVelocity = (float) ball.velocity.flatten().magnitude() - 30f;
                 driveToPointManuver.step(dt, controlsOutput);
             }else{
                 hasBallPossession = false;

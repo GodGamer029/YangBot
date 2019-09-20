@@ -9,6 +9,7 @@ public class Matrix2x2 {
         Arrays.fill(data, 0);
     }
 
+    @SuppressWarnings("CopyConstructorMissesField")
     public Matrix2x2(Matrix2x2 o){
         System.arraycopy(o.data, 0, this.data, 0, this.data.length);
     }

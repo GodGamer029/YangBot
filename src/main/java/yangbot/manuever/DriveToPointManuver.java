@@ -24,8 +24,8 @@ public class DriveToPointManuver extends Manuver {
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
 
-        float steer = 0;
-        float throttle = 0;
+        float steer;
+        float throttle;
         boolean boost = false;
 
         // Steer

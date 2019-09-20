@@ -1,16 +1,17 @@
 package yangbot.manuever;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
+@SuppressWarnings("WeakerAccess")
 public class AerialManuver extends Manuver{
 
     public static float boost_accel = 1060.0f;
     public static float throttle_accel = 66.66667f;
+
 
     public float arrivalTime = 0.0f;
 
@@ -45,28 +46,27 @@ public class AerialManuver extends Manuver{
         final GameData gameData = this.getGameData();
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
 
         float T = this.arrivalTime - car.elapsedSeconds;
 
         Vector3 xf = car.position
                 .add(car.velocity.mul(T))
                 .add(gravity.mul(T * T * 0.5f));
-        Vector3 vf = car.velocity.add(gravity.mul(T));
+        //Vector3 vf = car.velocity.add(gravity.mul(T));
 
         boolean jumping_prev = this.jumping;
         if(this.jumping){
             float tau = j_duration - doubleJump.timer;
 
             if(doubleJump.timer == 0.0f){
-                vf = vf.add(car.up().mul(j_speed));
+                //vf = vf.add(car.up().mul(j_speed));
                 xf = xf.add(car.up().mul(j_speed * T));
             }
 
-            vf = vf.add(car.up().mul(j_accel * tau));
+            //vf = vf.add(car.up().mul(j_accel * tau));
             xf = xf.add(car.up().mul(j_accel * tau * (T - 0.5f * tau)));
 
-            vf = vf.add(car.up().mul(j_speed));
+            //vf = vf.add(car.up().mul(j_speed));
             xf = xf.add(car.up().mul(j_speed * (T - tau)));
 
             ControlsOutput output = new ControlsOutput();

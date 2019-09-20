@@ -8,6 +8,7 @@ import rlbot.ControllerState;
  * This class is here for your convenience, it is NOT part of the framework. You can change it as much
  * as you want, or delete it.
  */
+@SuppressWarnings("UnusedReturnValue")
 public class ControlsOutput implements ControllerState {
 
     // 0 is straight, -1 is hard left, 1 is hard right.

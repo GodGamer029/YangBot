@@ -40,6 +40,7 @@ public class AdvancedRenderer extends Renderer {
         this.drawCentered3dCube(c, center, new Vector3(scale, scale, scale));
     }
     
+    @SuppressWarnings("WeakerAccess")
     public void drawCentered3dCube(Color c, Vector3 center, Vector3 size){
         Vector3 startPos = center.sub(size.div(2));
         Vector3 endPos = new Vector3(size);

@@ -354,6 +354,7 @@ public class Curve {
         );
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public float calculateMaxSpeeds(float v0, float vf){
         final Vector3 gravity = new Vector3(0, 0, -650);
 

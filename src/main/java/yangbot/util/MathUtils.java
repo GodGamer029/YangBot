@@ -21,7 +21,7 @@ public class MathUtils {
     }
 
     public static float clip(float value, float min, float max){
-        return (float) Math.max(min, Math.min(max, value));
+        return Math.max(min, Math.min(max, value));
     }
 
     public static float quadraticLerp(float start, float middle, float end, float t){

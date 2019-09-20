@@ -11,6 +11,7 @@ public class Matrix3x3 {
         Arrays.fill(data, 0);
     }
 
+    @SuppressWarnings("CopyConstructorMissesField")
     public Matrix3x3(Matrix3x3 other){
         System.arraycopy(other.data, 0, this.data, 0, data.length);
     }

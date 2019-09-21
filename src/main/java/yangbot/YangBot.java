@@ -8,8 +8,6 @@ import yangbot.input.CarData;
 import yangbot.input.DataPacket;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.input.fieldinfo.BoostPad;
-import yangbot.manuever.AerialManuver;
 import yangbot.manuever.LowGravKickoffManuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
@@ -18,14 +16,11 @@ import java.awt.*;
 
 public class YangBot implements Bot {
 
-    public static AdvancedRenderer renderer = null;
-
     enum State {
         RESET,
         INIT,
         RUN,
-        KICKOFF,
-        WAIT
+        KICKOFF
     }
 
     private final int playerIndex;
@@ -35,18 +30,16 @@ public class YangBot implements Bot {
     private float lastTick = -1;
 
     private LowGravKickoffManuver kickoffManuver = null;
-    private AerialManuver aerialManuver = null;
-
-    private boolean headingOut = false;
 
     public YangBot(int playerIndex) {
         this.playerIndex = playerIndex;
     }
 
     private ControlsOutput processInput(DataPacket input) {
-        if(lastTick > 0)
-            timer += Math.min(input.gameInfo.secondsElapsed() - lastTick, 0.5f);
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 1/60f);
+
+        if(lastTick > 0)
+            timer += Math.min(dt, 0.5f);
 
         CarData car = input.car;
         BallData ball = input.ball;
@@ -56,30 +49,24 @@ public class YangBot implements Bot {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         ControlsOutput output = new ControlsOutput();
 
-        State nextState = state;
-
         switch(state){
             case RESET:
                 timer = 0.0f;
                 if(ball.velocity.isZero())
-                    nextState = State.KICKOFF;
+                    state = State.KICKOFF;
                 else
-                    nextState = State.INIT;
+                    state = State.INIT;
                 kickoffManuver = new LowGravKickoffManuver();
                 break;
             case KICKOFF:
                 kickoffManuver.step(dt, output);
                 if(kickoffManuver.isDone())
-                    nextState = State.INIT;
-                break;
-            case WAIT:
-                if(timer >= 0.5f)
-                    nextState = State.INIT;
+                    state = State.INIT;
                 break;
             case INIT:
             {
                 if(input.gameInfo.isKickoffPause())
-                    nextState = State.RESET;
+                    state = State.RESET;
 
                 break;
             }
@@ -88,8 +75,6 @@ public class YangBot implements Bot {
                 break;
             }
         }
-
-        state = nextState;
 
         // Print Throttle info
         {
@@ -110,11 +95,6 @@ public class YangBot implements Bot {
     private void drawDebugLines(DataPacket input, CarData myCar) {
         // Here's an example of rendering debug data on the screen.
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
-        YangBot.renderer = renderer;
-        for(BoostPad boost : BoostManager.getAllBoosts()){
-            if(!boost.isActive())
-                renderer.drawString3d("Active in "+boost.boostAvailableIn(), Color.CYAN, boost.getLocation(), 1, 1);
-        }
 
         renderer.drawString2d("BallP: "+input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
         renderer.drawString2d("BallV: "+input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
@@ -140,8 +120,6 @@ public class YangBot implements Bot {
 
     @Override
     public ControllerState processInput(GameTickPacket packet) {
-
-
         if (packet.playersLength() <= playerIndex || packet.ball() == null || !packet.gameInfo().isRoundActive()) {
             // Just return immediately if something looks wrong with the data. This helps us avoid stack traces.
             return new ControlsOutput();

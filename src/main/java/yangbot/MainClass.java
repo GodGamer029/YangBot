@@ -24,6 +24,10 @@ public class MainClass {
 
     private static final Integer DEFAULT_PORT = 17357;
 
+    private static void lazyLoadNavigator(){
+        new Thread(MainClass::loadNavigator).start();
+    }
+
     private static void loadNavigator(){
         try{
             ClassLoader cl = ClassLoader.getSystemClassLoader();
@@ -90,7 +94,7 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
-        loadNavigator();
+        lazyLoadNavigator();
         BotManager botManager = new BotManager();
         Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
             System.out.println("Could not read port from args, using default!");

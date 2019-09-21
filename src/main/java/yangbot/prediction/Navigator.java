@@ -9,9 +9,11 @@ import yangbot.vector.Vector3;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Navigator {
 
+    private static AtomicBoolean loadedStatics = new AtomicBoolean(false);
     private static int nTheta = 16;
     private static int scale = -1;
     private static int nx = -1;
@@ -66,6 +68,8 @@ public class Navigator {
                 navigationTangents[i * nTheta + j] = basis.dot(directions[j]);
             }
         }
+
+        loadedStatics.set(true);
     }
 
     private int to_id(int x, int y, int theta, int v) {
@@ -221,6 +225,13 @@ public class Navigator {
     }
 
     public Curve pathTo(CarData car, Vector3 destination, Vector3 tangent, float offset) {
+        while (!loadedStatics.get()){
+            try{
+                Thread.sleep(1);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
     //if (Math.max(car.position.z, destination.z) < 50) {
         //return lutPathTo(car, destination, tangent, offset);
     //} else
@@ -228,6 +239,13 @@ public class Navigator {
     }
 
     public void analyzeSurroundings(CarData car){
+        while (!loadedStatics.get()){
+            try{
+                Thread.sleep(1);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
         source = car.position;
         int nnodes = navigationNodes.length;
 

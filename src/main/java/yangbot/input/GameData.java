@@ -11,13 +11,17 @@ public class GameData {
 
     private static Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
 
-    private CarData carData = null;
-    private BallData ballData = null;
-    private List<CarData> allCars = null;
-    private float gravityZ = -650;
+    protected CarData carData = null;
+    protected BallData ballData = null;
+    protected List<CarData> allCars = null;
+    protected float gravityZ = -650;
 
-    public GameData(Long threadId){
+    public GameData(Long threadId){ }
 
+    public FoolGameData fool(){
+        FoolGameData foo = new FoolGameData(0L);
+        foo.update(carData, ballData, allCars, gravityZ);
+        return foo;
     }
 
     public void update(CarData carData, BallData ballData, List<CarData> allCars, GameInfo gameInfo){
@@ -25,6 +29,13 @@ public class GameData {
         this.ballData = ballData;
         this.allCars = allCars;
         this.gravityZ = gameInfo.worldGravityZ();
+    }
+
+    public void update(CarData carData, BallData ballData, List<CarData> allCars, float gravity){
+        this.carData = carData;
+        this.ballData = ballData;
+        this.allCars = allCars;
+        this.gravityZ = gravity;
     }
 
     public Vector3 getGravity(){

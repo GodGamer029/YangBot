@@ -20,9 +20,9 @@ public class Navigator {
     private static int[] strides = new int[3];
     private static float[] LUT_times;
     private static int[] LUT_paths;
-    private static Vector3[] navigationNodes;
-    private static Vector3[] navigationTangents;
-    private static Vector3[] navigationNormals;
+    public static Vector3[] navigationNodes;
+    public static Vector3[] navigationTangents;
+    public static Vector3[] navigationNormals;
     private static int source_node = -1;
     private static int source_direction = -1;
     private static int[] navigation_paths;
@@ -221,9 +221,9 @@ public class Navigator {
     }
 
     public Curve pathTo(CarData car, Vector3 destination, Vector3 tangent, float offset) {
-    if (Math.max(car.position.z, destination.z) < 50) {
-        return lutPathTo(car, destination, tangent, offset);
-    } else
+    //if (Math.max(car.position.z, destination.z) < 50) {
+        //return lutPathTo(car, destination, tangent, offset);
+    //} else
         return navmeshPathTo(car, destination, tangent, offset);
     }
 

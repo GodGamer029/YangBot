@@ -61,7 +61,7 @@ public class MainClass {
             System.out.println("Read times "+(System.currentTimeMillis() - ns)+"ms");
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("hoops_navigation_graph.bin"));
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_graph.bin"));
                 for(int i = 0; i < edges.length; i++){
                     edges[i] = new Graph.Edge(para.readIntLE(),
                             para.readIntLE(),
@@ -71,7 +71,7 @@ public class MainClass {
             System.out.println("Read NAV_GRAPH "+(System.currentTimeMillis() - ns)+"ms");
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("hoops_navigation_nodes.bin"));
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_nodes.bin"));
                 for(int i = 0; i < nav_nodes.length; i++){
                     nav_nodes[i] = new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE());
                 }
@@ -79,7 +79,7 @@ public class MainClass {
             System.out.println("Read NAV_NODES "+(System.currentTimeMillis() - ns)+"ms");
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("hoops_navigation_normals.bin"));
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_normals.bin"));
                 for(int i = 0; i < nav_normals.length; i++){
                     nav_normals[i] = new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE());
                 }

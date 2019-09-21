@@ -34,9 +34,9 @@ public class MainClass {
             int[] parameters = new int[4];
             int[] paths = new int[13707632];
             float[] times = new float[13707632]; // 129791
-            Graph.Edge[] edges = new Graph.Edge[359303]; // 1530349 for soccers
-            Vector3[] nav_nodes = new Vector3[8111]; // 12115 for soccer
-            Vector3[] nav_normals = new Vector3[8111];
+            Graph.Edge[] edges = new Graph.Edge[1530349]; // 1530349 for soccers
+            Vector3[] nav_nodes = new Vector3[12115]; // 12115 for soccer
+            Vector3[] nav_normals = new Vector3[12115];
 
             {
                 LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("LUT_parameters.bin"));

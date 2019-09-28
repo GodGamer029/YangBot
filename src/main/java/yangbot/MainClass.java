@@ -31,12 +31,14 @@ public class MainClass {
     private static void loadNavigator(){
         try{
             ClassLoader cl = ClassLoader.getSystemClassLoader();
+            long ns = System.currentTimeMillis();
             int[] parameters = new int[4];
             int[] paths = new int[13707632];
             float[] times = new float[13707632]; // 129791
             Graph.Edge[] edges = new Graph.Edge[1530349]; // 1530349 for soccers
             Vector3[] nav_nodes = new Vector3[12115]; // 12115 for soccer
             Vector3[] nav_normals = new Vector3[12115];
+            System.out.println("Allocated arrays " + (System.currentTimeMillis() - ns) + "ms");
 
             {
                 LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("LUT_parameters.bin"));
@@ -44,7 +46,7 @@ public class MainClass {
                     parameters[i] = para.readIntLE();
             }
             System.out.println("Read parameters");
-            long ns = System.currentTimeMillis();
+            ns = System.currentTimeMillis();
             {
                 LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("LUT_paths.bin"));
                 for(int i = 0; i < paths.length; i++){
@@ -88,6 +90,7 @@ public class MainClass {
             ns = System.currentTimeMillis();
             Navigator.initStatics(parameters, times, paths, edges, nav_nodes, nav_normals);
             System.out.println("Initted Navigator in "+(System.currentTimeMillis() - ns)+"ms");
+            System.gc();
         }catch (Exception e){
             e.printStackTrace();
         }

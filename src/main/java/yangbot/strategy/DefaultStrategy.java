@@ -3,11 +3,14 @@ package yangbot.strategy;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.manuever.DribbleManuver;
 import yangbot.util.ControlsOutput;
 
 import java.util.Optional;
 
 public class DefaultStrategy extends Strategy {
+
+    private Strategy newDecidedStrat = null;
 
     @Override
     public void planStrategyInternal() {
@@ -27,10 +30,15 @@ public class DefaultStrategy extends Strategy {
 
         if (Math.abs(controlsOutput.getSteer()) >= 0.95f)
             controlsOutput.withSlide(true);
+
+        if (new DribbleManuver().isViable()) {
+            newDecidedStrat = new DribbleStrategy();
+            this.setDone();
+        }
     }
 
     @Override
     public Optional<Strategy> suggestStrategy() {
-        return Optional.empty();
+        return Optional.ofNullable(newDecidedStrat);
     }
 }

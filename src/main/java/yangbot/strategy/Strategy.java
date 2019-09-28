@@ -15,6 +15,8 @@ public abstract class Strategy {
 
     public final void setDone(boolean isDone){
         this.isDone = isDone;
+        if (isDone)
+            plannedStrategy = false;
     }
 
     public final void setDone() {

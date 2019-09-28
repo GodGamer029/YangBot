@@ -14,7 +14,7 @@ public class Graph {
     public Graph(Edge[] edges){
         Edge[] sortedEdges = new Edge[edges.length];
         System.arraycopy(edges, 0, sortedEdges, 0, edges.length);
-        // TODO
+
         Arrays.sort(sortedEdges, (i, j) -> {
             if(i.src == j.src && i.dst == j.dst && i.weight == j.weight)
                 return 0;
@@ -40,6 +40,7 @@ public class Graph {
         for (int i = 0; i < numVertices; i++) {
             offsets[i+1] += offsets[i];
         }
+
     }
 
     public int[] bellman_ford_sssp(int start, float maximum_weight){
@@ -112,7 +113,6 @@ public class Graph {
     public static class Edge {
         int src, dst;
         float weight;
-
 
         public Edge(int src, int dst, float weight) {
             this.src = src;

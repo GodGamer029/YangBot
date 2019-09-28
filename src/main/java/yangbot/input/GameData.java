@@ -17,27 +17,30 @@ public class GameData {
     protected BallData ballData = null;
     protected List<CarData> allCars = null;
     protected float gravityZ = -650;
+    protected float dt = 1 / 60f;
 
     public GameData(Long threadId){ }
 
     public FoolGameData fool(){
         FoolGameData foo = new FoolGameData(0L);
-        foo.update(carData, ballData, allCars, gravityZ);
+        foo.update(carData, ballData, allCars, gravityZ, dt);
         return foo;
     }
 
-    public void update(CarData carData, BallData ballData, List<CarData> allCars, GameInfo gameInfo){
+    public void update(CarData carData, BallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt) {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
         this.gravityZ = gameInfo.worldGravityZ();
+        this.dt = dt;
     }
 
-    public void update(CarData carData, BallData ballData, List<CarData> allCars, float gravity){
+    public void update(CarData carData, BallData ballData, List<CarData> allCars, float gravity, float dt) {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
         this.gravityZ = gravity;
+        this.dt = dt;
     }
 
     public Vector3 getGravity(){
@@ -54,6 +57,10 @@ public class GameData {
 
     public List<CarData> getAllCars() {
         return allCars;
+    }
+
+    public float getDt() {
+        return dt;
     }
 
     public static GameData current() {

@@ -2,11 +2,7 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
-import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
-import rlbot.gamestate.GameInfoState;
-import rlbot.gamestate.GameState;
-import rlbot.gamestate.GameStatePacket;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.DataPacket;
@@ -19,6 +15,7 @@ import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
+import yangbot.vector.Vector3;
 
 import java.awt.*;
 
@@ -53,21 +50,19 @@ public class YangBot implements Bot {
 
         CarData car = input.car;
         BallData ball = input.ball;
-        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo);
+        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt);
 
         drawDebugLines(input, car);
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         ControlsOutput output = new ControlsOutput();
 
-        //  renderer.drawLine3d(Color.RED, new Vector3(-100, -1000, 50), new Vector3(-100, 1000, 50));
-        //renderer.drawLine3d(Color.RED, new Vector3(100, -1000, 50), new Vector3(100, 1000, 50));
+        renderer.drawLine3d(Color.RED, new Vector3(3850, 3850, 150), new Vector3(2700, 4950, 150));
+        // renderer.drawLine3d(Color.RED, new Vector3(100, -1000, 50), new Vector3(100, 1000, 50));
 
 
         switch(state){
             case RESET:
             {
-                GameStatePacket st = new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket();
-                RLBotDll.setGameState(st);
                 timer = 0.0f;
                 if (RegularKickoffManuver.isKickoff()) {
                     kickoffManuver = new RegularKickoffManuver();
@@ -84,9 +79,6 @@ public class YangBot implements Bot {
                 kickoffManuver.step(dt, output);
                 if(kickoffManuver.isDone()){
                     state = State.INIT;
-                    System.out.println("Resetting to init after kickoff");
-                    GameStatePacket st = new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket();
-                    RLBotDll.setGameState(st);
                     currentPlan = new AfterKickoffStrategy();
                 }
 

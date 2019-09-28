@@ -6,7 +6,7 @@ import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
-import yangbot.util.AdvancedRenderer;
+import yangbot.input.RLConstants;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
@@ -37,6 +37,32 @@ public class DribbleManuver extends Manuver {
 
     @Override
     public boolean isViable() {
+        GameData gameData = GameData.current();
+        CarData car = gameData.getCarData();
+        try {
+            BallPrediction ballPrediction = RLBotDll.getBallPrediction();
+            final float ballRadius = RLConstants.ballRadius;
+            for (int i = 0; i < ballPrediction.slicesLength(); i++) {
+                PredictionSlice slice = ballPrediction.slices(i);
+                Vector3 loc = new Vector3(slice.physics().location());
+                Vector3 vel = new Vector3(slice.physics().velocity());
+
+                if (slice.gameSeconds() - car.elapsedSeconds < 0.2f)
+                    continue;
+
+                if (RLConstants.isPosNearWall(loc.flatten()))
+                    continue;
+
+                if (loc.z <= ballRadius + 2f && Math.abs(vel.z) <= 1f)
+                    break;
+
+                if (vel.z < 0 && loc.z - ballRadius > car.position.z + 18f && loc.z - ballRadius < car.position.z + 30f)
+                    return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return false;
     }
 
@@ -47,8 +73,6 @@ public class DribbleManuver extends Manuver {
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
         
-        new AdvancedRenderer(3244).eraseFromScreen();
-        dt = Math.max(dt, 1f/60f);
         float vf = (float) car.velocity.dot(car.forward());
         if(state == BallState.FINDBALL){
             try{
@@ -61,9 +85,15 @@ public class DribbleManuver extends Manuver {
                     if(slice.gameSeconds() - car.elapsedSeconds < 0.2f)
                         continue;
 
+                    if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)
+                        break;
+
+                    if (RLConstants.isPosNearWall(loc.flatten()))
+                        continue;
+
                     if(vel.z < 0 &&
-                            loc.z - 92.75f > car.position.z + 18f &&
-                            loc.z - 92.75f < car.position.z + 30f){
+                            loc.z - RLConstants.ballRadius > car.position.z + RLConstants.carElevation &&
+                            loc.z - RLConstants.ballRadius < car.position.z + RLConstants.carElevation + 12f) {
                         ballPredictionPos = loc.add(vel.mul(dt));
                         ballPredictionVelocity = vel;
                         ballArrival = slice.gameSeconds();
@@ -76,10 +106,13 @@ public class DribbleManuver extends Manuver {
             }catch (Exception e){
                 e.printStackTrace();
             }
+
+            if (state != BallState.GOTOBALL)
+                this.setIsDone(true);
         }else if(state == BallState.GOTOBALL){
 
             float dist = (float) car.position.flatten().distance(ballPredictionPos.flatten());
-            if(car.elapsedSeconds >= ballArrival || (dist < 15 && ball.position.z - 92.75f > car.position.z + 17f)){
+            if (car.elapsedSeconds >= ballArrival || (dist < 15 && ball.position.z - RLConstants.ballRadius > car.position.z + RLConstants.carElevation)) {
                 if(dist < 50){
                     //System.out.println("Starting dribble; "+dist);
                     state = BallState.DRIBBLING;
@@ -96,7 +129,7 @@ public class DribbleManuver extends Manuver {
                     PredictionSlice slice = ballPrediction.slices(i);
                     Vector3 loc = new Vector3(slice.physics().location());
                     Vector3 vel = new Vector3(slice.physics().velocity());
-                    if(vel.z < 0 && loc.z - 92.75f > car.position.z + 17f && loc.z - 92.75f < car.position.z + 40f && Math.abs(ballArrival - slice.gameSeconds()) < 0.2f){
+                    if (vel.z < 0 && loc.z - RLConstants.ballRadius > car.position.z + 17f && loc.z - RLConstants.ballRadius < car.position.z + 40f && Math.abs(ballArrival - slice.gameSeconds()) < 0.2f) {
                         weFoundTheBall = true;
                         ballPredictionPos = loc;
                         ballPredictionVelocity = vel;
@@ -121,17 +154,14 @@ public class DribbleManuver extends Manuver {
                 driveToPointManuver.step(dt, controlsOutput);
             }
         }else if(state == BallState.DRIBBLING){
-
             float toBallDistance = (float) car.position.flatten().distance(ball.position.flatten());
-            if(toBallDistance > 200 || (ball.position.z - 92.75f < car.position.z + 10f && Math.abs(ball.velocity.z) < 0.05f)){
+            if (toBallDistance > 200 || (ball.position.z - RLConstants.ballRadius < car.position.z + 10f && Math.abs(ball.velocity.z) < 0.05f)) {
                 state = BallState.FINDBALL;
                 hasBallPossession = false;
                 return;
             }
 
-            if(car.hasWheelContact && car.up().angle(new Vector3(0, 0, 1)) < Math.PI / 10)
-            {
-
+            if (car.hasWheelContact && car.up().angle(new Vector3(0, 0, 1)) < Math.PI / 10) {
                 driveToPointManuver.targetPosition = new Vector3(ball.position.flatten().add(ball.velocity.flatten().mul(dt)), car.position.z);
                 driveToPointManuver.targetVelocity = (float) ball.velocity.flatten().magnitude() - 30f;
                 driveToPointManuver.step(dt, controlsOutput);
@@ -143,10 +173,9 @@ public class DribbleManuver extends Manuver {
                 }
                 return;
             }
-
         }
 
-        hasBallPossession = state == BallState.DRIBBLING && ball.position.z - 92.75f > car.position.z + 15f;
+        hasBallPossession = state == BallState.DRIBBLING && ball.position.z - RLConstants.ballRadius > car.position.z + 15f;
     }
 
     @Override

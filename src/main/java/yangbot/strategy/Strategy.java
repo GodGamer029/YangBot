@@ -2,33 +2,41 @@ package yangbot.strategy;
 
 import yangbot.util.ControlsOutput;
 
-import java.util.List;
+import java.util.Optional;
 
 public abstract class Strategy {
 
     private boolean isDone = false;
     private boolean plannedStrategy = false;
 
-    public boolean didPlanStrategy(){
+    public final boolean didPlanStrategy(){
         return plannedStrategy;
     }
 
-    public void setDone(boolean isDone){
+    public final void setDone(boolean isDone){
         this.isDone = isDone;
     }
 
-    public boolean isDone(){
+    public final boolean isDone(){
         return isDone;
     }
 
-    public void planStrategy(){
+    protected abstract void planStrategyInternal();
+
+    @SuppressWarnings("WeakerAccess")
+    public final void planStrategy(){
         plannedStrategy = true;
+        planStrategyInternal();
     }
 
-    public void step(float dt, ControlsOutput controlsOutput){
+    protected abstract void stepInternal(float dt, ControlsOutput controlsOutput);
+
+    public final void step(float dt, ControlsOutput controlsOutput){
         if(!plannedStrategy)
             planStrategy();
+        stepInternal(dt, controlsOutput);
     }
-    public abstract List<Strategy> suggestStrategy();
+
+    public abstract Optional<Strategy> suggestStrategy();
 
 }

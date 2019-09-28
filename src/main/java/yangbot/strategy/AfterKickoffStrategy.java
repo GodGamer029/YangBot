@@ -11,9 +11,7 @@ import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Optional;
 
 public class AfterKickoffStrategy extends Strategy {
 
@@ -23,11 +21,10 @@ public class AfterKickoffStrategy extends Strategy {
         NEUTRAL
     }
 
-    private static List<Strategy> suggestedStrat;
     private KickoffQuality kickoffQuality = KickoffQuality.NEUTRAL;
 
     @Override
-    public void planStrategy() {
+    public void planStrategyInternal() {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
         BallData ball = gameData.getBallData();
@@ -59,7 +56,7 @@ public class AfterKickoffStrategy extends Strategy {
     }
 
     @Override
-    public void step(float dt, ControlsOutput controlsOutput) {
+    public void stepInternal(float dt, ControlsOutput controlsOutput) {
         AdvancedRenderer rend = new AdvancedRenderer(9384);
         rend.startPacket();
 
@@ -69,13 +66,7 @@ public class AfterKickoffStrategy extends Strategy {
     }
 
     @Override
-    public List<Strategy> suggestStrategy() {
-        return suggestedStrat;
-    }
-
-    static {
-        suggestedStrat = new ArrayList<>();
-        suggestedStrat.add(new DefaultStrategy());
-        suggestedStrat = Collections.unmodifiableList(suggestedStrat);
+    public Optional<Strategy> suggestStrategy() {
+        return Optional.of(new DefaultStrategy());
     }
 }

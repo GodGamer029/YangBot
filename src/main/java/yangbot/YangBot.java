@@ -8,7 +8,10 @@ import yangbot.input.CarData;
 import yangbot.input.DataPacket;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.manuever.LowGravKickoffManuver;
+import yangbot.manuever.RegularKickoffManuver;
+import yangbot.strategy.AfterKickoffStrategy;
+import yangbot.strategy.DefaultStrategy;
+import yangbot.strategy.Strategy;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 
@@ -29,7 +32,9 @@ public class YangBot implements Bot {
     private float timer = -1.0f;
     private float lastTick = -1;
 
-    private LowGravKickoffManuver kickoffManuver = null;
+    private RegularKickoffManuver kickoffManuver = null;
+
+    private Strategy currentPlan = null;
 
     public YangBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -51,27 +56,47 @@ public class YangBot implements Bot {
 
         switch(state){
             case RESET:
+            {
                 timer = 0.0f;
-                if(ball.velocity.isZero())
+                if(input.gameInfo.isKickoffPause() || (ball.velocity.isZero() && ball.position.flatten().magnitude() <= 0.5f)){
+                    kickoffManuver = new RegularKickoffManuver();
                     state = State.KICKOFF;
-                else
+                } else
                     state = State.INIT;
-                kickoffManuver = new LowGravKickoffManuver();
+
                 break;
+            }
             case KICKOFF:
+            {
                 kickoffManuver.step(dt, output);
-                if(kickoffManuver.isDone())
+                if(kickoffManuver.isDone()){
                     state = State.INIT;
+                    currentPlan = new AfterKickoffStrategy();
+                }
+
                 break;
+            }
             case INIT:
             {
                 if(input.gameInfo.isKickoffPause())
                     state = State.RESET;
+                else{
+                    state = State.RUN;
+                    if(currentPlan == null || currentPlan.isDone())
+                        currentPlan = new DefaultStrategy();
+                }
 
                 break;
             }
             case RUN:
             {
+                if(currentPlan == null)
+                    currentPlan = new DefaultStrategy();
+
+                if(currentPlan.isDone())
+                    currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
+
+                currentPlan.step(dt, output);
                 break;
             }
         }
@@ -120,10 +145,16 @@ public class YangBot implements Bot {
 
     @Override
     public ControllerState processInput(GameTickPacket packet) {
-        if (packet.playersLength() <= playerIndex || packet.ball() == null || !packet.gameInfo().isRoundActive()) {
+        if (packet.playersLength() <= playerIndex || packet.ball() == null) {
             // Just return immediately if something looks wrong with the data. This helps us avoid stack traces.
             return new ControlsOutput();
         }
+        if(!packet.gameInfo().isRoundActive()){
+            if(packet.gameInfo().isKickoffPause())
+                state = State.KICKOFF;
+            return new ControlsOutput();
+        }
+
         AdvancedRenderer r = AdvancedRenderer.forBotLoop(this);
         r.startPacket();
 
@@ -136,14 +167,14 @@ public class YangBot implements Bot {
 
         // Do the actual logic using our dataPacket.
 
-        long ms = System.nanoTime();
+        //long ms = System.nanoTime();
         ControlsOutput controlsOutput = processInput(dataPacket);
-        realCount++;
+        /*realCount++;
         if(realCount >= 100){
-            //all += ((System.nanoTime() - ms) / 1000000f);
+            all += ((System.nanoTime() - ms) / 1000000f);
             count++;
-            //System.out.println("It took "+(all / count));
-        }
+            System.out.println("It took "+(all / count));
+        }*/
 
         lastTick = dataPacket.gameInfo.secondsElapsed();
 
@@ -151,6 +182,7 @@ public class YangBot implements Bot {
         return controlsOutput;
     }
 
+    @Override
     public void retire() {
         System.out.println("Retiring sample bot " + playerIndex);
     }

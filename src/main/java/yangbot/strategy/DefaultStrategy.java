@@ -2,22 +2,21 @@ package yangbot.strategy;
 
 import yangbot.util.ControlsOutput;
 
-import java.util.List;
+import java.util.Optional;
 
 public class DefaultStrategy extends Strategy {
 
     @Override
-    public void planStrategy() {
+    public void planStrategyInternal() {
+    }
+
+    @Override
+    public void stepInternal(float dt, ControlsOutput controlsOutput) {
 
     }
 
     @Override
-    public void step(float dt, ControlsOutput controlsOutput) {
-
-    }
-
-    @Override
-    public List<Strategy> suggestStrategy() {
-        return null;
+    public Optional<Strategy> suggestStrategy() {
+        return Optional.empty();
     }
 }

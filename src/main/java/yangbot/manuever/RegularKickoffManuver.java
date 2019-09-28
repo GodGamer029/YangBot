@@ -30,6 +30,7 @@ public class RegularKickoffManuver extends Manuver {
     private TurnManuver turnManuver;
     private boolean reachedTheBoost = false;
     private boolean doingFlip = false;
+    @SuppressWarnings("WeakerAccess")
     public boolean doSecondFlip = true;
 
     @Override
@@ -123,7 +124,8 @@ public class RegularKickoffManuver extends Manuver {
                         if(dodgeManuver.timer >= dodgeManuver.delay){
                             kickOffState = KickOffState.SECOND_FlIP;
                             dodgeManuver.step(dt, controlsOutput);
-                            dodgeManuver.timer = 0;
+
+                            dodgeManuver = new DodgeManuver();
                         }else
                             dodgeManuver.step(dt, controlsOutput);
                     }else{
@@ -149,6 +151,7 @@ public class RegularKickoffManuver extends Manuver {
                 break;
             case SECOND_FlIP:
             {
+                System.out.println("Second flip");
                 if(car.boost > 13 && kickOffLocation == KickOffLocation.CORNER)
                     controlsOutput.withBoost(true);
 

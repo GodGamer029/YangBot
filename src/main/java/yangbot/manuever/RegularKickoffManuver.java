@@ -151,7 +151,6 @@ public class RegularKickoffManuver extends Manuver {
                 break;
             case SECOND_FlIP:
             {
-                System.out.println("Second flip");
                 if(car.boost > 13 && kickOffLocation == KickOffLocation.CORNER)
                     controlsOutput.withBoost(true);
 

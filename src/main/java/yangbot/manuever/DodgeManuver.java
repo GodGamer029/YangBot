@@ -93,9 +93,6 @@ public class DodgeManuver extends Manuver {
                 controlsOutput.withPitch(-direction_local.x);
                 controlsOutput.withYaw(direction_local.y);
 
-                System.out.println("Pitch: " + -direction_local.x);
-                System.out.println("Yaw: " + direction_local.y);
-
             }else if(controllerInput != null && !controllerInput.isZero()){
                 controlsOutput.withRoll(0);
                 controlsOutput.withPitch(controllerInput.y);

@@ -4,7 +4,6 @@ import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.util.ControlsOutput;
-import yangbot.util.MathUtils;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
@@ -33,6 +32,8 @@ public class RegularKickoffManuver extends Manuver {
     @SuppressWarnings("WeakerAccess")
     public boolean doSecondFlip = true;
 
+    private float timer = 0;
+
     public static boolean isKickoff() {
         GameData g = GameData.current();
         BallData ball = g.getBallData();
@@ -53,9 +54,10 @@ public class RegularKickoffManuver extends Manuver {
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
 
-        
+        timer += dt;
+
         if(ball.position.flatten().magnitude() > 5){
-            System.out.println("Kickoff done!" + ball.position.flatten().magnitude() + " : "+ball.position.flatten());
+            //System.out.println("Kickoff done!" + ball.position.flatten().magnitude() + " : "+ball.position.flatten());
             this.setIsDone(true);
             return;
         }
@@ -79,7 +81,7 @@ public class RegularKickoffManuver extends Manuver {
                 dodgeManuver = new DodgeManuver();
                 turnManuver = new TurnManuver();
 
-                System.out.println("kickoff location: "+kickOffLocation.name());
+                //System.out.println("kickoff location: "+kickOffLocation.name());
 
                 controlsOutput.withThrottle(1);
                 controlsOutput.withBoost(true);
@@ -96,16 +98,18 @@ public class RegularKickoffManuver extends Manuver {
                         controlsOutput.withBoost(true);
 
                     if(doingFlip) {
-                        if(dodgeManuver.timer >= dodgeManuver.delay){
-                            kickOffState = KickOffState.SECOND_FlIP;
+                        if (dodgeManuver.timer >= dodgeManuver.delay && !car.hasWheelContact) {
                             dodgeManuver.step(dt, controlsOutput);
-                            dodgeManuver = new DodgeManuver();
+                            if (controlsOutput.holdJump()) {
+                                kickOffState = KickOffState.SECOND_FlIP;
+                                dodgeManuver = new DodgeManuver();
+                            }
                         }else
                             dodgeManuver.step(dt, controlsOutput);
 
                     } else if(Math.abs(car.position.y) < 2400 || reachedTheBoost){
                         if(car.forward().angle(new Vector3(0, -Math.signum(car.position.y), 0)) < Math.PI / 6){
-                            System.out.println("Jumping with Angle: "+car.position);
+                            //System.out.println("Jumping with Angle: "+car.position);
                             doingFlip = true;
                             dodgeManuver.duration = 0.f;
                             dodgeManuver.delay = 0.10f;
@@ -184,12 +188,12 @@ public class RegularKickoffManuver extends Manuver {
                         }
 
                     }
-                    dodgeManuver.direction = ball.position.flatten().sub(car.position.add(car.velocity.mul(dt * MathUtils.clip(closestToBall == null ? 100 : 100 - Math.abs(closestToBall.sub(ball.position).x), 0, 100)).x, 0, 0).flatten()).normalized();
+                    //dodgeManuver.direction = ball.position.flatten().sub(car.position.add(car.velocity.mul(dt * MathUtils.clip(closestToBall == null ? 100 : 100 - Math.abs(closestToBall.sub(ball.position).x), 1000, 1000)).x, 0, 0).flatten()).normalized();
 
                     dodgeManuver.duration = 0.02f;
                     dodgeManuver.delay = 0.1f;
                     dodgeManuver.target = null;
-                    //dodgeManuver.direction = ball.position.flatten().sub(car.position.add(car.velocity.mul(dt * 100).x, 0 ,0).flatten()).normalized();
+                    dodgeManuver.direction = ball.position.flatten().sub(car.position.add(car.velocity.mul(dt * 1000).x, 0, 0).flatten()).normalized();
 
                     dodgeManuver.step(dt, controlsOutput);
 
@@ -203,7 +207,7 @@ public class RegularKickoffManuver extends Manuver {
                     }
 
                 }else if(car.hasWheelContact){
-                    if (Math.abs(car.position.x + car.velocity.x * dt) < Math.abs(car.position.x) && Math.abs(car.position.x + car.velocity.x) > 200f) {
+                    if (Math.abs(car.position.x + car.velocity.x * dt) < Math.abs(car.position.x) && Math.abs(car.position.x + car.velocity.x * dt) > 200f) {
                         controlsOutput.withSlide(true);
                         controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ball.position.flatten().sub(car.position.flatten().withX(ball.position.x))));
                     } else {
@@ -225,11 +229,15 @@ public class RegularKickoffManuver extends Manuver {
                     turnManuver.step(dt, controlsOutput);
                     controlsOutput.withSlide(true);
                     controlsOutput.withJump(false);
+                    controlsOutput.withThrottle(1f);
                 }
 
                 break;
             }
         }
+
+        if (timer > 4)
+            this.setIsDone(true);
     }
 
     @Override

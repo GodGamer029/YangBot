@@ -2,12 +2,17 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
+import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
+import rlbot.gamestate.GameInfoState;
+import rlbot.gamestate.GameState;
+import rlbot.gamestate.GameStatePacket;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.DataPacket;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
+import yangbot.manuever.DriveManuver;
 import yangbot.manuever.RegularKickoffManuver;
 import yangbot.strategy.AfterKickoffStrategy;
 import yangbot.strategy.DefaultStrategy;
@@ -54,13 +59,21 @@ public class YangBot implements Bot {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         ControlsOutput output = new ControlsOutput();
 
+        //  renderer.drawLine3d(Color.RED, new Vector3(-100, -1000, 50), new Vector3(-100, 1000, 50));
+        //renderer.drawLine3d(Color.RED, new Vector3(100, -1000, 50), new Vector3(100, 1000, 50));
+
+
         switch(state){
             case RESET:
             {
+                GameStatePacket st = new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket();
+                RLBotDll.setGameState(st);
                 timer = 0.0f;
-                if(input.gameInfo.isKickoffPause() || (ball.velocity.isZero() && ball.position.flatten().magnitude() <= 0.5f)){
+                if (RegularKickoffManuver.isKickoff()) {
                     kickoffManuver = new RegularKickoffManuver();
                     state = State.KICKOFF;
+                    output.withThrottle(1);
+                    output.withBoost(true);
                 } else
                     state = State.INIT;
 
@@ -71,6 +84,9 @@ public class YangBot implements Bot {
                 kickoffManuver.step(dt, output);
                 if(kickoffManuver.isDone()){
                     state = State.INIT;
+                    System.out.println("Resetting to init after kickoff");
+                    GameStatePacket st = new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket();
+                    RLBotDll.setGameState(st);
                     currentPlan = new AfterKickoffStrategy();
                 }
 
@@ -78,13 +94,9 @@ public class YangBot implements Bot {
             }
             case INIT:
             {
-                if(input.gameInfo.isKickoffPause())
-                    state = State.RESET;
-                else{
-                    state = State.RUN;
-                    if(currentPlan == null || currentPlan.isDone())
-                        currentPlan = new DefaultStrategy();
-                }
+                state = State.RUN;
+                if (currentPlan == null || currentPlan.isDone())
+                    currentPlan = new DefaultStrategy();
 
                 break;
             }
@@ -100,6 +112,9 @@ public class YangBot implements Bot {
                 break;
             }
         }
+
+        if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= DriveManuver.max_speed - 50)
+            output.withBoost(false);
 
         // Print Throttle info
         {
@@ -118,7 +133,6 @@ public class YangBot implements Bot {
      * This is a nice example of using the rendering feature.
      */
     private void drawDebugLines(DataPacket input, CarData myCar) {
-        // Here's an example of rendering debug data on the screen.
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
 
         renderer.drawString2d("BallP: "+input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
@@ -145,27 +159,25 @@ public class YangBot implements Bot {
 
     @Override
     public ControllerState processInput(GameTickPacket packet) {
-        if (packet.playersLength() <= playerIndex || packet.ball() == null) {
-            // Just return immediately if something looks wrong with the data. This helps us avoid stack traces.
+        if (packet.playersLength() <= playerIndex || packet.ball() == null)
             return new ControlsOutput();
-        }
+
         if(!packet.gameInfo().isRoundActive()){
-            if(packet.gameInfo().isKickoffPause())
-                state = State.KICKOFF;
-            return new ControlsOutput();
+            GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
+            state = State.RESET;
+            return new ControlsOutput().withThrottle(1).withBoost(true);
         }
+
+        if (GameData.timeOfMatchStart < 0)
+            GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
 
         AdvancedRenderer r = AdvancedRenderer.forBotLoop(this);
         r.startPacket();
 
-        // Update the boost manager and tile manager with the latest data
         BoostManager.loadGameTickPacket(packet);
 
-        // Translate the raw packet data (which is in an unpleasant format) into our custom DataPacket class.
-        // The DataPacket might not include everything from GameTickPacket, so improve it if you need to!
         DataPacket dataPacket = new DataPacket(packet, playerIndex);
 
-        // Do the actual logic using our dataPacket.
 
         //long ms = System.nanoTime();
         ControlsOutput controlsOutput = processInput(dataPacket);

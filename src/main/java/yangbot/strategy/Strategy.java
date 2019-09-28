@@ -17,6 +17,10 @@ public abstract class Strategy {
         this.isDone = isDone;
     }
 
+    public final void setDone() {
+        this.setDone(true);
+    }
+
     public final boolean isDone(){
         return isDone;
     }

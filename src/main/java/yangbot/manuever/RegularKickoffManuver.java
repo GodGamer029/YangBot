@@ -33,6 +33,14 @@ public class RegularKickoffManuver extends Manuver {
     @SuppressWarnings("WeakerAccess")
     public boolean doSecondFlip = true;
 
+    public static boolean isKickoff() {
+        GameData g = GameData.current();
+        BallData ball = g.getBallData();
+        if (g.getCarData().elapsedSeconds - GameData.timeOfMatchStart >= 3)
+            return false;
+        return (ball.velocity.flatten().isZero() && ball.position.flatten().isZero());
+    }
+
     @Override
     public boolean isViable() {
         return false;
@@ -44,6 +52,7 @@ public class RegularKickoffManuver extends Manuver {
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
+
         
         if(ball.position.flatten().magnitude() > 5){
             System.out.println("Kickoff done!" + ball.position.flatten().magnitude() + " : "+ball.position.flatten());
@@ -55,13 +64,14 @@ public class RegularKickoffManuver extends Manuver {
                 reachedTheBoost = false;
                 doingFlip = false;
                 int xPos = Math.abs(Math.round(car.position.x));
-                if(xPos == 2048)
+                if (xPos >= 2040 && xPos <= 2056)
                     kickOffLocation = KickOffLocation.CORNER;
-                else if(xPos == 256)
+                else if (xPos >= 250 && xPos <= 262)
                     kickOffLocation = KickOffLocation.MIDDLE;
                 else if(xPos == 0)
                     kickOffLocation = KickOffLocation.CENTER;
                 else{
+                    this.setIsDone(true);
                     // System.out.println("Couldnt determine kickoff location: "+car.position.toString()+" xPos: "+xPos);
                     return;
                 }
@@ -89,7 +99,7 @@ public class RegularKickoffManuver extends Manuver {
                         if(dodgeManuver.timer >= dodgeManuver.delay){
                             kickOffState = KickOffState.SECOND_FlIP;
                             dodgeManuver.step(dt, controlsOutput);
-                            dodgeManuver.timer = 0;
+                            dodgeManuver = new DodgeManuver();
                         }else
                             dodgeManuver.step(dt, controlsOutput);
 
@@ -97,7 +107,7 @@ public class RegularKickoffManuver extends Manuver {
                         if(car.forward().angle(new Vector3(0, -Math.signum(car.position.y), 0)) < Math.PI / 6){
                             System.out.println("Jumping with Angle: "+car.position);
                             doingFlip = true;
-                            dodgeManuver.duration = 0.05f;
+                            dodgeManuver.duration = 0.f;
                             dodgeManuver.delay = 0.10f;
                             dodgeManuver.target = new Vector3(0, car.position.y, car.position.z);
                             dodgeManuver.step(dt, controlsOutput);
@@ -143,7 +153,7 @@ public class RegularKickoffManuver extends Manuver {
                 else if(Math.abs(car.position.y) < 1000){
                     dodgeManuver.duration = 0.1f;
                     dodgeManuver.delay = 0.15f;
-                    dodgeManuver.direction = car.forward();
+                    dodgeManuver.direction = car.forward().flatten();
                     dodgeManuver.step(dt, controlsOutput);
                 }
 
@@ -154,13 +164,14 @@ public class RegularKickoffManuver extends Manuver {
                 if(car.boost > 13 && kickOffLocation == KickOffLocation.CORNER)
                     controlsOutput.withBoost(true);
 
-                if((car.hasWheelContact && Math.abs(car.position.x) < 1000) || dodgeManuver.timer > 0){
+                if ((car.hasWheelContact && (Math.abs(car.position.x) < 150 || Math.abs(car.position.x + car.velocity.x * dt) < 150)) || dodgeManuver.timer > 0) {
                     if(!doSecondFlip){
                         this.setIsDone(true);
                         this.kickOffState = KickOffState.INIT;
                         return;
                     }
 
+                    // TODO
                     Vector3 closestToBall = null;
                     float closestToBallDistance = (float) car.position.flatten().distance(ball.position.flatten()) * 2f;
                     for(CarData c : gameData.getAllCars()){
@@ -169,18 +180,22 @@ public class RegularKickoffManuver extends Manuver {
                         float dist = (float) c.position.flatten().distance(ball.position.flatten());
                         if(dist < closestToBallDistance){
                             closestToBallDistance = dist;
-                            closestToBall = c.position;
+                            closestToBall = c.position.add(c.velocity.mul(dt * 2));
                         }
-                    }
 
-                    dodgeManuver.duration = 0.1f;
-                    dodgeManuver.delay = 0.15f;
+                    }
+                    dodgeManuver.direction = ball.position.flatten().sub(car.position.add(car.velocity.mul(dt * MathUtils.clip(closestToBall == null ? 100 : 100 - Math.abs(closestToBall.sub(ball.position).x), 0, 100)).x, 0, 0).flatten()).normalized();
+
+                    dodgeManuver.duration = 0.02f;
+                    dodgeManuver.delay = 0.1f;
                     dodgeManuver.target = null;
-                    dodgeManuver.direction = new Vector3(MathUtils.clip(closestToBall == null ? 0 : closestToBall.sub(ball.position).flatten().x / 50, -1, 1), -Math.signum(car.position.y), 0).normalized();
+                    //dodgeManuver.direction = ball.position.flatten().sub(car.position.add(car.velocity.mul(dt * 100).x, 0 ,0).flatten()).normalized();
+
                     dodgeManuver.step(dt, controlsOutput);
+
                     if(dodgeManuver.timer >= dodgeManuver.delay){
                         turnManuver.target = Matrix3x3.lookAt(new Vector3(ball.position.add(ball.velocity.mul(dt * 3)).sub(car.position).flatten(), car.position.z).normalized(), new Vector3(0, 0, 1));
-                        turnManuver.step(dt, controlsOutput);
+                        //turnManuver.step(dt, controlsOutput);
                     }
                     if(dodgeManuver.isDone() || dodgeManuver.timer >= 1f){
                         this.setIsDone(true);
@@ -188,17 +203,27 @@ public class RegularKickoffManuver extends Manuver {
                     }
 
                 }else if(car.hasWheelContact){
-                    Vector3 target_local = ball.position.sub(car.position).dot(car.orientationMatrix);
+                    if (Math.abs(car.position.x + car.velocity.x * dt) < Math.abs(car.position.x) && Math.abs(car.position.x + car.velocity.x) > 200f) {
+                        controlsOutput.withSlide(true);
+                        controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ball.position.flatten().sub(car.position.flatten().withX(ball.position.x))));
+                    } else {
+                        Vector3 target_local = ball.position.sub(car.position).dot(car.orientationMatrix);
 
-                    float angle = (float) Math.atan2(target_local.y, target_local.x);
-                    controlsOutput.withSteer(3.0f * angle);
+                        float angle = (float) Math.atan2(target_local.y, target_local.x);
+                        controlsOutput.withSteer(3.0f * angle);
+                    }
+
+                    controlsOutput.withThrottle(1);
                 } else {
-                    if(kickOffLocation == KickOffLocation.CORNER)
-                        turnManuver.target = Matrix3x3.lookAt(new Vector3(-0.35f * Math.signum(car.position.x), -Math.signum(car.position.y), 0), new Vector3(0, 0, 1));
-                    else
-                        turnManuver.target = Matrix3x3.lookAt(new Vector3(0, -Math.signum(car.position.y), 0.3f).normalized(), new Vector3(0, 0, 1));
+                    if (turnManuver.target == null) {
+                        if (kickOffLocation == KickOffLocation.CORNER)
+                            turnManuver.target = Matrix3x3.lookAt(new Vector3(-0.18f * Math.signum(car.position.x), -Math.signum(car.position.y), 0), new Vector3(0, 0, 1));
+                        else
+                            turnManuver.target = Matrix3x3.lookAt(new Vector3(0, -Math.signum(car.position.y), 0.3f).normalized(), new Vector3(0, 0, 1));
+                    }
 
                     turnManuver.step(dt, controlsOutput);
+                    controlsOutput.withSlide(true);
                     controlsOutput.withJump(false);
                 }
 

@@ -149,6 +149,22 @@ public class Vector2 {
         return Math.atan2(y, x);
     }
 
+    public Vector2 withX(float x) {
+        return new Vector2(x, y);
+    }
+
+    public Vector2 withY(float y) {
+        return new Vector2(x, y);
+    }
+
+    public Vector3 withZ(float z) {
+        return new Vector3(x, y, z);
+    }
+
+    public Vector2 swap() {
+        return new Vector2(y, x);
+    }
+
     @Override
     public String toString() {
         return this.getClass().getSimpleName()+String.format("(x=%.1f;y=%.1f)", x, y);

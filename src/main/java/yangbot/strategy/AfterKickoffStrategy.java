@@ -6,11 +6,9 @@ import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
-import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
-import java.awt.*;
 import java.util.Optional;
 
 public class AfterKickoffStrategy extends Strategy {
@@ -57,12 +55,7 @@ public class AfterKickoffStrategy extends Strategy {
 
     @Override
     public void stepInternal(float dt, ControlsOutput controlsOutput) {
-        AdvancedRenderer rend = new AdvancedRenderer(9384);
-        rend.startPacket();
-
-        rend.drawString2d("Kickoff: "+kickoffQuality.name(), Color.WHITE, new Point(10, 510), 1, 1);
-
-        rend.finishAndSendIfDifferent();
+        this.setDone();
     }
 
     @Override

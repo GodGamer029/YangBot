@@ -29,7 +29,7 @@ public class DodgeManuver extends Manuver {
     public float timer = 0;
     public float delay = -1;
     public Vector3 target = null;
-    public Vector3 direction = null;
+    public Vector2 direction = null;
     public Vector2 controllerInput = null;
 
     @Override
@@ -72,7 +72,7 @@ public class DodgeManuver extends Manuver {
                         .dot(car.orientationDodge);
 
             if(target == null && direction != null)
-                direction_local = direction.normalized().flatten().dot(car.orientationDodge);
+                direction_local = direction.normalized().dot(car.orientationDodge);
 
             if(direction_local.magnitude() > 0.0f){
                 float vf = (float) car.velocity.dot(car.forward());
@@ -92,6 +92,9 @@ public class DodgeManuver extends Manuver {
                 controlsOutput.withRoll(0);
                 controlsOutput.withPitch(-direction_local.x);
                 controlsOutput.withYaw(direction_local.y);
+
+                System.out.println("Pitch: " + -direction_local.x);
+                System.out.println("Yaw: " + direction_local.y);
 
             }else if(controllerInput != null && !controllerInput.isZero()){
                 controlsOutput.withRoll(0);

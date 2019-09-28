@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class GameData {
 
+    public static float timeOfMatchStart = -1f;
+
     private static Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
 
     protected CarData carData = null;

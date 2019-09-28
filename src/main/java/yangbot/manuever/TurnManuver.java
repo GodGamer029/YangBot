@@ -10,7 +10,7 @@ import yangbot.vector.Vector3;
 public class TurnManuver extends Manuver {
 
     public ControlsOutput controls = new ControlsOutput();
-    public Matrix3x3 target;
+    public Matrix3x3 target = null;
 
     private Vector3 omega = new Vector3();
     private Vector3 omega_local = new Vector3();

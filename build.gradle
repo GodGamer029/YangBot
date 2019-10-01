@@ -15,12 +15,11 @@ mainClassName = 'yangbot.MainClass'
 // This directory will be created and the interface dll copied into it at runtime.
 // The end result is that the interface dll will be available for loading.
 def dllDirectory = 'build/dll'
-applicationDefaultJvmArgs = ["-Djna.library.path=" + dllDirectory, "-Xms256m", "-Xmx1024m"]
+applicationDefaultJvmArgs = ["-Djna.library.path=" + dllDirectory, "-Xms256m", "-Xmx1524m"]
 
 dependencies {
     // Fetch the framework jar file
     compile 'org.rlbot.commons:framework:1.+'
-
     // This is makes it easy to find the dll when running in intellij, where JVM args don't get passed from gradle.
     runtime files(dllDirectory)
 }

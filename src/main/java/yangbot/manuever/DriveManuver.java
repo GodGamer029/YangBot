@@ -2,6 +2,7 @@ package yangbot.manuever;
 
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.input.RLConstants;
 import yangbot.util.ControlsOutput;
 import yangbot.util.MathUtils;
 import yangbot.vector.Vector3;
@@ -22,6 +23,30 @@ public class DriveManuver extends Manuver {
     @Override
     public boolean isViable() {
         return false;
+    }
+
+    public static float maxDistance(float currentSpeed, float time) {
+        final float drivingSpeed = RLConstants.tickRate <= 60 ? 1238.3954f : 1235.0f;
+
+        if (time <= 0)
+            return 0;
+
+        float newSpeed = currentSpeed;
+        float dist = 0;
+        final float dt = 1f / 60f;
+
+        for (float t = 0; t < time; t += dt) {
+            float force = 0;
+            {
+                if (newSpeed < drivingSpeed)
+                    force = DriveManuver.max_speed - newSpeed;
+                else if (newSpeed < DriveManuver.max_speed)
+                    force = AerialManuver.boost_accel;
+            }
+            newSpeed += force * dt;
+            dist += newSpeed * dt;
+        }
+        return dist;
     }
 
     public static float maxTurningSpeed(float curvature){
@@ -101,7 +126,6 @@ public class DriveManuver extends Manuver {
             output.withThrottle(1.0f);
             output.withBoost(true);
         }
-
     }
 
     @Override

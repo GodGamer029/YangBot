@@ -10,7 +10,11 @@ public class YangPythonInterface extends SocketServer {
         super(port, botManager);
     }
 
+    @Override
     protected Bot initBot(int index, String botType, int team) {
-        return new YangBot(index);
+        if (MainClass.useTestBot)
+            return new TestBot(index);
+        else
+            return new YangBot(index);
     }
 }

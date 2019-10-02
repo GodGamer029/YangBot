@@ -156,9 +156,13 @@ public class YangBot implements Bot {
 
         DataPacket dataPacket = new DataPacket(packet, playerIndex);
 
-
+        ControlsOutput controlsOutput = new ControlsOutput();
         //long ms = System.nanoTime();
-        ControlsOutput controlsOutput = processInput(dataPacket);
+        try {
+            controlsOutput = processInput(dataPacket);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         /*realCount++;
         if(realCount >= 100){
             all += ((System.nanoTime() - ms) / 1000000f);

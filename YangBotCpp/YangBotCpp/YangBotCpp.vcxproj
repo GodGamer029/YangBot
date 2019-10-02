@@ -108,6 +108,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>rlutilities.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -125,6 +127,8 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalDependencies>rlutilities.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -147,6 +151,8 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalDependencies>rlutilities.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -168,15 +174,72 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalDependencies>rlutilities.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\base.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\code_generators.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\flatbuffers.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\flatc.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\flexbuffers.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\grpc.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\hash.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\idl.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\minireflect.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\reflection.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\reflection_generated.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\registry.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\stl_emulation.h" />
+    <ClInclude Include="rlu_headers\flatbuffers\util.h" />
+    <ClInclude Include="rlu_headers\linear_algebra\mat.h" />
+    <ClInclude Include="rlu_headers\linear_algebra\math.h" />
+    <ClInclude Include="rlu_headers\linear_algebra\vec.h" />
+    <ClInclude Include="rlu_headers\mechanics\aerial.h" />
+    <ClInclude Include="rlu_headers\mechanics\aerial_turn.h" />
+    <ClInclude Include="rlu_headers\mechanics\boostdash.h" />
+    <ClInclude Include="rlu_headers\mechanics\dodge.h" />
+    <ClInclude Include="rlu_headers\mechanics\drive.h" />
+    <ClInclude Include="rlu_headers\mechanics\drive_path.h" />
+    <ClInclude Include="rlu_headers\mechanics\follow_path.h" />
+    <ClInclude Include="rlu_headers\mechanics\jump.h" />
+    <ClInclude Include="rlu_headers\mechanics\orientation.h" />
+    <ClInclude Include="rlu_headers\mechanics\slide.h" />
+    <ClInclude Include="rlu_headers\mechanics\wavedash.h" />
+    <ClInclude Include="rlu_headers\misc\convert.h" />
+    <ClInclude Include="rlu_headers\misc\graph.h" />
+    <ClInclude Include="rlu_headers\misc\io.h" />
+    <ClInclude Include="rlu_headers\misc\json.h" />
+    <ClInclude Include="rlu_headers\misc\read_binary.h" />
+    <ClInclude Include="rlu_headers\misc\resource.h" />
+    <ClInclude Include="rlu_headers\misc\timer.h" />
+    <ClInclude Include="rlu_headers\simulation\ball.h" />
+    <ClInclude Include="rlu_headers\simulation\bezier.h" />
+    <ClInclude Include="rlu_headers\simulation\bit_packing.h" />
+    <ClInclude Include="rlu_headers\simulation\bvh.h" />
+    <ClInclude Include="rlu_headers\simulation\car.h" />
+    <ClInclude Include="rlu_headers\simulation\circles.h" />
+    <ClInclude Include="rlu_headers\simulation\composite_arc.h" />
+    <ClInclude Include="rlu_headers\simulation\curve.h" />
+    <ClInclude Include="rlu_headers\simulation\field.h" />
+    <ClInclude Include="rlu_headers\simulation\game.h" />
+    <ClInclude Include="rlu_headers\simulation\geometry.h" />
+    <ClInclude Include="rlu_headers\simulation\goal.h" />
+    <ClInclude Include="rlu_headers\simulation\input.h" />
+    <ClInclude Include="rlu_headers\simulation\mesh.h" />
+    <ClInclude Include="rlu_headers\simulation\morton.h" />
+    <ClInclude Include="rlu_headers\simulation\navigator.h" />
+    <ClInclude Include="rlu_headers\simulation\ogh.h" />
+    <ClInclude Include="rlu_headers\simulation\pad.h" />
+    <ClInclude Include="rlu_headers\simulation\path.h" />
+    <ClInclude Include="rlu_headers\simulation\path_planner.h" />
     <ClInclude Include="yangbot_defs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="yangbot_defs.c" />
+    <ClCompile Include="yangbot_defs.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

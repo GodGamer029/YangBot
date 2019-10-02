@@ -15,6 +15,9 @@ extern "C" {
 	JNIEXPORT jfloat JNICALL Java_yangbot_cpp_YangBotCppInterop_hello
 	(JNIEnv*, jclass);
 
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep
+	(JNIEnv*, jclass, jobject, jobject);
+
 #ifdef __cplusplus
 }
 #endif

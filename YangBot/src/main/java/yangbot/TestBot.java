@@ -2,9 +2,9 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
-import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
+import yangbot.cpp.YangBotCppInterop;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.DataPacket;
@@ -38,6 +38,8 @@ public class TestBot implements Bot {
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
     }
+
+    private long runner = 0;
 
     private ControlsOutput processInput(DataPacket input) {
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 0f);
@@ -74,7 +76,7 @@ public class TestBot implements Bot {
                                 .withVelocity(new DesiredVector3(0f, 0f, 0f))
                                 .withRotation(new DesiredRotation(0f, 0f, 0f))
                         ));
-                RLBotDll.setGameState(st.buildPacket());
+                //RLBotDll.setGameState(st.buildPacket());
                 state = State.INIT;
                 break;
             }
@@ -90,7 +92,7 @@ public class TestBot implements Bot {
             }
             case RUN: {
                 // Capture data
-                speedMap.put(timer, (float) car.position.distance(startPos));
+                /*speedMap.put(timer, (float) car.position.distance(startPos));
                 if (timer < testDuration) {
                     output.withThrottle(-1);
                     output.withBoost(true);
@@ -105,8 +107,26 @@ public class TestBot implements Bot {
                     System.out.println("Start Pos: " + startPos);
                     System.out.println("End Pos: " + endPos);
                     System.out.println("Dist: " + startPos.distance(endPos));
+                }*/
+
+                long ns = System.nanoTime();
+                float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity);
+                runner = ((runner * 59) + (System.nanoTime() - ns)) / 60;
+                System.out.println("and it took: " + runner);
+                Vector3[] positions = new Vector3[data.length / 3];
+
+                for (int i = 0; i < positions.length; i++) {
+                    positions[i] = new Vector3(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2]);
                 }
 
+                Vector3 lastPos = positions[0];
+                for (int i = 0; i < positions.length; i++) {
+                    if (lastPos.distance(positions[i]) >= 50) {
+                        renderer.drawLine3d(Color.RED, lastPos, positions[i]);
+                        lastPos = positions[i];
+                    }
+
+                }
 
                 break;
             }

@@ -21,12 +21,177 @@
     <ClInclude Include="yangbot_defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\ball.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\bezier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\bit_packing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\bvh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\car.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\circles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\composite_arc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\field.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\geometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\goal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\morton.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\navigator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\ogh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\pad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\simulation\path_planner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\convert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\graph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\json.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\read_binary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\code_generators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\flatbuffers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\flatc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\flexbuffers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\grpc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\idl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\minireflect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\reflection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\reflection_generated.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\registry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\stl_emulation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\flatbuffers\util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\linear_algebra\mat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\linear_algebra\math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\linear_algebra\vec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\aerial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\aerial_turn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\boostdash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\dodge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\drive.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\drive_path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\follow_path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\jump.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\orientation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\slide.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\mechanics\wavedash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="yangbot_defs.c">
+    <ClCompile Include="yangbot_defs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

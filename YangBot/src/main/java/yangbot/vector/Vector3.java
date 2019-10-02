@@ -170,6 +170,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return new Vector3(tx, ty, tz);
     }
 
+    public float[] getContents() {
+        return new float[]{x, y, z};
+    }
+
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + String.format("(x=%.2f;y=%.2f;z=%.2f)", x, y, z);

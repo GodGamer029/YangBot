@@ -33,6 +33,7 @@ public class YangBot implements Bot {
     private float lastTick = -1;
     private RegularKickoffManuver kickoffManuver = null;
     private Strategy currentPlan = null;
+    private boolean hasSetPriority = false;
 
     public YangBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -131,6 +132,11 @@ public class YangBot implements Bot {
 
     @Override
     public ControllerState processInput(GameTickPacket packet) {
+        if (!hasSetPriority) {
+            hasSetPriority = true;
+            Thread.currentThread().setPriority(10);
+        }
+
         if (packet.playersLength() <= playerIndex || packet.ball() == null)
             return new ControlsOutput();
 

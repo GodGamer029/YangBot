@@ -33,6 +33,7 @@ public class TestBot implements Bot {
     private float lastTick = -1;
     private Vector3 startPos = new Vector3();
     private Map<Float, Float> speedMap = new LinkedHashMap<>();
+    private boolean hasSetPriority = false;
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -145,6 +146,11 @@ public class TestBot implements Bot {
 
     @Override
     public ControllerState processInput(GameTickPacket packet) {
+        if (!hasSetPriority) {
+            hasSetPriority = true;
+            Thread.currentThread().setPriority(10);
+        }
+
         if (packet.playersLength() <= playerIndex || packet.ball() == null)
             return new ControlsOutput();
 

@@ -34,6 +34,7 @@ public class Navigator {
     public static void initStatics(int[] parameters, float[] times, int[] paths, Graph.Edge[] edges, Vector3[] nav_nodes, Vector3[] nav_normals) {
         navigationGraph = new Graph(edges);
 
+
         navigationNodes = nav_nodes;
         navigationNormals = nav_normals;
 

@@ -12,33 +12,42 @@ public class Graph {
     private float[] weights;
 
     public Graph(Edge[] edges) {
-        Edge[] sortedEdges = new Edge[edges.length];
-        System.arraycopy(edges, 0, sortedEdges, 0, edges.length);
+        try {
+            Edge[] sortedEdges = new Edge[edges.length];
+            Thread.sleep(0);
+            System.arraycopy(edges, 0, sortedEdges, 0, edges.length);
+            Thread.sleep(0);
 
-        Arrays.sort(sortedEdges, (i, j) -> {
-            if (i.src == j.src && i.dst == j.dst && i.weight == j.weight)
-                return 0;
-            return ((i.src < j.src) || ((i.src == j.src) && (i.dst < j.dst))) ? -1 : 1;
-        });
+            Arrays.sort(sortedEdges, (i, j) -> {
+                if (i.src == j.src && i.dst == j.dst && i.weight == j.weight)
+                    return 0;
+                return ((i.src < j.src) || ((i.src == j.src) && (i.dst < j.dst))) ? -1 : 1;
+            });
+            Thread.sleep(0);
 
-        numEdges = sortedEdges.length;
-        numVertices = sortedEdges[sortedEdges.length - 1].src + 1;
-        if (sortedEdges[0].src > numVertices - 1) {
-            throw new RuntimeException("WRONG SORT " + sortedEdges[0].src + " > " + (numVertices - 1));
-        }
+            numEdges = sortedEdges.length;
+            numVertices = sortedEdges[sortedEdges.length - 1].src + 1;
+            if (sortedEdges[0].src > numVertices - 1) {
+                throw new RuntimeException("WRONG SORT " + sortedEdges[0].src + " > " + (numVertices - 1));
+            }
 
-        offsets = new int[numVertices + 1];
-        destinations = new int[numEdges];
-        weights = new float[numEdges];
+            offsets = new int[numVertices + 1];
+            destinations = new int[numEdges];
+            weights = new float[numEdges];
 
-        for (int e = 0; e < numEdges; e++) {
-            offsets[sortedEdges[e].src + 1]++;
-            destinations[e] = sortedEdges[e].dst;
-            weights[e] = sortedEdges[e].weight;
-        }
+            for (int e = 0; e < numEdges; e++) {
+                offsets[sortedEdges[e].src + 1]++;
+                destinations[e] = sortedEdges[e].dst;
+                weights[e] = sortedEdges[e].weight;
+            }
+            Thread.sleep(0);
 
-        for (int i = 0; i < numVertices; i++) {
-            offsets[i + 1] += offsets[i];
+            for (int i = 0; i < numVertices; i++) {
+                offsets[i + 1] += offsets[i];
+            }
+            Thread.sleep(0);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
     }

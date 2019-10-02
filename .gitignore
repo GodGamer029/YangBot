@@ -362,4 +362,3 @@ MigrationBackup/
 .ionide/
 
 *.exp
-*.lib

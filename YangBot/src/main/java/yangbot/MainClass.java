@@ -1,6 +1,7 @@
 package yangbot;
 
 import rlbot.manager.BotManager;
+import yangbot.cpp.YangBotCppInterop;
 import yangbot.prediction.Navigator;
 import yangbot.util.Graph;
 import yangbot.util.LEDataInputStream;
@@ -106,6 +107,9 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
+        System.out.println("Going over to cpp");
+
+        System.out.println("Back here: " + YangBotCppInterop.hello());
         lazyLoadNavigator();
         BotManager botManager = new BotManager();
         Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {

@@ -21,18 +21,18 @@ private:
 };
 
 
-class OrientationController {
+class ReorientML {
 
 public:
   Car & car;
 
-  mat3 target;
+  mat3 target_orientation;
   float eps_phi;
 
   bool finished;
   Input controls;
 
-  explicit OrientationController(Car & c);
+  explicit ReorientML(Car & c);
 
   void step(float dt);
 

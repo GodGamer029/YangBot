@@ -5,12 +5,12 @@
 
 #include "linear_algebra/math.h"
 
-class AerialTurn {
+class Reorient {
 
  public:
   Car & car;
 
-  mat3 target;
+  mat3 target_orientation;
   float eps_phi;
   float eps_omega;
   float horizon_time;
@@ -20,7 +20,7 @@ class AerialTurn {
 
   vec3 alpha;
 
-  AerialTurn(Car & c);
+  Reorient(Car & c);
 
   void step(float dt);
 
@@ -39,7 +39,7 @@ class AerialTurn {
   mat3 Z0;
   mat3 theta;
 
-  mat3 target_prev;
+  mat3 target_orientation_prev;
 
   mat3 Z(const vec3 & q);
   vec3 G(const vec3 & q, const vec3 & dq_dt);

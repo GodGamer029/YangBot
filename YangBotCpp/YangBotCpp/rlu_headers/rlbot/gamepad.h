@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Xinput.h>
+#include <windows.h>
+#include <xinput.h>
 
 #include "simulation/input.h"
 

@@ -1,6 +1,7 @@
 package yangbot.input;
 
 
+import rlbot.flat.BoxShape;
 import rlbot.flat.Physics;
 import rlbot.flat.Rotator;
 import yangbot.manuever.AerialManuver;
@@ -69,6 +70,7 @@ public class CarData {
     private Vector3 gravity1 = new Vector3(0, 0, -650);
     private Vector2 dodgeDir;
     private Vector3 dodgeTorque;
+    public final BoxShape hitbox;
 
     public CarData(rlbot.flat.PlayerInfo playerInfo, float elapsedSeconds) {
         this.position = new Vector3(playerInfo.physics().location());
@@ -84,6 +86,7 @@ public class CarData {
         this.elapsedSeconds = elapsedSeconds;
         this.physics = playerInfo.physics();
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
+        this.hitbox = playerInfo.hitbox();
     }
 
     @SuppressWarnings("CopyConstructorMissesField")
@@ -100,6 +103,7 @@ public class CarData {
         this.elapsedSeconds = o.elapsedSeconds;
         this.physics = null;
         this.angularVelocity = new Vector3(o.angularVelocity);
+        this.hitbox = o.hitbox;
     }
 
     public Vector3 up() {

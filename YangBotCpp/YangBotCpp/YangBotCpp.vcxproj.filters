@@ -186,6 +186,18 @@
     <ClInclude Include="rlu_headers\mechanics\wavedash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rlu_headers\misc\interpolation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\logging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\random.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlu_headers\misc\rlu_dll.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

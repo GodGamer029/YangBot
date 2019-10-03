@@ -20,10 +20,7 @@ enum class UpdateStatus { InvalidData, OldData, NewData };
 
 class Game {
  public:
-  Game(int, int);
-
-  int id;
-  int team;
+  Game();
 
   int frame;
   int frame_delta;
@@ -43,15 +40,11 @@ class Game {
   static std::string map;
   static std::string mode;
 
-  Car *my_car;
-
   Ball ball;
 
   std::array<Car, 8> cars;
 
   std::vector<Pad> pads;
-
-  //  void log(std::string);
 
   static void set_mode(std::string);
 
@@ -67,9 +60,4 @@ class Game {
                               const rlbot::flat::FieldInfo *fieldInfo);
 #endif
 
- private:
-  //  std::ofstream logfile;
-  //  std::string log_filename;
-
-  std::array<float, 16> delta_history;
 };

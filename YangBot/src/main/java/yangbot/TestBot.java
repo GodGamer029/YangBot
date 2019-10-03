@@ -2,6 +2,7 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
+import rlbot.flat.BoxShape;
 import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
 import yangbot.cpp.YangBotCppInterop;
@@ -147,9 +148,43 @@ public class TestBot implements Bot {
                     Vector3 direction = new Vector3(data[3], data[4], data[5]);
                     float simulationTime = data[6];
 
-                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
-                    renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                    renderer.drawCentered3dCube(Color.GREEN, start, 200);
+                    //renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
+                    //renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+                    //renderer.drawCentered3dCube(Color.GREEN, start, 200);
+
+                }
+
+                {
+                    BoxShape hitbox = controlCar.hitbox;
+
+                    Color c = Color.RED;
+                    Vector3 p = controlCar.position;
+                    Vector3 hitboxOffset = new Vector3(13.88f, 0f, 20.75f);
+
+                    Vector3 f = controlCar.forward();
+                    Vector3 u = controlCar.up();
+                    Vector3 r = controlCar.left();
+
+                    p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
+
+                    Vector3 fL = f.mul(hitbox.length() / 2);
+                    Vector3 rW = r.mul(hitbox.width() / 2);
+                    Vector3 uH = u.mul(hitbox.height() / 2);
+
+                    renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
+                    renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
+                    renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).add(uH).sub(rW));
+                    renderer.drawLine3d(c, p.sub(fL).sub(uH).add(rW), p.sub(fL).sub(uH).sub(rW));
+
+                    renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.sub(fL).add(uH).add(rW));
+                    renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.sub(fL).sub(uH).add(rW));
+                    renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.sub(fL).add(uH).sub(rW));
+                    renderer.drawLine3d(c, p.add(fL).sub(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
+
+                    renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).sub(uH).add(rW));
+                    renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).sub(uH).add(rW));
+                    renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.add(fL).sub(uH).sub(rW));
+                    renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
 
                 }
 

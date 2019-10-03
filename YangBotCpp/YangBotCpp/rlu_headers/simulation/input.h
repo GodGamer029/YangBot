@@ -20,6 +20,6 @@ struct Input {
     jump = false;
     boost = false;
     handbrake = false;
-	useItem = false;
+	  useItem = false;
   }
 };

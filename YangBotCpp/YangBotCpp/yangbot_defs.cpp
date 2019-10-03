@@ -13,20 +13,19 @@ std::mutex initLock;
 
 JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceCollision(JNIEnv* env, jclass thisObj, jobject pos, jfloat sphereSize) {
 	if (!init)
-		return  env->NewFloatArray(0);
+		return env->NewFloatArray(0);
 
 	static jclass jvec3 = env->FindClass("yangbot/vector/Vector3");
-	static jmethodID jvec3_getContents = env->GetMethodID(jvec3, "get", "(I)F");
+	static jmethodID jvec3_get = env->GetMethodID(jvec3, "get", "(I)F");
 
-	vec3 position = { env->CallFloatMethod(pos, jvec3_getContents, 0), env->CallFloatMethod(pos, jvec3_getContents, 1), env->CallFloatMethod(pos, jvec3_getContents, 2) };
+	vec3 position = { env->CallFloatMethod(pos, jvec3_get, 0), env->CallFloatMethod(pos, jvec3_get, 1), env->CallFloatMethod(pos, jvec3_get, 2) };
 	
 	ray contact = Field::collide(sphere{ position, sphereSize });
-	ray* contactPtr = &contact;
 
 	jfloatArray output = env->NewFloatArray(3 * 2);
 	if (output == NULL)
 		return NULL;
-	env->SetFloatArrayRegion(output, 0, 3 * 2, reinterpret_cast<float*>(contactPtr));
+	env->SetFloatArrayRegion(output, 0, 3 * 2, reinterpret_cast<float*>(&contact));
 	return output;
 }
 
@@ -110,35 +109,25 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv
 		return env->NewFloatArray(0);
 	
 	static jclass jvec3 = env->FindClass("yangbot/vector/Vector3");
-	static jmethodID jvec3_getContents = env->GetMethodID(jvec3, "get", "(I)F");
+	static jmethodID jvec3_get = env->GetMethodID(jvec3, "get", "(I)F");
 
-	vec3 position;
-	position[0] = env->CallFloatMethod(pos, jvec3_getContents, 0);
-	position[1] = env->CallFloatMethod(pos, jvec3_getContents, 1);
-	position[2] = env->CallFloatMethod(pos, jvec3_getContents, 2);
+	vec3 position = { env->CallFloatMethod(pos, jvec3_get, 0), env->CallFloatMethod(pos, jvec3_get, 1), env->CallFloatMethod(pos, jvec3_get, 2) };
+	vec3 velocity = { env->CallFloatMethod(vel, jvec3_get, 0), env->CallFloatMethod(vel, jvec3_get, 1), env->CallFloatMethod(vel, jvec3_get, 2) };
+	vec3 angular  = { env->CallFloatMethod(ang, jvec3_get, 0), env->CallFloatMethod(ang, jvec3_get, 1), env->CallFloatMethod(ang, jvec3_get, 2) };
 
-	vec3 velocity;
-	velocity[0] = env->CallFloatMethod(vel, jvec3_getContents, 0);
-	velocity[1] = env->CallFloatMethod(vel, jvec3_getContents, 1);
-	velocity[2] = env->CallFloatMethod(vel, jvec3_getContents, 2);
-
-	vec3 angular;
-	angular[0] = env->CallFloatMethod(ang, jvec3_getContents, 0);
-	angular[1] = env->CallFloatMethod(ang, jvec3_getContents, 1);
-	angular[2] = env->CallFloatMethod(ang, jvec3_getContents, 2);
 
 	Ball ball = Ball();
-	ball.x = position;
-	ball.v = velocity;
-	ball.w = angular;
+	ball.position = position;
+	ball.velocity = velocity;
+	ball.angular_velocity = angular;
 
 	jfloat simulationResults[3 * (simulationSteps) + 1];
 
 	for (int i = 0; i < simulationSteps; i++) {
 		ball.step(simulationRate);
-		simulationResults[i * 3 + 0] = ball.x[0];
-		simulationResults[i * 3 + 1] = ball.x[1];
-		simulationResults[i * 3 + 2] = ball.x[2];
+		simulationResults[i * 3 + 0] = ball.position[0];
+		simulationResults[i * 3 + 1] = ball.position[1];
+		simulationResults[i * 3 + 2] = ball.position[2];
 	}
 
 	jfloatArray output = env->NewFloatArray(3 * (simulationSteps));

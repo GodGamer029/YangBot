@@ -51,7 +51,9 @@ public class TestBot implements Bot {
         BallData ball = input.ball;
         GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt);
 
-        drawDebugLines(input, car);
+        CarData controlCar = input.allCars.stream().filter((c) -> c.team != car.team).findFirst().orElse(car);
+
+        drawDebugLines(input, controlCar);
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         ControlsOutput output = new ControlsOutput();
 
@@ -109,24 +111,36 @@ public class TestBot implements Bot {
                     System.out.println("Dist: " + startPos.distance(endPos));
                 }*/
 
-                long ns = System.nanoTime();
                 float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity);
-                runner = ((runner * 59) + (System.nanoTime() - ns)) / 60;
-                System.out.println("and it took: " + runner);
-                Vector3[] positions = new Vector3[data.length / 3];
+                if (data != null) {
+                    Vector3[] positions = new Vector3[data.length / 3];
 
-                for (int i = 0; i < positions.length; i++) {
-                    positions[i] = new Vector3(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2]);
-                }
-
-                Vector3 lastPos = positions[0];
-                for (int i = 0; i < positions.length; i++) {
-                    if (lastPos.distance(positions[i]) >= 50) {
-                        renderer.drawLine3d(Color.RED, lastPos, positions[i]);
-                        lastPos = positions[i];
+                    for (int i = 0; i < positions.length; i++) {
+                        positions[i] = new Vector3(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2]);
                     }
 
+                    Vector3 lastPos = positions[0];
+                    for (int i = 0; i < positions.length; i++) {
+                        if (lastPos.distance(positions[i]) >= 50) {
+                            renderer.drawLine3d(Color.RED, lastPos, positions[i]);
+                            lastPos = positions[i];
+                        }
+
+                    }
                 }
+
+                data = YangBotCppInterop.getSurfaceCollision(controlCar.position, 60);
+                if (data != null) {
+                    Vector3 start = new Vector3(data[0], data[1], data[2]);
+                    Vector3 direction = new Vector3(data[3], data[4], data[5]);
+
+                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
+                    if (direction.magnitude() > 0) {
+                        renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+                        renderer.drawCentered3dCube(Color.GREEN, start, 100);
+                    }
+                }
+
 
                 break;
             }

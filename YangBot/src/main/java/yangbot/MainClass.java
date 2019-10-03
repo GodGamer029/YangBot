@@ -1,6 +1,9 @@
 package yangbot;
 
+import rlbot.cppinterop.RLBotDll;
+import rlbot.flat.MatchSettings;
 import rlbot.manager.BotManager;
+import yangbot.cpp.YangBotCppInterop;
 import yangbot.prediction.Navigator;
 import yangbot.util.Graph;
 import yangbot.util.LEDataInputStream;
@@ -106,7 +109,8 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
-        lazyLoadNavigator();
+        // TODO: use java navigator as fallback for RLU
+        //lazyLoadNavigator();
         BotManager botManager = new BotManager();
         Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
             System.out.println("Could not read port from args, using default!");
@@ -141,7 +145,7 @@ public class MainClass {
         frame.pack();
         frame.setVisible(true);
 
-        ActionListener myListener = e -> {
+        ActionListener botIndexListener = e -> {
             Set<Integer> runningBotIndices = botManager.getRunningBotIndices();
 
             String botsStr;
@@ -156,8 +160,18 @@ public class MainClass {
             botsRunning.setText("Bots indices running: " + botsStr);
         };
 
-        new Timer(1000, myListener).start();
+        ActionListener mapSettingsListener = f -> {
+            try {
+                if (botManager.getRunningBotIndices().size() <= 0)
+                    return;
+                MatchSettings matchSettings = RLBotDll.getMatchSettings();
+                YangBotCppInterop.init(matchSettings.gameMode(), matchSettings.gameMap());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        };
 
-
+        new Timer(1000, botIndexListener).start();
+        new Timer(1000, mapSettingsListener).start();
     }
 }

@@ -45,5 +45,8 @@ public class YangBotCppInterop {
     }
 
     public static native float[] ballstep(Vector3 pos, Vector3 vel);
-    public static native float hello();
+
+    public static native void init(byte mode, byte map);
+
+    public static native float[] getSurfaceCollision(Vector3 pos, float sphereSize);
 }

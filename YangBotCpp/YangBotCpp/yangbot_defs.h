@@ -7,16 +7,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	/*
-	 * Class:     yangbot_cpp_YangBotCppInterop
-	 * Method:    hello
-	 * Signature: ()V
-	 */
-	JNIEXPORT jfloat JNICALL Java_yangbot_cpp_YangBotCppInterop_hello
-	(JNIEnv*, jclass);
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceCollision(JNIEnv*, jclass, jobject, jfloat);
 
-	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep
-	(JNIEnv*, jclass, jobject, jobject);
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv*, jclass, jobject, jobject);
+
+	JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv*, jclass, jbyte, jbyte);
 
 #ifdef __cplusplus
 }

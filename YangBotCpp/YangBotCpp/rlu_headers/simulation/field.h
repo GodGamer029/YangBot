@@ -3,8 +3,8 @@
 #include <vector>
 #include <string>
 
-#include "simulation/bvh.h"
-#include "simulation/geometry.h"
+#include "../simulation/bvh.h"
+#include "../simulation/geometry.h"
 
 class Field {
 

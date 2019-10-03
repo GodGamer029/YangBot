@@ -13,7 +13,7 @@ extern "C" {
 
 	JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv*, jclass, jbyte, jbyte);
 	
-	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel);
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jobject rot);
 
 #ifdef __cplusplus
 }

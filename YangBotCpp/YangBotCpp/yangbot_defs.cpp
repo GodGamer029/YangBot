@@ -61,7 +61,7 @@ JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv* env, jcla
 	initLock.unlock();
 }
 
-JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel) {
+JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jobject rot) {
 	constexpr float simulationRate = 1.f / 60.f;
 	constexpr float secondsSimulated = 3.f;
 	constexpr int simulationSteps = (int)(secondsSimulated / simulationRate);
@@ -73,31 +73,43 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarColl
 
 	vec3 position = { env->CallFloatMethod(pos, jvec3_get, 0), env->CallFloatMethod(pos, jvec3_get, 1), env->CallFloatMethod(pos, jvec3_get, 2) };
 	vec3 velocity = { env->CallFloatMethod(vel, jvec3_get, 0), env->CallFloatMethod(vel, jvec3_get, 1), env->CallFloatMethod(vel, jvec3_get, 2) };
+	vec3 angular = { env->CallFloatMethod(ang, jvec3_get, 0), env->CallFloatMethod(ang, jvec3_get, 1), env->CallFloatMethod(ang, jvec3_get, 2) };
+	vec3 rotate = { env->CallFloatMethod(rot, jvec3_get, 0), env->CallFloatMethod(rot, jvec3_get, 1), env->CallFloatMethod(rot, jvec3_get, 2) };
+
 	const vec3 g = { 0, 0, -650 };
 
 	ray contact;
 	float simulationTime = 0;
+	Car car = Car();
+	car.position = position;
+	car.velocity = velocity;
+	car.angular_velocity = angular;
+	car.orientation = euler_to_rotation(rotate);
+	car.on_ground = false;
+
 	for (int i = 0; i < simulationSteps; i++) {
 		simulationTime += simulationRate;
-		velocity += g * simulationRate;
-		position += velocity * simulationRate;
-		contact = Field::collide(sphere{ position, 60 });
+		car.step(Input(), simulationRate);
+		contact = Field::collide(sphere{ car.position, 60 });
 		if (norm(contact.direction) > 0.f) 
 			break;
 	}
 
 	if (norm(contact.direction) <= 0.f) {
-		contact = Field::collide(sphere{ position, 400 });
+		contact = Field::collide(sphere{ car.position, 400 });
 		if (norm(contact.direction) <= 0.f) {
 			return env->NewFloatArray(0);
 		}
 	}
 
-	jfloatArray output = env->NewFloatArray(2 * 3 + 1);
+	jfloatArray output = env->NewFloatArray(3 * 3 + 1);
 	if (output == NULL)
 		return NULL;
+	vec3 eul = rotation_to_euler(car.orientation);
+
 	env->SetFloatArrayRegion(output, 0, 2 * 3, reinterpret_cast<float*>(&contact));
-	env->SetFloatArrayRegion(output, 2 * 3, 1, &simulationTime);
+	env->SetFloatArrayRegion(output, 2 * 3, 3, reinterpret_cast<float*>(&eul));
+	env->SetFloatArrayRegion(output, 3 * 3, 1, &simulationTime);
 	return output;
 }
 

@@ -16,8 +16,9 @@ public class YangBotCppInterop {
             boolean is64Bit = System.getProperty("os.arch").contains("64");
 
             final String libName = is64Bit ? "YangBotCpp64.dll" : "YangBotCpp32.dll";
+            final String rluName = is64Bit ? "rlutilities64.dll" : "rlutilities32.dll";
             final URL lib = ClassLoader.getSystemClassLoader().getResource("cpp/" + libName);
-            final URL rlut = ClassLoader.getSystemClassLoader().getResource("cpp/rlutilities.dll");
+            final URL rlut = ClassLoader.getSystemClassLoader().getResource("cpp/" + rluName);
 
             final File tmpDir = Files.createTempDirectory("yangbot").toFile();
             tmpDir.deleteOnExit();

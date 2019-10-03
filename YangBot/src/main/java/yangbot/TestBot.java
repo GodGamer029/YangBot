@@ -13,6 +13,7 @@ import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
+import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
@@ -142,51 +143,54 @@ public class TestBot implements Bot {
                     }
                 }*/
 
-                data = YangBotCppInterop.simulateCarCollision(controlCar.position, controlCar.velocity);
+                data = YangBotCppInterop.simulateCarCollision(controlCar.position, controlCar.velocity, controlCar.angularVelocity, controlCar.orientationMatrix.toEuler());
                 if (data.length > 0) {
                     Vector3 start = new Vector3(data[0], data[1], data[2]);
                     Vector3 direction = new Vector3(data[3], data[4], data[5]);
-                    float simulationTime = data[6];
+                    Vector3 eulerOrient = new Vector3(data[6], data[7], data[8]);
+                    Matrix3x3 orientation = Matrix3x3.eulerToRotation(eulerOrient);
+                    float simulationTime = data[9];
 
-                    //renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
-                    //renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                    //renderer.drawCentered3dCube(Color.GREEN, start, 200);
+                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
+                    renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+                    renderer.drawCentered3dCube(Color.GREEN, start, 200);
 
+                    {
+                        BoxShape hitbox = controlCar.hitbox;
+
+                        Color c = Color.RED;
+                        Vector3 p = start;
+                        Vector3 hitboxOffset = new Vector3(13.88f, 0f, 20.75f);
+
+                        Vector3 f = orientation.forward();
+                        Vector3 u = orientation.up();
+                        Vector3 r = orientation.left();
+
+                        p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
+
+                        Vector3 fL = f.mul(hitbox.length() / 2);
+                        Vector3 rW = r.mul(hitbox.width() / 2);
+                        Vector3 uH = u.mul(hitbox.height() / 2);
+
+                        renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
+                        renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
+                        renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).add(uH).sub(rW));
+                        renderer.drawLine3d(c, p.sub(fL).sub(uH).add(rW), p.sub(fL).sub(uH).sub(rW));
+
+                        renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.sub(fL).add(uH).add(rW));
+                        renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.sub(fL).sub(uH).add(rW));
+                        renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.sub(fL).add(uH).sub(rW));
+                        renderer.drawLine3d(c, p.add(fL).sub(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
+
+                        renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).sub(uH).add(rW));
+                        renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).sub(uH).add(rW));
+                        renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.add(fL).sub(uH).sub(rW));
+                        renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
+
+                    }
                 }
 
-                {
-                    BoxShape hitbox = controlCar.hitbox;
 
-                    Color c = Color.RED;
-                    Vector3 p = controlCar.position;
-                    Vector3 hitboxOffset = new Vector3(13.88f, 0f, 20.75f);
-
-                    Vector3 f = controlCar.forward();
-                    Vector3 u = controlCar.up();
-                    Vector3 r = controlCar.left();
-
-                    p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
-
-                    Vector3 fL = f.mul(hitbox.length() / 2);
-                    Vector3 rW = r.mul(hitbox.width() / 2);
-                    Vector3 uH = u.mul(hitbox.height() / 2);
-
-                    renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
-                    renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
-                    renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).add(uH).sub(rW));
-                    renderer.drawLine3d(c, p.sub(fL).sub(uH).add(rW), p.sub(fL).sub(uH).sub(rW));
-
-                    renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.sub(fL).add(uH).add(rW));
-                    renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.sub(fL).sub(uH).add(rW));
-                    renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.sub(fL).add(uH).sub(rW));
-                    renderer.drawLine3d(c, p.add(fL).sub(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
-
-                    renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).sub(uH).add(rW));
-                    renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).sub(uH).add(rW));
-                    renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.add(fL).sub(uH).sub(rW));
-                    renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
-
-                }
 
                 break;
             }

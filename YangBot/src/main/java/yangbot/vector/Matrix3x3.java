@@ -154,6 +154,14 @@ public class Matrix3x3 {
         return mat;
     }
 
+    public Vector3 toEuler() {
+        return new Vector3(
+                (float) Math.atan2(this.get(2, 0), new Vector2(this.get(0, 0), this.get(1, 0)).magnitude()),
+                (float) Math.atan2(this.get(1, 0), this.get(0, 0)),
+                (float) Math.atan2(-this.get(2, 1), this.get(2, 2))
+        );
+    }
+
     public Vector3 up() {
         return new Vector3(this.get(0, 2), this.get(1, 2), this.get(2, 2));
     }

@@ -51,5 +51,5 @@ public class YangBotCppInterop {
 
     public static native float[] getSurfaceCollision(Vector3 pos, float sphereSize);
 
-    public static native float[] simulateCarCollision(Vector3 pos, Vector3 vel);
+    public static native float[] simulateCarCollision(Vector3 pos, Vector3 vel, Vector3 ang, Vector3 rot);
 }

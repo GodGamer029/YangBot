@@ -153,10 +153,13 @@ public class TestBot implements Bot {
 
                     renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
                     renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                    renderer.drawCentered3dCube(Color.GREEN, start, 200);
+                    //renderer.drawCentered3dCube(Color.GREEN, start, 200);
+                    if (simulationTime >= 2f / 60f)
+                        renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
 
                     {
-                        BoxShape hitbox = controlCar.hitbox;
+                        BoxShape realhitbox = controlCar.hitbox;
+                        Vector3 hitbox = new Vector3(realhitbox.length(), realhitbox.width(), realhitbox.height()).mul(1.5f);
 
                         Color c = Color.RED;
                         Vector3 p = start;
@@ -168,9 +171,14 @@ public class TestBot implements Bot {
 
                         p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
 
-                        Vector3 fL = f.mul(hitbox.length() / 2);
-                        Vector3 rW = r.mul(hitbox.width() / 2);
-                        Vector3 uH = u.mul(hitbox.height() / 2);
+                        //Vector3 fL = f.mul(hitbox.length() / 2);
+                        //Vector3 rW = r.mul(hitbox.width() / 2);
+                        //Vector3 uH = u.mul(hitbox.height() / 2);
+
+                        Vector3 fL = f.mul(hitbox.x / 2);
+                        Vector3 rW = r.mul(hitbox.y / 2);
+                        Vector3 uH = u.mul(hitbox.z / 2);
+
 
                         renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
                         renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
@@ -189,8 +197,6 @@ public class TestBot implements Bot {
 
                     }
                 }
-
-
 
                 break;
             }

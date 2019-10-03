@@ -63,7 +63,7 @@ JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv* env, jcla
 
 JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jobject rot) {
 	constexpr float simulationRate = 1.f / 60.f;
-	constexpr float secondsSimulated = 3.f;
+	constexpr float secondsSimulated = 3.5f;
 	constexpr int simulationSteps = (int)(secondsSimulated / simulationRate);
 	if (!init)
 		return env->NewFloatArray(0);

@@ -108,9 +108,16 @@ public class MainClass {
         }
     }
 
+    private static void lazyLoadRLU() {
+        new Thread(() -> {
+            YangBotCppInterop.init((byte) 0, (byte) 0);
+        }).start();
+    }
+
     public static void main(String[] args) {
         // TODO: use java navigator as fallback for RLU
         //lazyLoadNavigator();
+        lazyLoadRLU();
         BotManager botManager = new BotManager();
         Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
             System.out.println("Could not read port from args, using default!");

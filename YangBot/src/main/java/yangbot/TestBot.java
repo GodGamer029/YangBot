@@ -63,7 +63,7 @@ public class TestBot implements Bot {
             case RESET: {
                 timer = 0.0f;
                 GameState st = new GameState()
-                        .withCarState(this.playerIndex, new CarState()
+                        /*.withCarState(this.playerIndex, new CarState()
                                 .withBoostAmount(100f)
                                 .withPhysics(new PhysicsState()
                                         .withLocation(new DesiredVector3(0f, -4900f, 0f))
@@ -71,11 +71,11 @@ public class TestBot implements Bot {
                                         .withVelocity(new DesiredVector3(0f, 0f, 0f))
                                         .withRotation(new DesiredRotation(0f, (float) Math.PI / 2f, 0f))
                                 )
-                        )
+                        )*/
                         .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(0f, 0f, 10000f))
-                                .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
-                                .withVelocity(new DesiredVector3(0f, 0f, 0f))
+                                .withLocation(new DesiredVector3(0f, 0f, 1000f))
+                                .withAngularVelocity(new DesiredVector3(10000f, 0f, 0f))
+                                .withVelocity(new DesiredVector3(0f, 0f, -1f))
                                 .withRotation(new DesiredRotation(0f, 0f, 0f))
                         ));
                 //RLBotDll.setGameState(st.buildPacket());
@@ -84,6 +84,7 @@ public class TestBot implements Bot {
             }
             case INIT: {
                 if (timer >= 2) {
+
                     //float dist = DriveManuver.maxDistance((float) car.velocity.magnitude(), testDuration);
                     //System.out.println("Predicted dist: "+dist);
                     startPos = car.position;
@@ -111,12 +112,12 @@ public class TestBot implements Bot {
                     System.out.println("Dist: " + startPos.distance(endPos));
                 }*/
 
-                float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity);
-                if (data != null) {
+                float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity, ball.spin);
+                if (data.length > 0) {
                     Vector3[] positions = new Vector3[data.length / 3];
 
                     for (int i = 0; i < positions.length; i++) {
-                        positions[i] = new Vector3(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2]);
+                        positions[i] = new Vector3(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
                     }
 
                     Vector3 lastPos = positions[0];
@@ -125,12 +126,11 @@ public class TestBot implements Bot {
                             renderer.drawLine3d(Color.RED, lastPos, positions[i]);
                             lastPos = positions[i];
                         }
-
                     }
                 }
 
-                data = YangBotCppInterop.getSurfaceCollision(controlCar.position, 60);
-                if (data != null) {
+                /*data = YangBotCppInterop.getSurfaceCollision(controlCar.position, 60);
+                if (data.length > 0) {
                     Vector3 start = new Vector3(data[0], data[1], data[2]);
                     Vector3 direction = new Vector3(data[3], data[4], data[5]);
 
@@ -139,8 +139,19 @@ public class TestBot implements Bot {
                         renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
                         renderer.drawCentered3dCube(Color.GREEN, start, 100);
                     }
-                }
+                }*/
 
+                data = YangBotCppInterop.simulateCarCollision(controlCar.position, controlCar.velocity);
+                if (data.length > 0) {
+                    Vector3 start = new Vector3(data[0], data[1], data[2]);
+                    Vector3 direction = new Vector3(data[3], data[4], data[5]);
+                    float simulationTime = data[6];
+
+                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
+                    renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+                    renderer.drawCentered3dCube(Color.GREEN, start, 200);
+
+                }
 
                 break;
             }

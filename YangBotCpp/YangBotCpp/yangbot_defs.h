@@ -9,9 +9,11 @@ extern "C" {
 #endif
 	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceCollision(JNIEnv*, jclass, jobject, jfloat);
 
-	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv*, jclass, jobject, jobject);
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv*, jclass, jobject, jobject, jobject);
 
 	JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv*, jclass, jbyte, jbyte);
+	
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel);
 
 #ifdef __cplusplus
 }

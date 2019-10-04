@@ -2,6 +2,7 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
+import rlbot.flat.BoxShape;
 import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
 import yangbot.cpp.CarCollisionInfo;
@@ -14,6 +15,7 @@ import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
+import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
@@ -150,25 +152,11 @@ public class TestBot implements Bot {
                     Vector3 start = new Vector3(carCollisionInfo.impact().start());
                     Vector3 direction = new Vector3(carCollisionInfo.impact().direction());
                     float simulationTime = carCollisionInfo.carData().elapsedSeconds();
+                    Matrix3x3 orientation = Matrix3x3.eulerToRotation(new Vector3(carCollisionInfo.carData().eulerRotation()));
 
                     renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
 
                     renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                    if (simulationTime >= 2f / 60f)
-                        renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
-                }
-
-                /*data = YangBotCppInterop.simulateCarCollision0(controlCar.position, controlCar.velocity, controlCar.angularVelocity, controlCar.orientationMatrix.toEuler());
-                if (data.length > 0) {
-                    Vector3 start = new Vector3(data[0], data[1], data[2]);
-                    Vector3 direction = new Vector3(data[3], data[4], data[5]);
-                    Vector3 eulerOrient = new Vector3(data[6], data[7], data[8]);
-                    Matrix3x3 orientation = Matrix3x3.eulerToRotation(eulerOrient);
-                    float simulationTime = data[9];
-
-                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
-                    renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                    //renderer.drawCentered3dCube(Color.GREEN, start, 200);
                     if (simulationTime >= 2f / 60f)
                         renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
 
@@ -211,7 +199,7 @@ public class TestBot implements Bot {
                         renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
 
                     }
-                }*/
+                }
 
                 break;
             }

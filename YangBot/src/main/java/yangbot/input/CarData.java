@@ -1,9 +1,11 @@
 package yangbot.input;
 
 
+import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.BoxShape;
 import rlbot.flat.Physics;
 import rlbot.flat.Rotator;
+import yangbot.cpp.FBSCarData;
 import yangbot.manuever.AerialManuver;
 import yangbot.manuever.DodgeManuver;
 import yangbot.util.ControlsOutput;
@@ -104,6 +106,15 @@ public class CarData {
         this.physics = null;
         this.angularVelocity = new Vector3(o.angularVelocity);
         this.hitbox = o.hitbox;
+    }
+
+    public void apply(FlatBufferBuilder builder) {
+        FBSCarData.addAngularVelocity(builder, this.angularVelocity.toYangbuffer(builder));
+        FBSCarData.addElapsedSeconds(builder, this.elapsedSeconds);
+        FBSCarData.addEulerRotation(builder, this.orientationMatrix.toEuler().toYangbuffer(builder));
+        FBSCarData.addOnGround(builder, this.hasWheelContact);
+        FBSCarData.addVelocity(builder, this.velocity.toYangbuffer(builder));
+        FBSCarData.addPosition(builder, this.position.toYangbuffer(builder));
     }
 
     public Vector3 up() {

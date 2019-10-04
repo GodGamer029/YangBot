@@ -1,0 +1,30 @@
+namespace yangbot.cpp;
+
+struct FlatVec3 {
+    x: float;
+    y: float;
+    z: float;
+}
+
+table FBSCarData {
+    position: FlatVec3;
+    velocity: FlatVec3;
+    angularVelocity: FlatVec3;
+    eulerRotation: FlatVec3;
+    onGround: bool;
+    elapsedSeconds: float = 0;
+}
+
+root_type FBSCarData;
+
+struct FlatRay {
+    start: FlatVec3;
+    direction: FlatVec3;
+}
+
+table CarCollisionInfo {
+    carData: FBSCarData;
+    impact: FlatRay;
+}
+
+root_type CarCollisionInfo;

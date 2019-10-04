@@ -2,10 +2,11 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
-import rlbot.flat.BoxShape;
 import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
+import yangbot.cpp.CarCollisionInfo;
 import yangbot.cpp.YangBotCppInterop;
+import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.DataPacket;
@@ -13,12 +14,12 @@ import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
-import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class TestBot implements Bot {
 
@@ -143,7 +144,21 @@ public class TestBot implements Bot {
                     }
                 }*/
 
-                data = YangBotCppInterop.simulateCarCollision(controlCar.position, controlCar.velocity, controlCar.angularVelocity, controlCar.orientationMatrix.toEuler());
+                Optional<CarCollisionInfo> simulateCar = YangBotJNAInterop.simulateCarWallCollision(controlCar);
+                if (simulateCar.isPresent()) {
+                    CarCollisionInfo carCollisionInfo = simulateCar.get();
+                    Vector3 start = new Vector3(carCollisionInfo.impact().start());
+                    Vector3 direction = new Vector3(carCollisionInfo.impact().direction());
+                    float simulationTime = carCollisionInfo.carData().elapsedSeconds();
+
+                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
+
+                    renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+                    if (simulationTime >= 2f / 60f)
+                        renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
+                }
+
+                /*data = YangBotCppInterop.simulateCarCollision0(controlCar.position, controlCar.velocity, controlCar.angularVelocity, controlCar.orientationMatrix.toEuler());
                 if (data.length > 0) {
                     Vector3 start = new Vector3(data[0], data[1], data[2]);
                     Vector3 direction = new Vector3(data[3], data[4], data[5]);
@@ -196,7 +211,7 @@ public class TestBot implements Bot {
                         renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
 
                     }
-                }
+                }*/
 
                 break;
             }

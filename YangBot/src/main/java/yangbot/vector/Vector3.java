@@ -1,6 +1,7 @@
 package yangbot.vector;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import yangbot.cpp.FlatVec3;
 
 /**
  * A simple 3d vector class with the most essential operations.
@@ -23,7 +24,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public Vector3(rlbot.flat.Vector3 vec) {
-        // Invert the X value so that the axes make more sense.
+        this(vec.x(), vec.y(), vec.z());
+    }
+
+    public Vector3(FlatVec3 vec) {
         this(vec.x(), vec.y(), vec.z());
     }
 
@@ -64,6 +68,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
     public int toFlatbuffer(FlatBufferBuilder builder) {
         // Invert the X value again so that rlbot sees the format it expects.
         return rlbot.flat.Vector3.createVector3(builder, x, y, z);
+    }
+
+    public int toYangbuffer(FlatBufferBuilder builder) {
+        return FlatVec3.createFlatVec3(builder, x, y, z);
     }
 
     public Vector3 add(Vector3 other) {

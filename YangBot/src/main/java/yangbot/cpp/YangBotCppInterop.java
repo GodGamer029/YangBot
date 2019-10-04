@@ -1,5 +1,6 @@
 package yangbot.cpp;
 
+import yangbot.util.Ray;
 import yangbot.vector.Vector3;
 
 import java.io.File;
@@ -7,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.Optional;
 
 public class YangBotCppInterop {
 
@@ -45,11 +47,24 @@ public class YangBotCppInterop {
     public YangBotCppInterop() {
     }
 
+    // To make sure the static init is called
+    public static void doNothing() {
+    }
+
+    public static Optional<Ray> checkForSurfaceCollision(Vector3 position, float collisionRadius) {
+        float[] data = getSurfaceCollision(position, collisionRadius);
+        if (data.length > 0) {
+            Vector3 start = new Vector3(data[0], data[1], data[2]);
+            Vector3 direction = new Vector3(data[3], data[4], data[5]);
+            return Optional.of(new Ray(start, direction));
+        }
+        return Optional.empty();
+    }
+
     public static native float[] ballstep(Vector3 pos, Vector3 vel, Vector3 ang);
 
     public static native void init(byte mode, byte map);
 
-    public static native float[] getSurfaceCollision(Vector3 pos, float sphereSize);
+    private static native float[] getSurfaceCollision(Vector3 pos, float sphereSize);
 
-    public static native float[] simulateCarCollision(Vector3 pos, Vector3 vel, Vector3 ang, Vector3 rot);
 }

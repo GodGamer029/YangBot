@@ -2,6 +2,7 @@
 #include <jni.h>
 #include <mutex>
 #include "yangbot_defs.h"
+#include "yangbot_generated.h"
 #include "rlu_headers/simulation/ball.h"
 #include "rlu_headers/simulation/game.h"
 #include "rlu_headers/simulation/field.h"
@@ -10,6 +11,8 @@ bool init = false;
 jbyte currentMode = -1;
 jbyte currentMap = -1;
 std::mutex initLock;
+
+using namespace yangbot::cpp;
 
 JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceCollision(JNIEnv* env, jclass thisObj, jobject pos, jfloat sphereSize) {
 	if (!init)
@@ -61,20 +64,21 @@ JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv* env, jcla
 	initLock.unlock();
 }
 
-JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jobject rot) {
+ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 	constexpr float simulationRate = 1.f / 60.f;
 	constexpr float secondsSimulated = 3.5f;
 	constexpr int simulationSteps = (int)(secondsSimulated / simulationRate);
+
+	const FBSCarData* inputCarData = flatbuffers::GetRoot<FBSCarData>(inputCar);
+
+	ByteBuffer result = ByteBuffer();
 	if (!init)
-		return env->NewFloatArray(0);
+		return result;
 
-	static jclass jvec3 = env->FindClass("yangbot/vector/Vector3");
-	static jmethodID jvec3_get = env->GetMethodID(jvec3, "get", "(I)F");
-
-	vec3 position = { env->CallFloatMethod(pos, jvec3_get, 0), env->CallFloatMethod(pos, jvec3_get, 1), env->CallFloatMethod(pos, jvec3_get, 2) };
-	vec3 velocity = { env->CallFloatMethod(vel, jvec3_get, 0), env->CallFloatMethod(vel, jvec3_get, 1), env->CallFloatMethod(vel, jvec3_get, 2) };
-	vec3 angular = { env->CallFloatMethod(ang, jvec3_get, 0), env->CallFloatMethod(ang, jvec3_get, 1), env->CallFloatMethod(ang, jvec3_get, 2) };
-	vec3 rotate = { env->CallFloatMethod(rot, jvec3_get, 0), env->CallFloatMethod(rot, jvec3_get, 1), env->CallFloatMethod(rot, jvec3_get, 2) };
+	const vec3 position = *reinterpret_cast<const vec3*>(inputCarData->position());
+	const vec3 velocity = *reinterpret_cast<const vec3*>(inputCarData->velocity());
+	const vec3 angular = *reinterpret_cast<const vec3*>(inputCarData->angularVelocity());
+	const vec3 rotate = *reinterpret_cast<const vec3*>(inputCarData->eulerRotation());
 
 	const vec3 g = { 0, 0, -650 };
 
@@ -95,22 +99,41 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarColl
 			break;
 	}
 
-	if (norm(contact.direction) <= 0.f) {
-		contact = Field::collide(sphere{ car.position, 400 });
-		if (norm(contact.direction) <= 0.f) {
-			return env->NewFloatArray(0);
-		}
-	}
+	flatbuffers::FlatBufferBuilder builder(256);
+	FBSCarDataBuilder carData(builder);
 
-	jfloatArray output = env->NewFloatArray(3 * 3 + 1);
-	if (output == NULL)
-		return NULL;
+	auto newPos = FlatVec3(car.position[0], car.position[1], car.position[2]);
+	auto newVel = FlatVec3(car.velocity[0], car.velocity[1], car.velocity[2]);
+	auto newAng = FlatVec3(car.angular_velocity[0], car.angular_velocity[1], car.angular_velocity[2]);
 	vec3 eul = rotation_to_euler(car.orientation);
+	auto newEuler = FlatVec3(eul[0], eul[1], eul[2]);
 
-	env->SetFloatArrayRegion(output, 0, 2 * 3, reinterpret_cast<float*>(&contact));
-	env->SetFloatArrayRegion(output, 2 * 3, 3, reinterpret_cast<float*>(&eul));
-	env->SetFloatArrayRegion(output, 3 * 3, 1, &simulationTime);
-	return output;
+	carData.add_position(&newPos);
+	carData.add_angularVelocity(&newAng);
+	carData.add_eulerRotation(&newEuler);
+	carData.add_velocity(&newVel);
+	carData.add_onGround(car.on_ground);
+	carData.add_elapsedSeconds(simulationTime);
+	auto flatCar = carData.Finish();
+
+	CarCollisionInfoBuilder carCollision(builder);
+	carCollision.add_carData(flatCar);
+
+	if (norm(contact.direction) <= 0.f) 
+		contact = Field::collide(sphere{ car.position, 400 });
+
+	auto fStart = FlatVec3(contact.start[0], contact.start[1], contact.start[2]);
+	auto fDirection = FlatVec3(contact.direction[0], contact.direction[1], contact.direction[2]);
+	FlatRay flatRay = FlatRay(fStart, fDirection);
+	carCollision.add_impact(&flatRay);
+	auto carCollisionResult = carCollision.Finish();
+	builder.Finish(carCollisionResult);
+	result.ptr = new unsigned char[builder.GetSize()];
+	result.size = builder.GetSize();
+	
+	memcpy(result.ptr, builder.GetBufferPointer(), result.size);
+
+	return result;
 }
 
 JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang) {
@@ -126,7 +149,6 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv
 	vec3 position = { env->CallFloatMethod(pos, jvec3_get, 0), env->CallFloatMethod(pos, jvec3_get, 1), env->CallFloatMethod(pos, jvec3_get, 2) };
 	vec3 velocity = { env->CallFloatMethod(vel, jvec3_get, 0), env->CallFloatMethod(vel, jvec3_get, 1), env->CallFloatMethod(vel, jvec3_get, 2) };
 	vec3 angular  = { env->CallFloatMethod(ang, jvec3_get, 0), env->CallFloatMethod(ang, jvec3_get, 1), env->CallFloatMethod(ang, jvec3_get, 2) };
-
 
 	Ball ball = Ball();
 	ball.position = position;
@@ -147,4 +169,8 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv
 		return NULL;
 	env->SetFloatArrayRegion(output, 0, 3 * (simulationSteps), simulationResults);
 	return output;
+}
+
+JNIEXPORT void JNICALL Free(void* ptr) {
+	free(ptr);
 }

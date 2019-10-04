@@ -4,6 +4,13 @@
 
 #ifndef _Included_yangbot_cpp_YangBotCppInterop
 #define _Included_yangbot_cpp_YangBotCppInterop
+
+struct ByteBuffer
+{
+	void* ptr;
+	int size;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,7 +20,9 @@ extern "C" {
 
 	JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv*, jclass, jbyte, jbyte);
 	
-	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_simulateCarCollision(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jobject rot);
+	JNIEXPORT ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize);
+
+	JNIEXPORT void JNICALL Free( void*);
 
 #ifdef __cplusplus
 }

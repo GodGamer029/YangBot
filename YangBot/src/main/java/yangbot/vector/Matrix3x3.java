@@ -154,6 +154,28 @@ public class Matrix3x3 {
         return mat;
     }
 
+    public static Matrix3x3 roofTo(Vector3 up) {
+        Vector3 f = new Vector3(-up.x * up.y, (up.x * up.x) + (up.z * up.z), -up.y * up.z).normalized();
+        if (f.isZero())
+            f = new Vector3(0, 0, -1);
+        Vector3 u = f.crossProduct(up.crossProduct(f)).normalized();
+        Vector3 l = u.crossProduct(f).normalized();
+
+        Matrix3x3 mat = new Matrix3x3();
+        mat.assign(0, 0, f.x);
+        mat.assign(0, 1, l.x);
+        mat.assign(0, 2, u.x);
+
+        mat.assign(1, 0, f.y);
+        mat.assign(1, 1, l.y);
+        mat.assign(1, 2, u.y);
+
+        mat.assign(2, 0, f.z);
+        mat.assign(2, 1, l.z);
+        mat.assign(2, 2, u.z);
+        return mat;
+    }
+
     public Vector3 toEuler() {
         return new Vector3(
                 (float) Math.atan2(this.get(2, 0), new Vector2(this.get(0, 0), this.get(1, 0)).magnitude()),

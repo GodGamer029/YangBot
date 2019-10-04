@@ -2,6 +2,7 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
+import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.BoxShape;
 import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
@@ -13,6 +14,7 @@ import yangbot.input.CarData;
 import yangbot.input.DataPacket;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
+import yangbot.manuever.TurnManuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
@@ -39,6 +41,7 @@ public class TestBot implements Bot {
     private Vector3 startPos = new Vector3();
     private Map<Float, Float> speedMap = new LinkedHashMap<>();
     private boolean hasSetPriority = false;
+    private TurnManuver turnManuver = new TurnManuver();
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -67,29 +70,33 @@ public class TestBot implements Bot {
         switch (state) {
             case RESET: {
                 timer = 0.0f;
-                GameState st = new GameState()
-                        /*.withCarState(this.playerIndex, new CarState()
-                                .withBoostAmount(100f)
-                                .withPhysics(new PhysicsState()
-                                        .withLocation(new DesiredVector3(0f, -4900f, 0f))
-                                        .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
-                                        .withVelocity(new DesiredVector3(0f, 0f, 0f))
-                                        .withRotation(new DesiredRotation(0f, (float) Math.PI / 2f, 0f))
-                                )
-                        )*/
-                        .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(0f, 0f, 1000f))
-                                .withAngularVelocity(new DesiredVector3(10000f, 0f, 0f))
-                                .withVelocity(new DesiredVector3(0f, 0f, -1f))
-                                .withRotation(new DesiredRotation(0f, 0f, 0f))
-                        ));
-                //RLBotDll.setGameState(st.buildPacket());
+
                 state = State.INIT;
                 break;
             }
             case INIT: {
-                if (timer >= 2) {
 
+                if (timer >= 0.5f) {
+                    turnManuver = new TurnManuver();
+                    GameState st = new GameState()
+                            .withCarState(this.playerIndex, new CarState()
+                                    .withBoostAmount(100f)
+                                    .withPhysics(new PhysicsState()
+                                            .withLocation(new DesiredVector3(0f, 0f, 1000f))
+                                            .withAngularVelocity(new DesiredVector3((float) (Math.random() * 5 * 2 - 5), (float) (Math.random() * 5 * 2 - 5), (float) (Math.random() * 5 * 2 - 5)))
+                                            .withVelocity(new DesiredVector3((float) (Math.random() * 3000 - 1500), 4000f, 1900f + (float) (Math.random() * 1500)))
+                                            .withRotation(new DesiredRotation((float) (Math.random() * Math.PI * 4 - 2 * Math.PI), (float) (Math.random() * Math.PI * 4 - 2 * Math.PI), (float) (Math.random() * Math.PI * 4 - 2 * Math.PI)))
+                                    )
+                            )
+                        /*.withBallState(new BallState().withPhysics(new PhysicsState()
+                                .withLocation(new DesiredVector3(0f, 0f, 1000f))
+                                .withAngularVelocity(new DesiredVector3(10000f, 0f, 0f))
+                                .withVelocity(new DesiredVector3(0f, 0f, -1f))
+                                .withRotation(new DesiredRotation(0f, 0f, 0f))
+                        )
+                        */;
+
+                    RLBotDll.setGameState(st.buildPacket());
                     //float dist = DriveManuver.maxDistance((float) car.velocity.magnitude(), testDuration);
                     //System.out.println("Predicted dist: "+dist);
                     startPos = car.position;
@@ -99,6 +106,8 @@ public class TestBot implements Bot {
                 break;
             }
             case RUN: {
+                if (timer > 4)
+                    state = State.RESET;
                 // Capture data
                 /*speedMap.put(timer, (float) car.position.distance(startPos));
                 if (timer < testDuration) {
@@ -154,6 +163,9 @@ public class TestBot implements Bot {
                     float simulationTime = carCollisionInfo.carData().elapsedSeconds();
                     Matrix3x3 orientation = Matrix3x3.eulerToRotation(new Vector3(carCollisionInfo.carData().eulerRotation()));
 
+                    turnManuver.target = Matrix3x3.roofTo(direction);
+                    turnManuver.step(dt, output);
+
                     renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
 
                     renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
@@ -182,7 +194,6 @@ public class TestBot implements Bot {
                         Vector3 rW = r.mul(hitbox.y / 2);
                         Vector3 uH = u.mul(hitbox.z / 2);
 
-
                         renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
                         renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
                         renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).add(uH).sub(rW));
@@ -197,6 +208,7 @@ public class TestBot implements Bot {
                         renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).sub(uH).add(rW));
                         renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.add(fL).sub(uH).sub(rW));
                         renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
+
 
                     }
                 }

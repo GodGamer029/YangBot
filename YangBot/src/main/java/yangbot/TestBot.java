@@ -3,27 +3,21 @@ package yangbot;
 import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.cppinterop.RLBotDll;
-import rlbot.flat.BoxShape;
 import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
-import yangbot.cpp.CarCollisionInfo;
-import yangbot.cpp.YangBotCppInterop;
-import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.DataPacket;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.manuever.TurnManuver;
+import yangbot.manuever.CeilingShotManuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
-import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 public class TestBot implements Bot {
 
@@ -41,7 +35,8 @@ public class TestBot implements Bot {
     private Vector3 startPos = new Vector3();
     private Map<Float, Float> speedMap = new LinkedHashMap<>();
     private boolean hasSetPriority = false;
-    private TurnManuver turnManuver = new TurnManuver();
+    private final float desiredGravity = -650;
+    private CeilingShotManuver ceilingShotManuver = new CeilingShotManuver();
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -76,25 +71,28 @@ public class TestBot implements Bot {
             }
             case INIT: {
 
-                if (timer >= 0.5f) {
-                    turnManuver = new TurnManuver();
+                if (timer >= 0.1f) {
+                    //navigator.analyzeSurroundings(controlCar);
+                    //pathC = navigator.pathTo(controlCar, new Vector3(0, 0, controlCar.position.z), new Vector3(), 0);
+                    ceilingShotManuver = new CeilingShotManuver();
                     GameState st = new GameState()
-                            .withCarState(this.playerIndex, new CarState()
+                            .withGameInfoState(new GameInfoState().withWorldGravityZ(desiredGravity))
+
+                            .withCarState(this.playerIndex + 1, new CarState()
                                     .withBoostAmount(100f)
                                     .withPhysics(new PhysicsState()
-                                            .withLocation(new DesiredVector3(0f, 0f, 1000f))
-                                            .withAngularVelocity(new DesiredVector3((float) (Math.random() * 5 * 2 - 5), (float) (Math.random() * 5 * 2 - 5), (float) (Math.random() * 5 * 2 - 5)))
-                                            .withVelocity(new DesiredVector3((float) (Math.random() * 3000 - 1500), 4000f, 1900f + (float) (Math.random() * 1500)))
-                                            .withRotation(new DesiredRotation((float) (Math.random() * Math.PI * 4 - 2 * Math.PI), (float) (Math.random() * Math.PI * 4 - 2 * Math.PI), (float) (Math.random() * Math.PI * 4 - 2 * Math.PI)))
+                                            .withLocation(new DesiredVector3(1000f, 1200f, 18f))
+                                            //.withAngularVelocity(new DesiredVector3((float) (Math.random() * 5 * 2 - 5), (float) (Math.random() * 5 * 2 - 5), (float) (Math.random() * 5 * 2 - 5)))
+                                            .withVelocity(new DesiredVector3(1200f, -900f, 0f))
+                                            .withRotation(new DesiredRotation(0f, (float) Math.PI / -9f, 0f))
                                     )
                             )
-                        /*.withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(0f, 0f, 1000f))
-                                .withAngularVelocity(new DesiredVector3(10000f, 0f, 0f))
-                                .withVelocity(new DesiredVector3(0f, 0f, -1f))
+                            .withBallState(new BallState().withPhysics(new PhysicsState()
+                                    .withLocation(new DesiredVector3(1900f, 000f, 100f))
+                                    .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
+                                    .withVelocity(new DesiredVector3(1800f, -300f, 0f))
                                 .withRotation(new DesiredRotation(0f, 0f, 0f))
-                        )
-                        */;
+                            ));
 
                     RLBotDll.setGameState(st.buildPacket());
                     //float dist = DriveManuver.maxDistance((float) car.velocity.magnitude(), testDuration);
@@ -106,9 +104,13 @@ public class TestBot implements Bot {
                 break;
             }
             case RUN: {
-                if (timer > 4)
+                if (timer > 8)
                     state = State.RESET;
-                // Capture data
+                ceilingShotManuver.step(dt, output);
+                renderer.drawCentered3dCube(Color.GREEN, controlCar.position, 30);
+
+                if (timer > 4 && ball.position.z <= 100)
+                    state = State.RESET;
                 /*speedMap.put(timer, (float) car.position.distance(startPos));
                 if (timer < testDuration) {
                     output.withThrottle(-1);
@@ -126,7 +128,7 @@ public class TestBot implements Bot {
                     System.out.println("Dist: " + startPos.distance(endPos));
                 }*/
 
-                float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity, ball.spin);
+                /*float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity, ball.spin);
                 if (data.length > 0) {
                     Vector3[] positions = new Vector3[data.length / 3];
 
@@ -141,7 +143,7 @@ public class TestBot implements Bot {
                             lastPos = positions[i];
                         }
                     }
-                }
+                }*/
 
                 /*data = YangBotCppInterop.getSurfaceCollision(controlCar.position, 60);
                 if (data.length > 0) {
@@ -155,7 +157,7 @@ public class TestBot implements Bot {
                     }
                 }*/
 
-                Optional<CarCollisionInfo> simulateCar = YangBotJNAInterop.simulateCarWallCollision(controlCar);
+                /*Optional<CarCollisionInfo> simulateCar = YangBotJNAInterop.simulateCarWallCollision(controlCar);
                 if (simulateCar.isPresent()) {
                     CarCollisionInfo carCollisionInfo = simulateCar.get();
                     Vector3 start = new Vector3(carCollisionInfo.impact().start());
@@ -211,7 +213,7 @@ public class TestBot implements Bot {
 
 
                     }
-                }
+                }*/
 
                 break;
             }

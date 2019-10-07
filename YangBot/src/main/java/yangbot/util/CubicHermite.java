@@ -21,9 +21,29 @@ public class CubicHermite {
 
     public Vector3 e(float s) {
         float u = s / L;
-        return x0.mul((1.0f - u) * (1.0f - u) * (1.0f + 2.0f * u))
+        return x0
+                .mul((1.0f - u) * (1.0f - u) * (1.0f + 2.0f * u))
                 .add(t0.mul(L * (1.0f - u) * (1.0f - u) * u))
                 .add(x1.mul((3.0f - 2.0f * u) * u * u))
                 .add(t1.mul(L * (u - 1.0f) * u * u));
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -116,7 +116,7 @@ public class MainClass {
 
     public static void main(String[] args) {
         // TODO: use java navigator as fallback for RLU
-        //lazyLoadNavigator();
+        lazyLoadNavigator();
         lazyLoadRLU();
         BotManager botManager = new BotManager();
         Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {

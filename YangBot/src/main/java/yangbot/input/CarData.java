@@ -89,6 +89,7 @@ public class CarData {
         this.physics = playerInfo.physics();
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
         this.hitbox = playerInfo.hitbox();
+
     }
 
     @SuppressWarnings("CopyConstructorMissesField")

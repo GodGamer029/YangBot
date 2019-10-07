@@ -48,12 +48,11 @@ public class AerialManuver extends Manuver {
         this.turnManuver.fool(gameData);
         this.doubleJump.fool(gameData);
 
-        float T = this.arrivalTime - car.elapsedSeconds;
+        final float T = this.arrivalTime - car.elapsedSeconds;
 
         Vector3 xf = car.position
                 .add(car.velocity.mul(T))
                 .add(gravity.mul(T * T * 0.5f));
-        //Vector3 vf = car.velocity.add(gravity.mul(T));
 
         boolean jumping_prev = this.jumping;
         if (this.jumping) {

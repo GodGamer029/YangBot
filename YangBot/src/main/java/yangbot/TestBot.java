@@ -2,9 +2,7 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
-import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
-import rlbot.gamestate.*;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.DataPacket;
@@ -13,11 +11,8 @@ import yangbot.input.fieldinfo.BoostManager;
 import yangbot.manuever.CeilingShotManuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
-import yangbot.vector.Vector3;
 
 import java.awt.*;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class TestBot implements Bot {
 
@@ -26,23 +21,17 @@ public class TestBot implements Bot {
      * This is the most important function. It will automatically get called by the framework with fresh data
      * every frame. Respond with appropriate controls!
      */
-    public float all = 0;
-    public int count = 0;
-    public int realCount = 0;
     private State state = State.RESET;
     private float timer = -1.0f;
     private float lastTick = -1;
-    private Vector3 startPos = new Vector3();
-    private Map<Float, Float> speedMap = new LinkedHashMap<>();
     private boolean hasSetPriority = false;
+    private float lastVel = 0;
     private final float desiredGravity = -650;
     private CeilingShotManuver ceilingShotManuver = new CeilingShotManuver();
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
     }
-
-    private long runner = 0;
 
     private ControlsOutput processInput(DataPacket input) {
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 0f);
@@ -75,7 +64,7 @@ public class TestBot implements Bot {
                     //navigator.analyzeSurroundings(controlCar);
                     //pathC = navigator.pathTo(controlCar, new Vector3(0, 0, controlCar.position.z), new Vector3(), 0);
                     ceilingShotManuver = new CeilingShotManuver();
-                    GameState st = new GameState()
+                    /*GameState st = new GameState()
                             .withGameInfoState(new GameInfoState().withWorldGravityZ(desiredGravity))
 
                             .withCarState(this.playerIndex + 1, new CarState()
@@ -94,10 +83,10 @@ public class TestBot implements Bot {
                                 .withRotation(new DesiredRotation(0f, 0f, 0f))
                             ));
 
-                    RLBotDll.setGameState(st.buildPacket());
+                    RLBotDll.setGameState(st.buildPacket());*/
                     //float dist = DriveManuver.maxDistance((float) car.velocity.magnitude(), testDuration);
                     //System.out.println("Predicted dist: "+dist);
-                    startPos = car.position;
+                    //startPos = car.position;
                     state = State.RUN;
                     timer = 0;
                 }
@@ -106,114 +95,24 @@ public class TestBot implements Bot {
             case RUN: {
                 if (timer > 8)
                     state = State.RESET;
-                ceilingShotManuver.step(dt, output);
+
                 renderer.drawCentered3dCube(Color.GREEN, controlCar.position, 30);
 
                 if (timer > 4 && ball.position.z <= 100)
                     state = State.RESET;
-                /*speedMap.put(timer, (float) car.position.distance(startPos));
-                if (timer < testDuration) {
-                    output.withThrottle(-1);
-                    output.withBoost(true);
-                } else {
-                    Vector3 endPos = car.position;
 
-                    state = State.STOP;
-                    {
+                float vf = (float) controlCar.forward().dot(controlCar.velocity);
+                float accel = (vf - lastVel) / dt;
+                renderer.drawString2d(String.format("Accel: %.1f", accel), Color.WHITE, new Point(400, 400), 2, 2);
+                if (accel >= 4000 && dt >= 1f / 140f) {
+                    System.out.println("#######");
+                    System.out.println("DT: 1 / " + (1 / dt) + " : " + dt);
+                    System.out.println("Accel: " + accel);
+                    System.out.println("Last: " + lastVel);
+                    System.out.println("Current: " + controlCar.velocity);
+                }
 
-                    }
-
-                    System.out.println("Start Pos: " + startPos);
-                    System.out.println("End Pos: " + endPos);
-                    System.out.println("Dist: " + startPos.distance(endPos));
-                }*/
-
-                /*float[] data = YangBotCppInterop.ballstep(ball.position, ball.velocity, ball.spin);
-                if (data.length > 0) {
-                    Vector3[] positions = new Vector3[data.length / 3];
-
-                    for (int i = 0; i < positions.length; i++) {
-                        positions[i] = new Vector3(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
-                    }
-
-                    Vector3 lastPos = positions[0];
-                    for (int i = 0; i < positions.length; i++) {
-                        if (lastPos.distance(positions[i]) >= 50) {
-                            renderer.drawLine3d(Color.RED, lastPos, positions[i]);
-                            lastPos = positions[i];
-                        }
-                    }
-                }*/
-
-                /*data = YangBotCppInterop.getSurfaceCollision(controlCar.position, 60);
-                if (data.length > 0) {
-                    Vector3 start = new Vector3(data[0], data[1], data[2]);
-                    Vector3 direction = new Vector3(data[3], data[4], data[5]);
-
-                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
-                    if (direction.magnitude() > 0) {
-                        renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                        renderer.drawCentered3dCube(Color.GREEN, start, 100);
-                    }
-                }*/
-
-                /*Optional<CarCollisionInfo> simulateCar = YangBotJNAInterop.simulateCarWallCollision(controlCar);
-                if (simulateCar.isPresent()) {
-                    CarCollisionInfo carCollisionInfo = simulateCar.get();
-                    Vector3 start = new Vector3(carCollisionInfo.impact().start());
-                    Vector3 direction = new Vector3(carCollisionInfo.impact().direction());
-                    float simulationTime = carCollisionInfo.carData().elapsedSeconds();
-                    Matrix3x3 orientation = Matrix3x3.eulerToRotation(new Vector3(carCollisionInfo.carData().eulerRotation()));
-
-                    turnManuver.target = Matrix3x3.roofTo(direction);
-                    turnManuver.step(dt, output);
-
-                    renderer.drawCentered3dCube(Color.RED, controlCar.position, 50);
-
-                    renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
-                    if (simulationTime >= 2f / 60f)
-                        renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
-
-                    {
-                        BoxShape realhitbox = controlCar.hitbox;
-                        Vector3 hitbox = new Vector3(realhitbox.length(), realhitbox.width(), realhitbox.height()).mul(1.5f);
-
-                        Color c = Color.RED;
-                        Vector3 p = start;
-                        Vector3 hitboxOffset = new Vector3(13.88f, 0f, 20.75f);
-
-                        Vector3 f = orientation.forward();
-                        Vector3 u = orientation.up();
-                        Vector3 r = orientation.left();
-
-                        p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
-
-                        //Vector3 fL = f.mul(hitbox.length() / 2);
-                        //Vector3 rW = r.mul(hitbox.width() / 2);
-                        //Vector3 uH = u.mul(hitbox.height() / 2);
-
-                        Vector3 fL = f.mul(hitbox.x / 2);
-                        Vector3 rW = r.mul(hitbox.y / 2);
-                        Vector3 uH = u.mul(hitbox.z / 2);
-
-                        renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
-                        renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
-                        renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).add(uH).sub(rW));
-                        renderer.drawLine3d(c, p.sub(fL).sub(uH).add(rW), p.sub(fL).sub(uH).sub(rW));
-
-                        renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.sub(fL).add(uH).add(rW));
-                        renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.sub(fL).sub(uH).add(rW));
-                        renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.sub(fL).add(uH).sub(rW));
-                        renderer.drawLine3d(c, p.add(fL).sub(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
-
-                        renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).sub(uH).add(rW));
-                        renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).sub(uH).add(rW));
-                        renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.add(fL).sub(uH).sub(rW));
-                        renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
-
-
-                    }
-                }*/
+                lastVel = vf;
 
                 break;
             }

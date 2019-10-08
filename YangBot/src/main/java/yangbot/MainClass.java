@@ -119,6 +119,7 @@ public class MainClass {
         lazyLoadNavigator();
         lazyLoadRLU();
         BotManager botManager = new BotManager();
+        botManager.setRefreshRate(120);
         Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
             System.out.println("Could not read port from args, using default!");
             return DEFAULT_PORT;

@@ -17,6 +17,7 @@ import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
+import java.io.PrintWriter;
 import java.util.Random;
 
 public class TestBot implements Bot {
@@ -37,17 +38,26 @@ public class TestBot implements Bot {
     private int timesTested = 0;
     private Matrix3x3 actionTarget = null;
     private float timeNeeded = 0;
+    private float disttt = 0;
     private int counter = 0;
+    private int counter2 = 0;
+    private PrintWriter fileWrite = null;
+    private Vector3 startOrient = null;
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
+        try {
+            fileWrite = new PrintWriter("yeet.dat", "UTF-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private ControlsOutput processInput(DataPacket input) {
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 0f);
 
         if (lastTick > 0)
-            timer += Math.min(dt, 0.5f);
+            timer += Math.min(dt, 0.1f);
 
         CarData car = input.car;
         BallData ball = input.ball;
@@ -65,15 +75,25 @@ public class TestBot implements Bot {
 
                 state = State.RUN;
 
-                Random rng = new Random(timesTested);
-                //actionTarget = Matrix3x3.axisToRotation(new Vector3(rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2));
-                actionTarget = Matrix3x3.lookAt(new Vector3(1, 0, 0), new Vector3(0, 0, 1));
+                Random rng = new Random(System.currentTimeMillis());
+                Vector3 eulerOrient = new Vector3(rng.nextFloat() * Math.PI * 2 - Math.PI, rng.nextFloat() * Math.PI * 2 - Math.PI, rng.nextFloat() * Math.PI * 2 - Math.PI);
+                eulerOrient = new Vector3(0f, (rng.nextFloat() * 2 - 1) * Math.PI, 0f);
 
-                Vector3 init = Matrix3x3.axisToRotation(new Vector3(rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2)).toEuler();
+                actionTarget = Matrix3x3.eulerToRotation(eulerOrient);
+                //actionTarget = Matrix3x3.lookAt(new Vector3(1, 0, 0), new Vector3(0, 0, 1));
+
+                Vector3 init = eulerOrient;
+                init = Matrix3x3.lookAt(new Vector3(1, 0, 0), new Vector3(0, 0, 1)).toEuler();
+
+                disttt += Matrix3x3.eulerToRotation(init).angle(actionTarget);
+                counter2++;
+
+                startOrient = init;
+
                 Vector3 f = actionTarget.forward();
 
                 GameState st = new GameState()
-                        .withGameInfoState(new GameInfoState().withWorldGravityZ(desiredGravity))
+                        .withGameInfoState(new GameInfoState().withWorldGravityZ(desiredGravity).withGameSpeed(2.5f))
                         .withCarState(this.playerIndex, new CarState()
                                 .withBoostAmount(100f)
                                 .withPhysics(new PhysicsState()
@@ -103,9 +123,11 @@ public class TestBot implements Bot {
                 break;
             }
             case RUN: {
-                if (timer > 2f || (car.orientationMatrix.angle(actionTarget) < 0.01f && car.angularVelocity.magnitude() < 0.15f)) {
+                if (timer > 2f || (car.orientationMatrix.angle(actionTarget) < 0.01f && car.angularVelocity.magnitude() < 0.1f)) {
                     timesTested++;
                     timeNeeded += timer;
+                    fileWrite.println(this.actionTarget.toEuler().y + " " + timer);
+                    fileWrite.flush();
                     counter++;
                     state = State.RESET;
                 } else {
@@ -131,6 +153,7 @@ public class TestBot implements Bot {
         {
             renderer.drawString2d(String.format("OrientIndex: %d", timesTested), Color.WHITE, new Point(500, 500), 2, 2);
             renderer.drawString2d(String.format("Avg: %.2f", timeNeeded / counter), Color.WHITE, new Point(500, 600), 2, 2);
+            renderer.drawString2d(String.format("AvgAngle: %.2f", disttt / counter2), Color.WHITE, new Point(500, 700), 2, 2);
             renderer.drawString2d("State: " + state.name(), Color.WHITE, new Point(10, 270), 2, 2);
             renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 350), 1, 1);
             renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 370), 1, 1);

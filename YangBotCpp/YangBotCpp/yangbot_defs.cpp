@@ -248,7 +248,7 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_aerialML(JNIEnv
 	Car car = Car();
 	car.orientation = orient;
 	car.angular_velocity = angular;
-	ReorientML reorientML(car);
+	Reorient reorientML(car);
 	reorientML.target_orientation = targetOrient;
 	reorientML.eps_phi = 0.01f;
 	//reorientML.eps_omega = 0.02f;

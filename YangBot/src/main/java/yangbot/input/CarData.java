@@ -8,6 +8,7 @@ import rlbot.flat.Rotator;
 import yangbot.cpp.FBSCarData;
 import yangbot.manuever.AerialManuver;
 import yangbot.manuever.DodgeManuver;
+import yangbot.manuever.DriveManuver;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix2x2;
 import yangbot.vector.Matrix3x3;
@@ -69,12 +70,15 @@ public class CarData {
     private boolean jumped = false;
     private float dodge_timer = -1.0f;
     private boolean enable_jump_acceleration = false;
-    private Vector3 gravity1 = new Vector3(0, 0, -650);
     private Vector2 dodgeDir;
     private Vector3 dodgeTorque;
     public final BoxShape hitbox;
+    public final boolean isBot;
+    public final String name;
+    public final String strippedName;
+    public final int playerIndex;
 
-    public CarData(rlbot.flat.PlayerInfo playerInfo, float elapsedSeconds) {
+    public CarData(rlbot.flat.PlayerInfo playerInfo, float elapsedSeconds, int index) {
         this.position = new Vector3(playerInfo.physics().location());
         this.velocity = new Vector3(playerInfo.physics().velocity());
         this.orientation = CarOrientation.fromFlatbuffer(playerInfo);
@@ -89,7 +93,14 @@ public class CarData {
         this.physics = playerInfo.physics();
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
         this.hitbox = playerInfo.hitbox();
+        this.isBot = playerInfo.isBot();
+        this.name = playerInfo.name();
+        this.playerIndex = index;
 
+        if (isBot && name.endsWith("(" + (playerIndex + 1) + ")"))
+            strippedName = name.substring(0, name.length() - 3);
+        else
+            strippedName = name;
     }
 
     @SuppressWarnings("CopyConstructorMissesField")
@@ -107,6 +118,10 @@ public class CarData {
         this.physics = null;
         this.angularVelocity = new Vector3(o.angularVelocity);
         this.hitbox = o.hitbox;
+        this.isBot = o.isBot;
+        this.name = o.name;
+        this.playerIndex = o.playerIndex;
+        this.strippedName = o.strippedName;
     }
 
     public void apply(FlatBufferBuilder builder) {
@@ -130,8 +145,89 @@ public class CarData {
         return new Vector3(this.orientationMatrix.get(0, 1), this.orientationMatrix.get(1, 1), this.orientationMatrix.get(2, 1));
     }
 
+    private float driveForceForward(ControlsOutput in, float dt) {
+        final float driving_speed = 1450.0f;
+        final float braking_force = -3500.0f;
+        final float coasting_force = -525.0f;
+        final float throttle_threshold = 0.05f;
+        final float throttle_force = 1550.0f;
+        final float max_speed = 2275.0f;
+        final float min_speed = 10.0f;
+        final float boost_force = 1500.0f;
+        final float steering_torque = 25.75f;
+        final float braking_threshold = -0.001f;
+        final float supersonic_turn_drag = -98.25f;
+
+        final float v_f = (float) velocity.dot(forward());
+        final float v_l = (float) velocity.dot(left());
+        final float w_u = (float) angularVelocity.dot(up());
+
+        final float dir = Math.signum(v_f);
+        final float speed = Math.abs(v_f);
+
+        final float turn_damping = (-0.07186693033945346f * Math.abs(in.getSteer()) + -0.05545323728191764f * Math.abs(w_u) + 0.00062552963716722f * Math.abs(v_l)) * v_f;
+
+        if (in.holdBoost()) {
+            if (v_f < 0.0f)
+                return -braking_force;
+            else {
+                if (v_f < driving_speed)
+                    return max_speed - v_f;
+                else {
+                    if (v_f < max_speed)
+                        return AerialManuver.boost_accel + turn_damping;
+                    else
+                        return supersonic_turn_drag * Math.abs(w_u);
+                }
+            }
+        } else { // Not boosting
+            if ((in.getThrottle() * Math.signum(v_f) <= braking_threshold) &&
+                    Math.abs(v_f) > min_speed) {
+                return braking_force * Math.signum(v_f);
+                // not braking
+            } else {
+                // coasting
+                if (Math.abs(in.getThrottle()) < throttle_threshold && Math.abs(v_f) > min_speed) {
+                    return coasting_force * Math.signum(v_f) + turn_damping;
+                    // accelerating
+                } else {
+                    if (Math.abs(v_f) > driving_speed) {
+                        return turn_damping;
+                    } else {
+                        return in.getThrottle() * (throttle_force - Math.abs(v_f)) + turn_damping;
+                    }
+                }
+            }
+        }
+    }
+
+    private float driveForceLeft(ControlsOutput in, float dt) {
+        final float v_f = (float) velocity.dot(forward());
+        final float v_l = (float) velocity.dot(left());
+        final float w_u = (float) angularVelocity.dot(up());
+
+        return (float) ((1380.4531378f * in.getSteer() + 7.8281188f * in.getThrottle() -
+                15.0064029f * v_l + 668.1208332f * w_u) *
+                (1.0f - Math.exp(-0.001161f * Math.abs(v_f))));
+    }
+
+    private float driveTorqueUp(ControlsOutput in, float dt) {
+        final float v_f = (float) velocity.dot(forward());
+        final float w_u = (float) angularVelocity.dot(up());
+
+        return 15.0f * (in.getSteer() * DriveManuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
+    }
+
     private void driving(ControlsOutput in, float dt) {
-        // TODO
+        Vector3 force = forward().mul(driveForceForward(in, dt)).add(left().mul(driveForceLeft(in, dt)));
+
+        Vector3 torque = up().mul(driveTorqueUp(in, dt));
+
+        velocity = velocity.add(force.mul(dt));
+        position = position.add(velocity.mul(dt));
+
+        angularVelocity = angularVelocity.add(torque.mul(dt));
+        orientationMatrix = Matrix3x3.axisToRotation(angularVelocity.mul(dt)).dot(orientationMatrix);
     }
 
     private void driving_handbrake(ControlsOutput in, float dt) {

@@ -33,13 +33,12 @@ public class DataPacket {
     public final GameInfo gameInfo;
 
     public DataPacket(GameTickPacket request, int playerIndex) {
-
         this.playerIndex = playerIndex;
         this.ball = new BallData(request.ball());
 
         allCars = new ArrayList<>();
         for (int i = 0; i < request.playersLength(); i++) {
-            allCars.add(new CarData(request.players(i), request.gameInfo().secondsElapsed()));
+            allCars.add(new CarData(request.players(i), request.gameInfo().secondsElapsed(), i));
         }
 
         this.car = allCars.get(playerIndex);

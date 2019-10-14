@@ -67,6 +67,30 @@ public class DriveManuver extends Manuver {
         return -1.0f;
     }
 
+    public static float maxTurningCurvature(float v) {
+        final int n = 6;
+
+        float[][] values = {
+                {0.0f, 0.00690f},
+                {500.0f, 0.00398f},
+                {1000.0f, 0.00235f},
+                {1500.0f, 0.00138f},
+                {1750.0f, 0.00110f},
+                {2300.0f, 0.00088f}
+        };
+
+        float input = MathUtils.clip(Math.abs(v), 0f, 2300f);
+
+        for (int i = 0; i < (n - 1); i++) {
+            if (values[i][0] <= input && input <= values[i + 1][0]) {
+                float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
+                return MathUtils.lerp(values[i][1], values[i + 1][1], u);
+            }
+        }
+
+        return -1.0f;
+    }
+
     public static float throttle_accel(float v) {
         final int n = 3;
         float[][] values = {

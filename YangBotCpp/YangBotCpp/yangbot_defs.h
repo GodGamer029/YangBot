@@ -18,9 +18,13 @@ extern "C" {
 
 	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv*, jclass, jobject, jobject, jobject);
 
+	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_aerialML(JNIEnv*, jclass, jobject, jobject, jobject, jfloat);
+
 	JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv*, jclass, jbyte, jbyte);
 	
 	JNIEXPORT ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize);
+
+	JNIEXPORT ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize);
 
 	JNIEXPORT void JNICALL Free( void*);
 

@@ -6,6 +6,8 @@
 #include "rlu_headers/simulation/ball.h"
 #include "rlu_headers/simulation/game.h"
 #include "rlu_headers/simulation/field.h"
+#include "rlu_headers/mechanics/reorient_ML.h"
+#include "rlu_headers/mechanics/reorient.h"
 
 bool init = false;
 jbyte currentMode = -1;
@@ -62,6 +64,63 @@ JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv* env, jcla
 	
 	init = true;
 	initLock.unlock();
+}
+
+
+ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize) {
+	const FBSCarData* inputCarData = flatbuffers::GetRoot<FBSCarData>(inputCar);
+
+	constexpr float simulationRate = 1.f / 60.f;
+	const float secondsSimulated = inputCarData->elapsedSeconds();
+	const int simulationSteps = (int)(secondsSimulated / simulationRate);
+
+	ByteBuffer result = ByteBuffer();
+	if (!init)
+		return result;
+
+	const vec3 position = *reinterpret_cast<const vec3*>(inputCarData->position());
+	const vec3 velocity = *reinterpret_cast<const vec3*>(inputCarData->velocity());
+	const vec3 angular = *reinterpret_cast<const vec3*>(inputCarData->angularVelocity());
+	const vec3 rotate = *reinterpret_cast<const vec3*>(inputCarData->eulerRotation());
+
+	const vec3 g = { 0, 0, -650 };
+
+	float simulationTime = 0;
+	Car car = Car();
+	car.position = position;
+	car.velocity = velocity;
+	car.angular_velocity = angular;
+	car.orientation = euler_to_rotation(rotate);
+	car.on_ground = inputCarData->onGround();
+
+	for (int i = 0; i < simulationSteps; i++) {
+		simulationTime += simulationRate;
+		car.step(Input(), simulationRate);
+	}
+
+	flatbuffers::FlatBufferBuilder builder(256);
+	FBSCarDataBuilder carData(builder);
+
+	auto newPos = FlatVec3(car.position[0], car.position[1], car.position[2]);
+	auto newVel = FlatVec3(car.velocity[0], car.velocity[1], car.velocity[2]);
+	auto newAng = FlatVec3(car.angular_velocity[0], car.angular_velocity[1], car.angular_velocity[2]);
+	vec3 eul = rotation_to_euler(car.orientation);
+	auto newEuler = FlatVec3(eul[0], eul[1], eul[2]);
+
+	carData.add_position(&newPos);
+	carData.add_angularVelocity(&newAng);
+	carData.add_eulerRotation(&newEuler);
+	carData.add_velocity(&newVel);
+	carData.add_onGround(car.on_ground);
+	carData.add_elapsedSeconds(simulationTime);
+
+	builder.Finish(carData.Finish());
+	result.ptr = new unsigned char[builder.GetSize()];
+	result.size = builder.GetSize();
+
+	memcpy(result.ptr, builder.GetBufferPointer(), result.size);
+
+	return result;
 }
 
 ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
@@ -168,6 +227,39 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv
 	if (output == NULL)
 		return NULL;
 	env->SetFloatArrayRegion(output, 0, 3 * (simulationSteps), simulationResults);
+	return output;
+}
+
+JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_aerialML(JNIEnv* env, jclass thisObj, jobject orientEulerV, jobject angularVelV, jobject targetOrientEulerV, jfloat dt)
+{
+	if (!init)
+		return env->NewFloatArray(0);
+
+	static jclass jvec3 = env->FindClass("yangbot/vector/Vector3");
+	static jmethodID jvec3_get = env->GetMethodID(jvec3, "get", "(I)F");
+
+	vec3 orientEuler = { env->CallFloatMethod(orientEulerV, jvec3_get, 0), env->CallFloatMethod(orientEulerV, jvec3_get, 1), env->CallFloatMethod(orientEulerV, jvec3_get, 2) };
+	vec3 angular = { env->CallFloatMethod(angularVelV, jvec3_get, 0), env->CallFloatMethod(angularVelV, jvec3_get, 1), env->CallFloatMethod(angularVelV, jvec3_get, 2) };
+	vec3 targetOrientEuler = { env->CallFloatMethod(targetOrientEulerV, jvec3_get, 0), env->CallFloatMethod(targetOrientEulerV, jvec3_get, 1), env->CallFloatMethod(targetOrientEulerV, jvec3_get, 2) };
+
+	mat3 orient = euler_to_rotation(orientEuler);
+	mat3 targetOrient = euler_to_rotation(targetOrientEuler);
+
+	Car car = Car();
+	car.orientation = orient;
+	car.angular_velocity = angular;
+	ReorientML reorientML(car);
+	reorientML.target_orientation = targetOrient;
+	reorientML.eps_phi = 0.01f;
+	//reorientML.eps_omega = 0.02f;
+	reorientML.step(dt);
+
+	vec3 cOutput = { reorientML.controls.roll, reorientML.controls.pitch, reorientML.controls.yaw };
+
+	jfloatArray output = env->NewFloatArray(3);
+	if (output == NULL)
+		return NULL;
+	env->SetFloatArrayRegion(output, 0, 3, reinterpret_cast<float*>(&cOutput));
 	return output;
 }
 

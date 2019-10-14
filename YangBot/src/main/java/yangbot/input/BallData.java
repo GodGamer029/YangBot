@@ -15,10 +15,14 @@ public class BallData {
     public Vector3 velocity;
     @SuppressWarnings({"WeakerAccess", "unused"})
     public Vector3 spin;
+    public final BallTouch latestTouch;
+    public final boolean hasBeenTouched;
 
     public BallData(final BallInfo ball) {
         this.position = new Vector3(ball.physics().location());
         this.velocity = new Vector3(ball.physics().velocity());
         this.spin = new Vector3(ball.physics().angularVelocity());
+        this.hasBeenTouched = ball.latestTouch() != null;
+        this.latestTouch = this.hasBeenTouched ? new BallTouch(ball.latestTouch()) : null;
     }
 }

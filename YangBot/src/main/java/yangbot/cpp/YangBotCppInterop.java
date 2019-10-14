@@ -63,6 +63,8 @@ public class YangBotCppInterop {
 
     public static native float[] ballstep(Vector3 pos, Vector3 vel, Vector3 ang);
 
+    public static native float[] aerialML(Vector3 orientEuler, Vector3 angularVel, Vector3 targetEuler, float dt);
+
     public static native void init(byte mode, byte map);
 
     private static native float[] getSurfaceCollision(Vector3 pos, float sphereSize);

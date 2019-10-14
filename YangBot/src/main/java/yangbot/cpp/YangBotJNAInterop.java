@@ -60,7 +60,37 @@ public class YangBotJNAInterop {
         return Optional.empty();
     }
 
-    public static native ByteBufferStruct simulateCarCollision(Pointer ptr, int size);
+    public static Optional<FBSCarData> simulateSimpleCar(CarData carData, float time) {
+        try {
+            FlatBufferBuilder builder = new FlatBufferBuilder(128);
+
+            FBSCarData.startFBSCarData(builder);
+            carData.apply(builder);
+            FBSCarData.addElapsedSeconds(builder, time);  // This wastes 4 bytes but its used for the simulation time
+            int offset = FBSCarData.endFBSCarData(builder);
+            builder.finish(offset);
+
+            final byte[] proto = builder.sizedByteArray();
+            final Memory memory = getMemory(proto);
+
+            final ByteBufferStruct struct = simulateSimpleCar(memory, proto.length);
+            if (struct.size < 4) {
+                if (struct.size > 0)
+                    Free(struct.ptr);
+                return Optional.empty();
+            }
+            final byte[] protoBytes = struct.ptr.getByteArray(0, struct.size);
+            Free(struct.ptr);
+            return Optional.ofNullable(FBSCarData.getRootAsFBSCarData(ByteBuffer.wrap(protoBytes)));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Optional.empty();
+    }
+
+    private static native ByteBufferStruct simulateCarCollision(Pointer ptr, int size);
+
+    private static native ByteBufferStruct simulateSimpleCar(Pointer ptr, int size);
 
     private static native void Free(Pointer ptr);
 }

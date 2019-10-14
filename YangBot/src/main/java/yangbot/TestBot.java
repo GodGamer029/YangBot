@@ -66,7 +66,10 @@ public class TestBot implements Bot {
                 state = State.RUN;
 
                 Random rng = new Random(timesTested);
-                actionTarget = Matrix3x3.axisToRotation(new Vector3(rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2));
+                //actionTarget = Matrix3x3.axisToRotation(new Vector3(rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2));
+                actionTarget = Matrix3x3.lookAt(new Vector3(1, 0, 0), new Vector3(0, 0, 1));
+
+                Vector3 init = Matrix3x3.axisToRotation(new Vector3(rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2, rng.nextFloat() * 4 - 2)).toEuler();
                 Vector3 f = actionTarget.forward();
 
                 GameState st = new GameState()
@@ -77,11 +80,11 @@ public class TestBot implements Bot {
                                                 .withLocation(new DesiredVector3(0f, 0f, 1000f))
                                                 .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                                                 .withVelocity(new DesiredVector3(0f, 0f, 0f))
-                                        //.withRotation(new DesiredRotation(0f, (float)0, 0f))
+                                        .withRotation(new DesiredRotation(init.x, init.y, init.z))
                                 )
                         )
                         .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(500f * f.x, 500f * f.y, 500f * f.z + 1000))
+                                .withLocation(new DesiredVector3(500f, 0f, 1000f))
                                 .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                                 .withVelocity(new DesiredVector3(0f, -0f, 0f))
                                 .withRotation(new DesiredRotation(0f, 0f, 0f))

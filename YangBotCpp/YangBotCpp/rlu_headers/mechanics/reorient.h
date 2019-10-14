@@ -1,9 +1,9 @@
 #pragma once
 
-#include "simulation/car.h"
-#include "simulation/input.h"
+#include "../simulation/car.h"
+#include "../simulation/input.h"
 
-#include "linear_algebra/math.h"
+#include "../linear_algebra/math.h"
 
 class Reorient {
 

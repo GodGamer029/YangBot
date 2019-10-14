@@ -1,7 +1,7 @@
 #pragma once
 
-#include <linear_algebra/vec.h>
-#include <simulation/car.h>
+#include "../linear_algebra/vec.h"
+#include "../simulation/car.h"
 
 class Model {
 

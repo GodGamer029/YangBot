@@ -17,8 +17,9 @@ public class YangBotCppInterop {
             // https://stackoverflow.com/questions/2937406/how-to-bundle-a-native-library-and-a-jni-library-inside-a-jar
             boolean is64Bit = System.getProperty("os.arch").contains("64");
 
-            final String libName = is64Bit ? "YangBotCpp64.dll" : "YangBotCpp32.dll";
-            final String rluName = is64Bit ? "rlutilities64.dll" : "rlutilities32.dll";
+
+            final String libName = System.mapLibraryName(is64Bit ? "YangBotCpp64" : "YangBotCpp32");
+            final String rluName = System.mapLibraryName(is64Bit ? "rlutilities64" : "rlutilities32");
             final URL lib = ClassLoader.getSystemClassLoader().getResource("cpp/" + libName);
             final URL rlut = ClassLoader.getSystemClassLoader().getResource("cpp/" + rluName);
 
@@ -28,7 +29,7 @@ public class YangBotCppInterop {
             final File nativeLibTmpFile = new File(tmpDir, libName);
             nativeLibTmpFile.deleteOnExit();
 
-            final File nativeRlutTmpFile = new File(tmpDir, "rlutilities.dll");
+            final File nativeRlutTmpFile = new File(tmpDir, System.mapLibraryName("rlutilities"));
             nativeRlutTmpFile.deleteOnExit();
 
             try (InputStream in = lib.openStream()) {
@@ -61,7 +62,7 @@ public class YangBotCppInterop {
         return Optional.empty();
     }
 
-    public static native float[] ballstep(Vector3 pos, Vector3 vel, Vector3 ang);
+    public static native float[] ballstep(Vector3 pos, Vector3 vel, Vector3 ang, int tickRate);
 
     public static native float[] aerialML(Vector3 orientEuler, Vector3 angularVel, Vector3 targetEuler, float dt);
 

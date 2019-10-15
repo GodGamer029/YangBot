@@ -13,11 +13,11 @@ import java.util.Optional;
 
 public class YangBotJNAInterop {
     static {
-        YangBotCppInterop.doNothing();
+        YangBotCppInterop.doNothing(); // Make sure to load required libs with the static{} initializer
 
         boolean is64Bit = System.getProperty("os.arch").contains("64");
 
-        final String libName = is64Bit ? "YangBotCpp64.dll" : "YangBotCpp32.dll";
+        final String libName = System.mapLibraryName(is64Bit ? "YangBotCpp64" : "YangBotCpp32");
         Native.register(libName);
     }
 

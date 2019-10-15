@@ -195,10 +195,10 @@ ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 	return result;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang) {
-	constexpr float simulationRate = 1.f / 60.f;
+JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jint tickrate) {
+	const float simulationRate = 1.f / tickrate;
 	constexpr float secondsSimulated = 6.f;
-	constexpr int simulationSteps = (int) (secondsSimulated / simulationRate);
+	constexpr int simulationSteps = (int) (secondsSimulated / (1.f / 60.f));
 	if (!init) 
 		return env->NewFloatArray(0);
 	

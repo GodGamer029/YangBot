@@ -1,6 +1,7 @@
 package yangbot.input;
 
 import rlbot.flat.GameInfo;
+import yangbot.util.AdvancedRenderer;
 import yangbot.vector.Vector3;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class GameData {
     protected List<CarData> allCars = null;
     protected float gravityZ = -650;
     protected float dt = 1 / 60f;
+    protected AdvancedRenderer advancedRenderer = null;
 
     public GameData(Long threadId) {
     }
@@ -29,24 +31,26 @@ public class GameData {
 
     public FoolGameData fool() {
         FoolGameData foo = new FoolGameData(0L);
-        foo.update(carData, ballData, allCars, gravityZ, dt);
+        foo.update(carData, ballData, allCars, gravityZ, dt, advancedRenderer);
         return foo;
     }
 
-    public void update(CarData carData, BallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt) {
+    public void update(CarData carData, BallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt, AdvancedRenderer advancedRenderer) {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
         this.gravityZ = gameInfo.worldGravityZ();
         this.dt = dt;
+        this.advancedRenderer = advancedRenderer;
     }
 
-    public void update(CarData carData, BallData ballData, List<CarData> allCars, float gravity, float dt) {
+    public void update(CarData carData, BallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
         this.gravityZ = gravity;
         this.dt = dt;
+        this.advancedRenderer = advancedRenderer;
     }
 
     public Vector3 getGravity() {
@@ -67,5 +71,9 @@ public class GameData {
 
     public float getDt() {
         return dt;
+    }
+
+    public AdvancedRenderer getAdvancedRenderer() {
+        return advancedRenderer;
     }
 }

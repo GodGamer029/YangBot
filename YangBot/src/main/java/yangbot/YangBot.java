@@ -45,12 +45,13 @@ public class YangBot implements Bot {
         if (lastTick > 0)
             timer += Math.min(dt, 0.5f);
 
+        AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
         BallData ball = input.ball;
-        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt);
+        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
 
         drawDebugLines(input, car);
-        AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
+
         ControlsOutput output = new ControlsOutput();
 
         switch (state) {

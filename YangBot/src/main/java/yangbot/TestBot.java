@@ -59,14 +59,15 @@ public class TestBot implements Bot {
         if (lastTick > 0)
             timer += Math.min(dt, 0.1f);
 
+        AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
         BallData ball = input.ball;
-        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt);
+        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
 
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != car.team).findFirst().orElse(car);
 
         drawDebugLines(input, controlCar);
-        AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
+
         ControlsOutput output = new ControlsOutput();
 
         switch (state) {

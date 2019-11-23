@@ -35,6 +35,13 @@ public class DefaultStrategy extends Strategy {
             newDecidedStrat = new DribbleStrategy();
             this.setDone();
         }
+
+        if (!car.hasWheelContact) {
+            newDecidedStrat = new RecoverStrategy();
+            this.setDone();
+        } else if (car.position.z > 150) {
+            controlsOutput.withJump(true);
+        }
     }
 
     @Override

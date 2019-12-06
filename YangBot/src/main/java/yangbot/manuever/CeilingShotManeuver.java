@@ -6,7 +6,7 @@ import yangbot.input.GameData;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
-public class CeilingShotManuver extends Manuver {
+public class CeilingShotManeuver extends Maneuver {
 
     private State state = State.ROLLUP;
 
@@ -22,12 +22,13 @@ public class CeilingShotManuver extends Manuver {
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
 
-        switch (state) {
+        throw new IllegalStateException("Not implemented");
+        /*switch (state) {
             case ROLLUP:
                 controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ball.position.sub(car.position).flatten()));
                 //controlsOutput.withThrottle(1);
                 break;
-        }
+        }*/
     }
 
     @Override
@@ -37,6 +38,6 @@ public class CeilingShotManuver extends Manuver {
 
     enum State {
         ROLLUP,
-        FALLDOWN
+        FALL_DOWN
     }
 }

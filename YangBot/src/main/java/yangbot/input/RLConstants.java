@@ -4,11 +4,11 @@ import yangbot.vector.Vector2;
 
 public class RLConstants {
 
-    public static float ballRadius = 92.75f;
-    public static float carHeight = 36.16f;
-    public static float carElevation = 17.01f;
+    public static final float ballRadius = 92.75f;
+    public static final float carHeight = 36.16f;
+    public static final float carElevation = 17.01f;
 
-    public static int tickRate = 60;
+    public static int tickRate = 120;
     public static float tickSpeed = 1f / tickRate;
 
     public static boolean isPosNearWall(Vector2 pos) {

@@ -138,10 +138,10 @@ public class Vector2 {
     }
 
     public Vector2 rotateBy(double angle) {
-        double cosa = Math.cos(-angle);
-        double sina = Math.sin(-angle);
-        double newX = x * cosa + y * sina;
-        double newY = -x * sina + y * cosa;
+        double cosAngle = Math.cos(-angle);
+        double sinAngle = Math.sin(-angle);
+        double newX = x * cosAngle + y * sinAngle;
+        double newY = -x * sinAngle + y * cosAngle;
         return new Vector2(newX, newY);
     }
 

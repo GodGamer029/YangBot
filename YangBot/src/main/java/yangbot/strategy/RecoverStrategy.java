@@ -5,7 +5,7 @@ import yangbot.cpp.CarCollisionInfo;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
-import yangbot.manuever.TurnManuver;
+import yangbot.manuever.TurnManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
@@ -16,7 +16,7 @@ import java.util.Optional;
 
 public class RecoverStrategy extends Strategy {
 
-    private TurnManuver turnManuver;
+    private TurnManeuver turnManuver;
 
     @Override
     protected void planStrategyInternal() {
@@ -24,7 +24,7 @@ public class RecoverStrategy extends Strategy {
         CarData car = gameData.getCarData();
         if (car.hasWheelContact)
             this.setDone();
-        turnManuver = new TurnManuver();
+        turnManuver = new TurnManeuver();
     }
 
     @Override
@@ -59,8 +59,8 @@ public class RecoverStrategy extends Strategy {
         if (simulationTime >= 2f / 60f)
             renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
         {
-            BoxShape realhitbox = car.hitbox;
-            Vector3 hitbox = new Vector3(realhitbox.length(), realhitbox.width(), realhitbox.height()).mul(1.5f);
+            BoxShape real_hitbox = car.hitbox;
+            Vector3 hitbox = new Vector3(real_hitbox.length(), real_hitbox.width(), real_hitbox.height()).mul(1.5f);
             Color c = Color.RED;
             Vector3 p = start;
             Vector3 hitboxOffset = new Vector3(13.88f, 0f, 20.75f);

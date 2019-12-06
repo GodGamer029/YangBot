@@ -77,8 +77,8 @@ public class TestBot implements Bot {
                 state = State.RUN;
 
                 Random rng = new Random(System.currentTimeMillis());
-                Vector3 eulerOrient = new Vector3(rng.nextFloat() * Math.PI * 2 - Math.PI, rng.nextFloat() * Math.PI * 2 - Math.PI, rng.nextFloat() * Math.PI * 2 - Math.PI);
-                eulerOrient = new Vector3(0f, (rng.nextFloat() * 2 - 1) * Math.PI, 0f);
+                //Vector3 eulerOrient = new Vector3(rng.nextFloat() * Math.PI * 2 - Math.PI, rng.nextFloat() * Math.PI * 2 - Math.PI, rng.nextFloat() * Math.PI * 2 - Math.PI);
+                Vector3 eulerOrient = new Vector3(0f, (rng.nextFloat() * 2 - 1) * Math.PI, 0f);
 
                 actionTarget = Matrix3x3.eulerToRotation(eulerOrient);
                 //actionTarget = Matrix3x3.lookAt(new Vector3(1, 0, 0), new Vector3(0, 0, 1));

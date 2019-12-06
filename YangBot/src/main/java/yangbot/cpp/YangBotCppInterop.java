@@ -32,9 +32,11 @@ public class YangBotCppInterop {
             final File nativeRlutTmpFile = new File(tmpDir, System.mapLibraryName("rlutilities"));
             nativeRlutTmpFile.deleteOnExit();
 
+            assert lib != null;
             try (InputStream in = lib.openStream()) {
                 Files.copy(in, nativeLibTmpFile.toPath());
             }
+            assert rlut != null;
             try (InputStream in = rlut.openStream()) {
                 Files.copy(in, nativeRlutTmpFile.toPath());
             }

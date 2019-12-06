@@ -7,21 +7,21 @@ import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
-public class AerialManuver extends Manuver {
+public class AerialManeuver extends Maneuver {
 
-    public static float boost_accel = 1060.0f;
-    public static float throttle_accel = 66.66667f;
+    public static final float boost_acceleration = 1060.0f;
+    public static final float throttle_acceleration = 66.66667f;
 
     public float arrivalTime = 0.0f;
     public Vector3 target = null;
     public Matrix3x3 target_orientation = null;
     private boolean jumping = true;
-    private DodgeManuver doubleJump;
-    private TurnManuver turnManuver;
+    private final DodgeManeuver doubleJump;
+    private final TurnManeuver turnManuver;
 
-    public AerialManuver() {
-        this.turnManuver = new TurnManuver();
-        this.doubleJump = new DodgeManuver();
+    public AerialManeuver() {
+        this.turnManuver = new TurnManeuver();
+        this.doubleJump = new DodgeManeuver();
         this.doubleJump.duration = 0.20f;
         this.doubleJump.delay = 0.25f;
     }
@@ -33,9 +33,9 @@ public class AerialManuver extends Manuver {
 
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
-        final float j_speed = DodgeManuver.speed;
-        final float j_accel = DodgeManuver.acceleration;
-        final float j_duration = DodgeManuver.max_duration;
+        final float j_speed = DodgeManeuver.speed;
+        final float j_acceleration = DodgeManeuver.acceleration;
+        final float j_duration = DodgeManeuver.max_duration;
 
         final float reorient_distance = 50.0f;
         final float angle_threshold = 0.3f;
@@ -64,7 +64,7 @@ public class AerialManuver extends Manuver {
             }
 
             //vf = vf.add(car.up().mul(j_accel * tau));
-            xf = xf.add(car.up().mul(j_accel * tau * (T - 0.5f * tau)));
+            xf = xf.add(car.up().mul(j_acceleration * tau * (T - 0.5f * tau)));
 
             //vf = vf.add(car.up().mul(j_speed));
             xf = xf.add(car.up().mul(j_speed * (T - tau)));
@@ -109,7 +109,7 @@ public class AerialManuver extends Manuver {
                 controlsOutput.withThrottle(0);
             } else {
                 controlsOutput.withBoost(false);
-                controlsOutput.withThrottle(0.5f * throttle_accel * T * T);
+                controlsOutput.withThrottle(0.5f * throttle_acceleration * T * T);
             }
         } else {
             controlsOutput.withBoost(false);
@@ -122,18 +122,13 @@ public class AerialManuver extends Manuver {
     @Override
     public CarData simulate(CarData car) {
         CarData carCopy = new CarData(car);
-        AerialManuver fakeAerial = new AerialManuver();
+        AerialManeuver fakeAerial = new AerialManeuver();
         fakeAerial.target = this.target;
         fakeAerial.arrivalTime = this.arrivalTime;
         fakeAerial.target_orientation = this.target_orientation;
         fakeAerial.jumping = car.hasWheelContact;
         FoolGameData foolGameData = GameData.current().fool();
 
-      /* AdvancedRenderer rennd = new AdvancedRenderer(124);
-        AdvancedRenderer f2 = new AdvancedRenderer(126);
-        rennd.startPacket();
-        f2.startPacket();
-*/
         float dt = 0.01666f;
         Vector3 lastPos = null;
         for (float t = dt; t < 5.0f; t += dt) {
@@ -143,23 +138,10 @@ public class AerialManuver extends Manuver {
             fakeAerial.step(dt, output);
             carCopy.step(output, dt);
 
-            /*if(lastPos == null){
-                rennd.drawCentered3dCube(Color.green, carCopy.position, 50);
-                lastPos = carCopy.position;
-            }else if(lastPos.distance(carCopy.position) > 50){
-
-               // rennd.drawLine3d(Color.RED, lastPos, carCopy.position);
-                rennd.drawLine3d(Color.yellow, lastPos, carCopy.position);
-                f2.drawLine3d(Color.white, carCopy.position, carCopy.position.add(carCopy.forward().mul(50)));
-                lastPos = carCopy.position;
-            }*/
 
             if (fakeAerial.isDone())
                 break;
         }
-
-        //rennd.finishAndSendIfDifferent();
-        //f2.finishAndSendIfDifferent();
 
         return carCopy;
     }

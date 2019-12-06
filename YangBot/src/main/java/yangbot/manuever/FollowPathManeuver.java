@@ -7,18 +7,18 @@ import yangbot.prediction.Curve;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
-public class FollowPathManuver extends Manuver {
+public class FollowPathManeuver extends Maneuver {
 
     public Curve path;
     public float arrivalTime = -1;
     public float arrivalSpeed = -1;
     float expected_error;
     float expected_speed;
-    private DriveManuver driveManuver;
+    private DriveManeuver driveManeuver;
 
-    public FollowPathManuver() {
+    public FollowPathManeuver() {
         path = new Curve();
-        driveManuver = new DriveManuver();
+        driveManeuver = new DriveManeuver();
     }
 
     @Override
@@ -41,7 +41,7 @@ public class FollowPathManuver extends Manuver {
         }
 
         if (path.maxSpeeds.length == 0)
-            path.calculateMaxSpeeds(DriveManuver.max_speed, DriveManuver.max_speed);
+            path.calculateMaxSpeeds(DriveManeuver.max_speed, DriveManeuver.max_speed);
 
         float tReact = 0.3f;
 
@@ -51,30 +51,30 @@ public class FollowPathManuver extends Manuver {
 
         float sAhead = (float) (s - Math.max(car.velocity.magnitude(), 500f) * tReact);
 
-        driveManuver.target = path.pointAt(sAhead);
+        driveManeuver.target = path.pointAt(sAhead);
 
         if (arrivalTime != -1) {
             float T_min = 0.008f;
             float T = Math.max(arrivalTime - car.elapsedSeconds, T_min);
 
             if (arrivalSpeed != -1)
-                driveManuver.speed = determine_speed_plan(s, T, dt, car);
+                driveManeuver.speed = determine_speed_plan(s, T, dt, car);
             else
-                driveManuver.speed = s / T;
+                driveManeuver.speed = s / T;
 
             this.setIsDone(T <= T_min);
         } else {
             if (arrivalSpeed != -1)
-                driveManuver.speed = arrivalSpeed;
+                driveManeuver.speed = arrivalSpeed;
             else
-                driveManuver.speed = DriveManuver.max_throttle_speed;
+                driveManeuver.speed = DriveManeuver.max_throttle_speed;
 
             this.setIsDone(s <= 50f);
         }
 
-        driveManuver.speed = Math.min(driveManuver.speed, path.maxSpeedAt(s - 4f * speed * dt));
+        driveManeuver.speed = Math.min(driveManeuver.speed, path.maxSpeedAt(s - 4f * speed * dt));
 
-        driveManuver.step(dt, controlsOutput);
+        driveManeuver.step(dt, controlsOutput);
     }
 
     float interpolate_quadratic(float v0, float vT, float aT, float t, float T) {
@@ -109,10 +109,10 @@ public class FollowPathManuver extends Manuver {
         float v0 = (float) car.velocity.magnitude();
         float vf = arrivalSpeed;
 
-        float a = DriveManuver.boost_accel + DriveManuver.throttle_accel(vf);
+        float a = DriveManeuver.boost_acceleration + DriveManeuver.throttle_acceleration(vf);
         float error = distance_error(s, T, dt, v0, vf, a);
 
-        float a_old = -DriveManuver.brake_accel;
+        float a_old = -DriveManeuver.brake_acceleration;
 
         float error_old = distance_error(s, T, dt, v0, vf, a_old);
 
@@ -132,7 +132,7 @@ public class FollowPathManuver extends Manuver {
         }
 
         expected_error = error;
-        expected_speed = interpolate_quadratic(v0, vf, a, DriveManuver.reaction_time, T);
+        expected_speed = interpolate_quadratic(v0, vf, a, DriveManeuver.reaction_time, T);
         //if(Float.isNaN(expected_speed))
         //    System.out.println("Expected speed isNan. v0="+v0+" vf="+vf+" a="+a+" error_old="+error_old);
         return expected_speed;

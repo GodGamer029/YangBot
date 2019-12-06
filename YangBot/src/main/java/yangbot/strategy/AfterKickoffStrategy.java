@@ -23,9 +23,9 @@ public class AfterKickoffStrategy extends Strategy {
 
         Vector3 predictedPos = ball.position;
         try {
-            BallPrediction pred = RLBotDll.getBallPrediction();
-            for (int i = 0; i < pred.slicesLength(); i += 4) {
-                PredictionSlice slice = pred.slices(i);
+            BallPrediction ballPrediction = RLBotDll.getBallPrediction();
+            for (int i = 0; i < ballPrediction.slicesLength(); i += 4) {
+                PredictionSlice slice = ballPrediction.slices(i);
                 if (slice.gameSeconds() > car.elapsedSeconds + 2) {
                     predictedPos = new Vector3(slice.physics().location());
                     break;

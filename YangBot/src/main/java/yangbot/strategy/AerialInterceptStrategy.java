@@ -6,7 +6,7 @@ import rlbot.flat.BallPrediction;
 import rlbot.flat.PredictionSlice;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
-import yangbot.manuever.AerialManuver;
+import yangbot.manuever.AerialManeuver;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
@@ -14,11 +14,11 @@ import java.util.Optional;
 
 public class AerialInterceptStrategy extends Strategy {
 
-    private AerialManuver aerialManuver = null;
+    private AerialManeuver aerialManeuver = null;
 
     @Override
     protected void planStrategyInternal() {
-        aerialManuver = new AerialManuver();
+        aerialManeuver = new AerialManeuver();
 
         GameData gameData = GameData.current();
         CarData carData = gameData.getCarData();

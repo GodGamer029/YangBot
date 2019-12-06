@@ -7,15 +7,15 @@ import yangbot.util.ControlsOutput;
 import yangbot.util.MathUtils;
 import yangbot.vector.Vector3;
 
-public class DriveManuver extends Manuver {
+public class DriveManeuver extends Maneuver {
 
-    public static float max_speed = 2300f;
-    public static float min_speed = 10f;
-    public static float max_throttle_speed = 1410.0f;
-    public static float boost_accel = 991.667f;
-    public static float brake_accel = 3500.0f;
-    public static float coasting_accel = 525.0f;
-    public static float reaction_time = 0.04f;
+    public static final float max_speed = 2300f;
+    public static final float min_speed = 10f;
+    public static final float max_throttle_speed = 1410.0f;
+    public static final float boost_acceleration = 991.667f;
+    public static final float brake_acceleration = 3500.0f;
+    public static final float coasting_acceleration = 525.0f;
+    public static final float reaction_time = 0.04f;
     public Vector3 target = null;
     public float speed = 1400f;
 
@@ -33,9 +33,9 @@ public class DriveManuver extends Manuver {
             float force = 0;
             {
                 if (newSpeed < drivingSpeed)
-                    force = DriveManuver.max_speed - newSpeed;
-                else if (newSpeed < DriveManuver.max_speed)
-                    force = AerialManuver.boost_accel;
+                    force = DriveManeuver.max_speed - newSpeed;
+                else if (newSpeed < DriveManeuver.max_speed)
+                    force = AerialManeuver.boost_acceleration;
             }
             newSpeed += force * dt;
             dist += newSpeed * dt;
@@ -91,7 +91,7 @@ public class DriveManuver extends Manuver {
         return -1.0f;
     }
 
-    public static float throttle_accel(float v) {
+    public static float throttle_acceleration(float v) {
         final int n = 3;
         float[][] values = {
                 {0f, 1600f},
@@ -128,12 +128,12 @@ public class DriveManuver extends Manuver {
 
         float acceleration = (speed - vf) / reaction_time;
 
-        float brake_coast_transition = -(0.45f * brake_accel + 0.55f * coasting_accel);
-        float coasting_throttle_transition = -0.5f * coasting_accel;
-        float throttle_boost_transition = 1.0f * throttle_accel(vf) + 0.5f * boost_accel;
+        float brake_coast_transition = -(0.45f * brake_acceleration + 0.55f * coasting_acceleration);
+        float coasting_throttle_transition = -0.5f * coasting_acceleration;
+        float throttle_boost_transition = 1.0f * throttle_acceleration(vf) + 0.5f * boost_acceleration;
 
         if (car.up().z < 0.7f) {
-            brake_coast_transition = coasting_throttle_transition = -0.5f * brake_accel;
+            brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
         }
 
         if (acceleration <= brake_coast_transition) {
@@ -143,7 +143,7 @@ public class DriveManuver extends Manuver {
             output.withThrottle(0);
             output.withBoost(false);
         } else if ((coasting_throttle_transition <= acceleration) && (acceleration <= throttle_boost_transition)) {
-            output.withThrottle(Math.max(0.001f, acceleration / throttle_accel(vf)));
+            output.withThrottle(Math.max(0.001f, acceleration / throttle_acceleration(vf)));
             output.withBoost(false);
         } else if (throttle_boost_transition < acceleration) {
             output.withThrottle(1.0f);

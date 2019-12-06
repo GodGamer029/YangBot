@@ -8,13 +8,13 @@ import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
 
-public class RecoverToGroundManuver extends Manuver {
+public class RecoverToGroundManeuver extends Maneuver {
 
     public Vector2 orientationTarget = new Vector2(0, 0);
-    private TurnManuver turnManuver;
+    private final TurnManeuver turnManeuver;
 
-    public RecoverToGroundManuver() {
-        turnManuver = new TurnManuver();
+    public RecoverToGroundManeuver() {
+        turnManeuver = new TurnManeuver();
     }
 
     @Override
@@ -39,8 +39,8 @@ public class RecoverToGroundManuver extends Manuver {
         if (car.hasWheelContact) {
             this.setIsDone(true);
         } else {
-            turnManuver.target = Matrix3x3.lookAt(new Vector3(orientationTarget, 0), new Vector3(0, 0, 1));
-            turnManuver.step(dt, controlsOutput);
+            turnManeuver.target = Matrix3x3.lookAt(new Vector3(orientationTarget, 0), new Vector3(0, 0, 1));
+            turnManeuver.step(dt, controlsOutput);
         }
     }
 

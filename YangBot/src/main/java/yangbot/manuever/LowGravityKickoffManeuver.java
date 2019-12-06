@@ -7,12 +7,12 @@ import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
-public class LowGravKickoffManuver extends Manuver {
+public class LowGravityKickoffManeuver extends Maneuver {
 
-    private AerialManuver aerialManuver;
+    private final AerialManeuver aerialManeuver;
 
-    public LowGravKickoffManuver() {
-        this.aerialManuver = new AerialManuver();
+    public LowGravityKickoffManeuver() {
+        this.aerialManeuver = new AerialManeuver();
     }
 
     @Override
@@ -32,15 +32,15 @@ public class LowGravKickoffManuver extends Manuver {
         }
 
 
-        if (aerialManuver.target == null) { // Find target
+        if (aerialManeuver.target == null) { // Find target
 
             boolean foundTarget = false;
             for (float f = 1; f < 7; f += 1 / 30f) {
-                aerialManuver.target = ball.position;
-                aerialManuver.arrivalTime = f + car.elapsedSeconds;
-                CarData carData = aerialManuver.simulate(car);
+                aerialManeuver.target = ball.position;
+                aerialManeuver.arrivalTime = f + car.elapsedSeconds;
+                CarData carData = aerialManeuver.simulate(car);
 
-                if (carData.position.distance(aerialManuver.target) <= 200) {
+                if (carData.position.distance(aerialManeuver.target) <= 200) {
                     System.out.println("Found kickoff at " + f);
                     foundTarget = true;
                     break;
@@ -48,14 +48,14 @@ public class LowGravKickoffManuver extends Manuver {
             }
             if (!foundTarget) {
                 System.out.println("Cant find target kick off");
-                aerialManuver.target = null;
+                aerialManeuver.target = null;
                 return;
             }
         }
 
-        aerialManuver.target_orientation = Matrix3x3.lookAt(ball.position.sub(car.position).normalized(), new Vector3(0, 0, 1));
-        aerialManuver.step(dt, controlsOutput);
-        if (aerialManuver.isDone())
+        aerialManeuver.target_orientation = Matrix3x3.lookAt(ball.position.sub(car.position).normalized(), new Vector3(0, 0, 1));
+        aerialManeuver.step(dt, controlsOutput);
+        if (aerialManeuver.isDone())
             this.setIsDone(true);
     }
 

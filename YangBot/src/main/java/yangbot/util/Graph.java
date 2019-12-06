@@ -120,8 +120,8 @@ public class Graph {
     }
 
     public static class Edge {
-        int src, dst;
-        float weight;
+        final int src, dst;
+        final float weight;
 
         public Edge(int src, int dst, float weight) {
             this.src = src;

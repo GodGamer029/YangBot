@@ -7,7 +7,7 @@ import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
-public class TurnManuver extends Manuver {
+public class TurnManeuver extends Maneuver {
 
     private final Vector3[] e = new Vector3[]{
             new Vector3(1, 0, 0),
@@ -45,8 +45,8 @@ public class TurnManuver extends Manuver {
 
     private Vector3 f(Vector3 alpha_local, float dt) {
         Vector3 alpha_world = theta.dot(alpha_local);
-        Vector3 omega_pred = omega.add(alpha_world.mul(dt));
-        Vector3 phi_pred = phi
+        Vector3 omega_prediction = omega.add(alpha_world.mul(dt));
+        Vector3 phi_prediction = phi
                 .add(Z0
                         .dot(omega
                                 .add(alpha_world
@@ -55,27 +55,31 @@ public class TurnManuver extends Manuver {
                         )
                         .mul(dt)
                 );
-        Vector3 dphi_dt_pred = Z0.dot(omega_pred);
-        return phi_pred.mul(-1).sub(G(phi_pred, dphi_dt_pred));
+        Vector3 dphi_dt_prediction = Z0.dot(omega_prediction);
+        return phi_prediction.mul(-1).sub(G(phi_prediction, dphi_dt_prediction));
     }
 
     private Matrix3x3 Z(Vector3 q) {
         float norm_q = (float) q.magnitude();
 
+        final float v1 = q.x * q.x + q.z * q.z;
+        final float v2 = q.y * q.y + q.z * q.z;
+        final float v3 = q.x * q.x + q.y * q.y;
+
         if (norm_q < 0.2f) {
             Matrix3x3 mat = new Matrix3x3();
 
-            mat.assign(0, 0, 1.0f - (q.y * q.y + q.z * q.z) / 12.0f);
+            mat.assign(0, 0, 1.0f - v2 / 12.0f);
             mat.assign(0, 1, (q.x * q.y / 12.0f) + q.z / 2.0f);
             mat.assign(0, 2, (q.x * q.z / 12.0f) - q.y / 2.0f);
 
             mat.assign(1, 0, (q.y * q.x / 12.0f) - q.z / 2.0f);
-            mat.assign(1, 1, 1.0f - (q.x * q.x + q.z * q.z) / 12.0f);
+            mat.assign(1, 1, 1.0f - v1 / 12.0f);
             mat.assign(1, 2, (q.y * q.z / 12.0f) + q.x / 2.0f);
 
             mat.assign(2, 0, (q.z * q.x / 12.0f) + q.y / 2.0f);
             mat.assign(2, 1, (q.z * q.y / 12.0f) - q.x / 2.0f);
-            mat.assign(2, 2, 1.0f - (q.x * q.x + q.y * q.y) / 12.0f);
+            mat.assign(2, 2, 1.0f - v3 / 12.0f);
 
             return mat;
         } else {
@@ -84,17 +88,17 @@ public class TurnManuver extends Manuver {
 
             Matrix3x3 mat = new Matrix3x3();
 
-            mat.assign(0, 0, (q.x * q.x + c * (q.y * q.y + q.z * q.z)) / qq);
+            mat.assign(0, 0, (q.x * q.x + c * v2) / qq);
             mat.assign(0, 1, ((1.0f - c) * q.x * q.y / qq) + q.z / 2.0f);
             mat.assign(0, 2, ((1.0f - c) * q.x * q.z / qq) - q.y / 2.0f);
 
             mat.assign(1, 0, ((1.0f - c) * q.y * q.x / qq) - q.z / 2.0f);
-            mat.assign(1, 1, (q.y * q.y + c * (q.x * q.x + q.z * q.z)) / qq);
+            mat.assign(1, 1, (q.y * q.y + c * v1) / qq);
             mat.assign(1, 2, ((1.0f - c) * q.y * q.z / qq) + q.x / 2.0f);
 
             mat.assign(2, 0, ((1.0f - c) * q.z * q.x / qq) + q.y / 2.0f);
             mat.assign(2, 1, ((1.0f - c) * q.z * q.y / qq) - q.x / 2.0f);
-            mat.assign(2, 2, (q.z * q.z + c * (q.x * q.x + q.y * q.y)) / qq);
+            mat.assign(2, 2, (q.z * q.z + c * v3) / qq);
 
             return mat;
         }
@@ -172,9 +176,9 @@ public class TurnManuver extends Manuver {
             dphi_dt = this.Z0.dot(omega);
             this.horizon_time = Math.max(0.03f, 4.0f * dt);
 
-            final int n_iter = 5;
+            final int n_iterations = 5;
             float eps = 0.001f;
-            for (int i = 0; i < n_iter; i++) {
+            for (int i = 0; i < n_iterations; i++) {
                 Vector3 f0 = f(alpha, horizon_time);
 
                 Matrix3x3 J = new Matrix3x3();

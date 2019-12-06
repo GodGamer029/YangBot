@@ -8,8 +8,8 @@ import yangbot.input.CarData;
 import yangbot.input.DataPacket;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.manuever.DriveManuver;
-import yangbot.manuever.RegularKickoffManuver;
+import yangbot.manuever.DriveManeuver;
+import yangbot.manuever.RegularKickoffManeuver;
 import yangbot.strategy.AfterKickoffStrategy;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.Strategy;
@@ -31,7 +31,7 @@ public class YangBot implements Bot {
     private State state = State.RESET;
     private float timer = -1.0f;
     private float lastTick = -1;
-    private RegularKickoffManuver kickoffManuver = null;
+    private RegularKickoffManeuver kickoffManeuver = null;
     private Strategy currentPlan = null;
     private boolean hasSetPriority = false;
 
@@ -64,8 +64,8 @@ public class YangBot implements Bot {
         switch (state) {
             case RESET: {
                 timer = 0.0f;
-                if (RegularKickoffManuver.isKickoff()) {
-                    kickoffManuver = new RegularKickoffManuver();
+                if (RegularKickoffManeuver.isKickoff()) {
+                    kickoffManeuver = new RegularKickoffManeuver();
                     state = State.KICKOFF;
                     output.withThrottle(1);
                     output.withBoost(true);
@@ -75,8 +75,8 @@ public class YangBot implements Bot {
                 break;
             }
             case KICKOFF: {
-                kickoffManuver.step(dt, output);
-                if (kickoffManuver.isDone()) {
+                kickoffManeuver.step(dt, output);
+                if (kickoffManeuver.isDone()) {
                     state = State.INIT;
                     currentPlan = new AfterKickoffStrategy();
                 }
@@ -103,7 +103,7 @@ public class YangBot implements Bot {
             }
         }
 
-        if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= DriveManuver.max_speed - 50)
+        if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= DriveManeuver.max_speed - 50)
             output.withBoost(false);
 
         // Print Throttle info

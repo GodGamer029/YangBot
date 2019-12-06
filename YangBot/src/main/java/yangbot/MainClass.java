@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class MainClass {
 
     private static final Integer DEFAULT_PORT = 19265;
-    public static boolean useTestBot = false;
+    public static final boolean useTestBot = false;
 
     private static void lazyLoadNavigator() {
         new Thread(MainClass::loadNavigator).start();
@@ -41,7 +41,7 @@ public class MainClass {
             int[] parameters = new int[4];
             int[] paths = new int[13707632];
             float[] times = new float[13707632]; // 129791
-            Graph.Edge[] edges = new Graph.Edge[1530349]; // 1530349 for soccers
+            Graph.Edge[] edges = new Graph.Edge[1530349]; // 1530349 for soccer
             Vector3[] nav_nodes = new Vector3[12115]; // 12115 for soccer
             Vector3[] nav_normals = new Vector3[12115];
             System.out.println("Allocated arrays " + (System.currentTimeMillis() - ns) + "ms");
@@ -101,7 +101,7 @@ public class MainClass {
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             Navigator.initStatics(parameters, times, paths, edges, nav_nodes, nav_normals);
-            System.out.println("Initted Navigator in " + (System.currentTimeMillis() - ns) + "ms");
+            System.out.println("Navigator-Init in " + (System.currentTimeMillis() - ns) + "ms");
             System.gc();
         } catch (Exception e) {
             e.printStackTrace();
@@ -109,9 +109,7 @@ public class MainClass {
     }
 
     private static void lazyLoadRLU() {
-        new Thread(() -> {
-            YangBotCppInterop.init((byte) 0, (byte) 0);
-        }).start();
+        new Thread(() -> YangBotCppInterop.init((byte) 0, (byte) 0)).start();
     }
 
     public static void main(String[] args) {

@@ -7,14 +7,14 @@ import yangbot.util.ControlsOutput;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Manuver {
+public abstract class Maneuver {
     private boolean isDone;
     private boolean isFooling = false;
     private GameData foolGameData = null;
 
-    private List<Manuver> manuverList = new ArrayList<>();
+    private List<Maneuver> maneuverList = new ArrayList<>();
 
-    public Manuver() {
+    public Maneuver() {
     }
 
     public abstract boolean isViable();

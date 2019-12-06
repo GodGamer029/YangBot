@@ -7,23 +7,23 @@ import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
 
-public class DodgeManuver extends Manuver {
+public class DodgeManeuver extends Maneuver {
 
-    public static float max_duration = 0.2f;
-    public static float min_duration = 0.025f;
-    public static float speed = 291.667f;
-    public static float acceleration = 1458.3333f;
+    public static final float max_duration = 0.2f;
+    public static final float min_duration = 0.025f;
+    public static final float speed = 291.667f;
+    public static final float acceleration = 1458.3333f;
 
-    public static float timeout = 1.5f;
-    public static float input_threshold = 0.5f;
+    public static final float timeout = 1.5f;
+    public static final float input_threshold = 0.5f;
 
-    public static float z_damping = 0.35f;
-    public static float z_damping_start = 0.15f;
-    public static float z_damping_end = 0.21f;
+    public static final float z_damping = 0.35f;
+    public static final float z_damping_start = 0.15f;
+    public static final float z_damping_end = 0.21f;
 
-    public static float torque_time = 0.65f;
-    public static float side_torque = 260.0f;
-    public static float forward_torque = 224.0f;
+    public static final float torque_time = 0.65f;
+    public static final float side_torque = 260.0f;
+    public static final float forward_torque = 224.0f;
 
     public float duration = -1;
     public float timer = 0;
@@ -103,8 +103,6 @@ public class DodgeManuver extends Manuver {
 
         if (car.double_jumped)
             controlsOutput.withJump(false);
-
-        //if((timer < dodge_time) && preorientation)
 
         setIsDone(this.timer > timeout);
         this.timer += dt;

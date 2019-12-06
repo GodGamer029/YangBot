@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AdvancedRenderer extends Renderer {
-    private static Map<Integer, AdvancedRenderer> botLoopMap = new ConcurrentHashMap<>();
+    private final static Map<Integer, AdvancedRenderer> botLoopMap = new ConcurrentHashMap<>();
     private RenderPacket previousPacket = null;
 
     public AdvancedRenderer(int index) {

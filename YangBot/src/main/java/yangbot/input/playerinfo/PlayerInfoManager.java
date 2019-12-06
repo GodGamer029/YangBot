@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerInfoManager {
 
-    private static Map<String, PlayerInfo> playerInfoMap = new ConcurrentHashMap<>();
+    private static final Map<String, PlayerInfo> playerInfoMap = new ConcurrentHashMap<>();
 
     public static PlayerInfo getFor(String name) {
         playerInfoMap.computeIfAbsent(name, PlayerInfo::new);

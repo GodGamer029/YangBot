@@ -12,7 +12,7 @@ public class GameData {
 
     public static float timeOfMatchStart = -1f;
 
-    private static Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
+    public static final float gameLatencyCompensation = 0.f;
 
     protected CarData carData = null;
     protected BallData ballData = null;
@@ -20,7 +20,7 @@ public class GameData {
     protected float gravityZ = -650;
     protected float dt = 1 / 60f;
     protected AdvancedRenderer advancedRenderer = null;
-    public static float gameLatencyCompensation = 0.4f;
+    private static final Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
 
     public GameData(Long threadId) {
     }

@@ -66,7 +66,6 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public int toFlatbuffer(FlatBufferBuilder builder) {
-        // Invert the X value again so that rlbot sees the format it expects.
         return rlbot.flat.Vector3.createVector3(builder, x, y, z);
     }
 
@@ -165,10 +164,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public double angle(Vector3 v) {
-        double mag2 = magnitudeSquared();
-        double vmag2 = v.magnitudeSquared();
+        double magnitude2 = magnitudeSquared();
+        double vMagnitude2 = v.magnitudeSquared();
         double dot = dot(v);
-        return Math.acos(dot / Math.sqrt(mag2 * vmag2));
+        return Math.acos(dot / Math.sqrt(magnitude2 * vMagnitude2));
     }
 
     public Vector3 crossProduct(Vector3 v) {

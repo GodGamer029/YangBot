@@ -1,6 +1,6 @@
 package yangbot.prediction;
 
-import yangbot.manuever.DriveManuver;
+import yangbot.manuever.DriveManeuver;
 import yangbot.util.CubicHermite;
 import yangbot.util.MathUtils;
 import yangbot.util.OGH;
@@ -14,7 +14,7 @@ import java.util.List;
 public class Curve {
 
     public float length;
-    public ArrayList<Vector3> points;
+    public final ArrayList<Vector3> points;
     public float[] maxSpeeds;
     private ArrayList<Vector3> tangents;
     private ArrayList<Float> curvatures;
@@ -361,7 +361,7 @@ public class Curve {
         maxSpeeds = new float[curvatures.size()];
 
         for (int i = 0; i < curvatures.size(); i++)
-            maxSpeeds[i] = DriveManuver.maxTurningSpeed(curvatures.get(i) * 1.1f);
+            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(curvatures.get(i) * 1.1f);
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
         maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);
@@ -369,7 +369,7 @@ public class Curve {
         for (int i = 1; i < curvatures.size(); i++) {
             float ds = distances[i - 1] - distances[i];
             Vector3 t = tangents.get(i).add(tangents.get(i - 1)).normalized();
-            float attainable_speed = maximize_speed_with_throttle((float) (0.9f * DriveManuver.boost_accel + gravity.dot(t)), maxSpeeds[i - 1], ds);
+            float attainable_speed = maximize_speed_with_throttle((float) (0.9f * DriveManeuver.boost_acceleration + gravity.dot(t)), maxSpeeds[i - 1], ds);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
         }
 
@@ -378,7 +378,7 @@ public class Curve {
         for (int i = curvatures.size() - 2; i >= 0; i--) {
             float ds = distances[i] - distances[i + 1];
             Vector3 t = tangents.get(i).add(tangents.get(i + 1)).normalized();
-            float attainable_speed = maximize_speed_without_throttle(DriveManuver.brake_accel - (float) gravity.dot(t), maxSpeeds[i + 1], ds);
+            float attainable_speed = maximize_speed_without_throttle(DriveManeuver.brake_acceleration - (float) gravity.dot(t), maxSpeeds[i + 1], ds);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
             time += ds / (0.5f * (maxSpeeds[i] + maxSpeeds[i + 1]));
         }
@@ -386,12 +386,12 @@ public class Curve {
         return time;
     }
 
-    private float maximize_speed_with_throttle(float accel, float v0, float sf) {
+    private float maximize_speed_with_throttle(float acceleration, float v0, float sf) {
         float dt = 0.008333f;
         float s = 0.0f;
         float v = v0;
         for (int i = 0; i < 100; i++) {
-            float dv = (DriveManuver.throttle_accel(v) + accel) * dt;
+            float dv = (DriveManeuver.throttle_acceleration(v) + acceleration) * dt;
             float ds = (v + 0.5f * dv) * dt;
             v += dv;
             s += ds;
@@ -403,11 +403,11 @@ public class Curve {
         return v;
     }
 
-    private float maximize_speed_without_throttle(float accel, float v0, float sf) {
+    private float maximize_speed_without_throttle(float acceleration, float v0, float sf) {
         float dt = 0.008333f;
         float s = 0.0f;
         float v = v0;
-        float dv = accel * dt;
+        float dv = acceleration * dt;
         for (int i = 0; i < 100; i++) {
             float ds = (v + 0.5f * dv) * dt;
             v += dv;
@@ -421,9 +421,9 @@ public class Curve {
     }
 
     public static class ControlPoint {
-        public Vector3 p;
+        public final Vector3 p;
         public Vector3 t;
-        public Vector3 n;
+        public final Vector3 n;
 
         public ControlPoint(Vector3 p, Vector3 t, Vector3 n) {
             this.p = p;

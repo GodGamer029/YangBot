@@ -7,7 +7,7 @@ import yangbot.util.ControlsOutput;
 import yangbot.util.MathUtils;
 import yangbot.vector.Vector3;
 
-public class DriveToPointManuver extends Manuver {
+public class DriveToPointManeuver extends Maneuver {
 
     public Vector3 targetPosition = null;
     public float targetVelocity = 0;
@@ -46,7 +46,7 @@ public class DriveToPointManuver extends Manuver {
             final float velocityForward = (float) car.velocity.dot(car.forward());
             final float currentVelocity = (float) car.velocity.flatten().magnitude();
             final float velocityDifference = targetVelocity - currentVelocity;
-            final float brakingForcePerTick = -DriveManuver.brake_accel * dt;
+            final float brakingForcePerTick = -DriveManeuver.brake_acceleration * dt;
             final float ticksWithBrakingForce = velocityDifference / brakingForcePerTick;
             final Vector3 carForwardDirection = car.forward();
             boolean behindTarget = false;
@@ -67,10 +67,10 @@ public class DriveToPointManuver extends Manuver {
 
                     Vector3 actingForce;
 
-                    if (Math.abs(vfTemp) > DriveManuver.min_speed && -1 * Math.signum(vfTemp) < 0)
-                        actingForce = carForwardDirection.mul(-DriveManuver.brake_accel);
+                    if (Math.abs(vfTemp) > DriveManeuver.min_speed && -1 * Math.signum(vfTemp) < 0)
+                        actingForce = carForwardDirection.mul(-DriveManeuver.brake_acceleration);
                     else
-                        actingForce = carForwardDirection.mul(-DriveManuver.coasting_accel);
+                        actingForce = carForwardDirection.mul(-DriveManeuver.coasting_acceleration);
 
                     tempVelocity = tempVelocity.add(actingForce.mul(dt));
                     if (tempVelocity.dot(carForwardDirection) <= 0)
@@ -97,10 +97,10 @@ public class DriveToPointManuver extends Manuver {
                 }
             } else {
                 if (lastDistance < 30)
-                    throttle = velocityDifference / DriveManuver.throttle_accel(velocityForward);
+                    throttle = velocityDifference / DriveManeuver.throttle_acceleration(velocityForward);
                 else
                     throttle = 1;
-                if (targetVelocity > DriveManuver.max_throttle_speed || velocityDifference > DriveManuver.throttle_accel(velocityForward))
+                if (targetVelocity > DriveManeuver.max_throttle_speed || velocityDifference > DriveManeuver.throttle_acceleration(velocityForward))
                     boost = true;
             }
         }

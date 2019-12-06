@@ -1,29 +1,29 @@
 package yangbot.strategy;
 
-import yangbot.manuever.DribbleManuver;
+import yangbot.manuever.DribbleManeuver;
 import yangbot.util.ControlsOutput;
 
 import java.util.Optional;
 
 public class DribbleStrategy extends Strategy {
 
-    private DribbleManuver dribbleManuver;
+    private DribbleManeuver dribbleManeuver;
 
     public static boolean isViable() {
-        return new DribbleManuver().isViable();
+        return new DribbleManeuver().isViable();
     }
 
     @Override
     protected void planStrategyInternal() {
-        dribbleManuver = new DribbleManuver();
-        if (!dribbleManuver.isViable())
+        dribbleManeuver = new DribbleManeuver();
+        if (!dribbleManeuver.isViable())
             this.setDone(true);
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        dribbleManuver.step(dt, controlsOutput);
-        if (dribbleManuver.isDone())
+        dribbleManeuver.step(dt, controlsOutput);
+        if (dribbleManeuver.isDone())
             this.setDone();
     }
 

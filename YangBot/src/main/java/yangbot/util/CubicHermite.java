@@ -4,11 +4,11 @@ import yangbot.vector.Vector3;
 
 public class CubicHermite {
 
-    Vector3 x0, t0;
+    final Vector3 x0, t0;
 
-    Vector3 x1, t1;
+    final Vector3 x1, t1;
 
-    float L;
+    final float L;
 
     public CubicHermite(Vector3 x0, Vector3 t0, Vector3 x1, Vector3 t1, float l) {
         this.x0 = x0;

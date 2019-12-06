@@ -49,7 +49,7 @@ public class Navigator {
         directions = new Vector3[nTheta];
 
         final float k = nTheta / 6.28318530f;
-        System.out.println("initting Directions with " + nTheta + " elements");
+        System.out.println("Direction-Init with " + nTheta + " elements");
         for (int i = 0; i < nTheta; i++) {
             directions[i] = new Vector3(Math.cos(((float) i) / k), Math.sin(((float) i) / k), 0f);
         }

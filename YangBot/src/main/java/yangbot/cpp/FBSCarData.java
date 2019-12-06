@@ -100,7 +100,7 @@ public final class FBSCarData extends Table {
 
     public boolean onGround() {
         int o = __offset(12);
-        return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+        return o != 0 && 0 != bb.get(o + bb_pos);
     }
 
     public float elapsedSeconds() {

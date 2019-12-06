@@ -6,9 +6,9 @@ import rlbot.flat.BoxShape;
 import rlbot.flat.Physics;
 import rlbot.flat.Rotator;
 import yangbot.cpp.FBSCarData;
-import yangbot.manuever.AerialManuver;
-import yangbot.manuever.DodgeManuver;
-import yangbot.manuever.DriveManuver;
+import yangbot.manuever.AerialManeuver;
+import yangbot.manuever.DodgeManeuver;
+import yangbot.manuever.DriveManeuver;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix2x2;
 import yangbot.vector.Matrix3x3;
@@ -23,8 +23,8 @@ import yangbot.vector.Vector3;
  */
 public class CarData {
 
-    public static float velocity_max = 2300.0f;
-    public static float angularVelocity_max = 5.5f;
+    public static final float velocity_max = 2300.0f;
+    public static final float angularVelocity_max = 5.5f;
     /**
      * The orientation of the car
      */
@@ -175,7 +175,7 @@ public class CarData {
                     return max_speed - v_f;
                 else {
                     if (v_f < max_speed)
-                        return AerialManuver.boost_accel + turn_damping;
+                        return AerialManeuver.boost_acceleration + turn_damping;
                     else
                         return supersonic_turn_drag * Math.abs(w_u);
                 }
@@ -215,7 +215,7 @@ public class CarData {
         final float v_f = (float) velocity.dot(forward());
         final float w_u = (float) angularVelocity.dot(up());
 
-        return 15.0f * (in.getSteer() * DriveManuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
+        return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
     }
 
     private void driving(ControlsOutput in, float dt) {
@@ -238,7 +238,7 @@ public class CarData {
         this.velocity = this.velocity.add(
                 GameData.current().getGravity()
                         .mul(dt)
-                        .add(this.up().mul(DodgeManuver.speed))
+                        .add(this.up().mul(DodgeManeuver.speed))
         );
         this.position = this.position.add(this.velocity.mul(dt));
 
@@ -253,7 +253,7 @@ public class CarData {
     }
 
     private void air_dodge(ControlsOutput in, float dt) {
-        if (Math.abs(in.getPitch()) + Math.abs(in.getRoll()) + Math.abs(in.getYaw()) >= DodgeManuver.input_threshold) {
+        if (Math.abs(in.getPitch()) + Math.abs(in.getRoll()) + Math.abs(in.getYaw()) >= DodgeManeuver.input_threshold) {
             // directional dodge
 
             float vf = (float) this.velocity.dot(this.forward());
@@ -293,14 +293,14 @@ public class CarData {
             // double jump
             dodgeTorque = new Vector3(0, 0, 0);
 
-            this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt)).add(this.up().mul(DodgeManuver.speed));
+            this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt)).add(this.up().mul(DodgeManeuver.speed));
             this.position = this.position.add(this.velocity.mul(dt));
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientationMatrix = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).dot(this.orientationMatrix);
 
             this.double_jumped = true;
-            this.dodge_timer = 1.01f * DodgeManuver.torque_time;
+            this.dodge_timer = 1.01f * DodgeManeuver.torque_time;
         }
     }
 
@@ -312,35 +312,35 @@ public class CarData {
 
         Vector3 rpy = new Vector3(in.getRoll(), in.getPitch(), in.getYaw());
         if (in.holdBoost() && boost > 0) {
-            this.velocity = this.velocity.add(this.forward().mul((AerialManuver.boost_accel + AerialManuver.throttle_accel) * dt));
+            this.velocity = this.velocity.add(this.forward().mul((AerialManeuver.boost_acceleration + AerialManeuver.throttle_acceleration) * dt));
             boost--;
         } else {
-            this.velocity = this.velocity.add(this.forward().mul(in.getThrottle() * AerialManuver.throttle_accel * dt));
+            this.velocity = this.velocity.add(this.forward().mul(in.getThrottle() * AerialManeuver.throttle_acceleration * dt));
         }
 
         if (in.holdJump() && enable_jump_acceleration) {
-            if (jump_timer < DodgeManuver.min_duration) {
+            if (jump_timer < DodgeManeuver.min_duration) {
                 this.velocity = this.velocity.add(
                         (
                                 this.up()
-                                        .mul(0.75f * DodgeManuver.acceleration)
+                                        .mul(0.75f * DodgeManeuver.acceleration)
                                         .sub(this.forward().mul(510.0f))
                         ).mul(dt)
                 );
             } else {
-                this.velocity = this.velocity.add(this.up().mul(DodgeManuver.acceleration * dt));
+                this.velocity = this.velocity.add(this.up().mul(DodgeManeuver.acceleration * dt));
             }
         }
 
-        if (dodge_timer >= DodgeManuver.z_damping_start && (this.velocity.z < 0.0f || dodge_timer < DodgeManuver.z_damping_end)) {
-            this.velocity = this.velocity.add(new Vector3(0.0f, 0.0f, -this.velocity.z * DodgeManuver.z_damping));
+        if (dodge_timer >= DodgeManeuver.z_damping_start && (this.velocity.z < 0.0f || dodge_timer < DodgeManeuver.z_damping_end)) {
+            this.velocity = this.velocity.add(new Vector3(0.0f, 0.0f, -this.velocity.z * DodgeManeuver.z_damping));
         }
 
         if (0.0f <= dodge_timer && dodge_timer <= 0.3f) {
             rpy = new Vector3(rpy.x, 0, rpy.z);
         }
 
-        if (0.0f <= dodge_timer && dodge_timer <= DodgeManuver.torque_time) {
+        if (0.0f <= dodge_timer && dodge_timer <= DodgeManeuver.torque_time) {
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
         } else {
             Vector3 w_local = this.angularVelocity.dot(this.orientationMatrix);
@@ -373,7 +373,7 @@ public class CarData {
             if (
                     in.holdJump() &&
                             !this.controls.holdJump() &&
-                            this.jump_timer < DodgeManuver.timeout &&
+                            this.jump_timer < DodgeManeuver.timeout &&
                             !this.double_jumped
             ) {
                 air_dodge(in, dt);
@@ -388,7 +388,7 @@ public class CarData {
         this.elapsedSeconds += dt;
 
         if (this.dodge_timer >= 0.0f) {
-            if (this.dodge_timer >= DodgeManuver.torque_time || this.hasWheelContact) {
+            if (this.dodge_timer >= DodgeManeuver.torque_time || this.hasWheelContact) {
                 this.dodge_timer = -1.0f;
             } else {
                 this.dodge_timer += dt;
@@ -403,7 +403,7 @@ public class CarData {
             }
         }
 
-        if (!in.holdJump() || this.jump_timer > DodgeManuver.max_duration) {
+        if (!in.holdJump() || this.jump_timer > DodgeManeuver.max_duration) {
             enable_jump_acceleration = false;
         }
 

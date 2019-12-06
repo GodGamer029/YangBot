@@ -4,9 +4,9 @@ import yangbot.vector.Vector3;
 
 public class OGH { // oink
 
-    float a0, a1;
+    final float a0, a1;
 
-    Vector3 P0, P1, V0, V1;
+    final Vector3 P0, P1, V0, V1;
 
     public OGH(Vector3 _P0, Vector3 _V0, Vector3 _P1, Vector3 _V1) {
         P0 = _P0;
@@ -17,10 +17,10 @@ public class OGH { // oink
 
         Vector3 dP = P1.sub(P0);
         float V0dotV1 = (float) V0.dot(V1);
-        float denom = 4f - V0dotV1 * V0dotV1;
+        float denominator = 4f - V0dotV1 * V0dotV1;
 
-        a0 = (float) (6.0f * dP.dot(V0) - 3.0f * dP.dot(V1) * V0dotV1) / denom;
-        a1 = (float) (6.0f * dP.dot(V1) - 3.0f * dP.dot(V0) * V0dotV1) / denom;
+        a0 = (float) (6.0f * dP.dot(V0) - 3.0f * dP.dot(V1) * V0dotV1) / denominator;
+        a1 = (float) (6.0f * dP.dot(V1) - 3.0f * dP.dot(V0) * V0dotV1) / denominator;
     }
 
     public Vector3 evaluate(float t) {

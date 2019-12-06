@@ -20,6 +20,7 @@ public class GameData {
     protected float gravityZ = -650;
     protected float dt = 1 / 60f;
     protected AdvancedRenderer advancedRenderer = null;
+    public static float gameLatencyCompensation = 0.4f;
 
     public GameData(Long threadId) {
     }

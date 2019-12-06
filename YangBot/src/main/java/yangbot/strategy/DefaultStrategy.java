@@ -28,18 +28,25 @@ public class DefaultStrategy extends Strategy {
         if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.distance(ball.position) > 1000)
             controlsOutput.withBoost(true);
 
-        if (Math.abs(controlsOutput.getSteer()) >= 0.95f)
+        if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)
             controlsOutput.withSlide(true);
 
         if (new DribbleManuver().isViable()) {
             newDecidedStrat = new DribbleStrategy();
             this.setDone();
+            return;
+        }
+
+        if (ball.position.z > 300 && car.hasWheelContact) {
+
         }
 
         if (!car.hasWheelContact) {
             newDecidedStrat = new RecoverStrategy();
             this.setDone();
+            return;
         } else if (car.position.z > 150) {
+            controlsOutput.withThrottle(-1);
             controlsOutput.withJump(true);
         }
     }

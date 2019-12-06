@@ -72,11 +72,15 @@ public class DribbleManuver extends Manuver {
             try {
                 BallPrediction ballPrediction = RLBotDll.getBallPrediction();
                 for (int i = 0; i < ballPrediction.slicesLength(); i++) {
+
                     PredictionSlice slice = ballPrediction.slices(i);
                     Vector3 loc = new Vector3(slice.physics().location());
                     Vector3 vel = new Vector3(slice.physics().velocity());
 
-                    if (slice.gameSeconds() - car.elapsedSeconds < 0.2f)
+                    float sliceSeconds = slice.gameSeconds() - GameData.gameLatencyCompensation;
+                    if (sliceSeconds < ballPrediction.slices(0).gameSeconds() + GameData.gameLatencyCompensation)
+                        continue;
+                    if (sliceSeconds - (car.elapsedSeconds) < 0.2f)
                         continue;
 
                     if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)
@@ -90,7 +94,7 @@ public class DribbleManuver extends Manuver {
                             loc.z - RLConstants.ballRadius < car.position.z + RLConstants.carElevation + 12f) {
                         ballPredictionPos = loc.add(vel.mul(dt));
                         ballPredictionVelocity = vel;
-                        ballArrival = slice.gameSeconds();
+                        ballArrival = sliceSeconds;
 
                         state = BallState.GOTOBALL;
                         //System.out.println("Got a ball "+(slice.gameSeconds() - car.elapsedSeconds)+" seconds into the future");

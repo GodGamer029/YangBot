@@ -48,6 +48,13 @@ public class YangBot implements Bot {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
         BallData ball = input.ball;
+
+        float det = (1f / 120f);
+        for (float time = 0; time < GameData.gameLatencyCompensation; time += det) {
+            car.step(new ControlsOutput(), det);
+            ball.step(det);
+        }
+
         GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
 
         drawDebugLines(input, car);
@@ -90,6 +97,7 @@ public class YangBot implements Bot {
                 if (currentPlan.isDone())
                     currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
 
+                //System.out.println("Plan: "+currentPlan.getClass().getSimpleName()+" time: "+input.gameInfo.secondsElapsed());
                 currentPlan.step(dt, output);
                 break;
             }
@@ -139,7 +147,7 @@ public class YangBot implements Bot {
         }
 
         if (packet.playersLength() <= playerIndex || packet.ball() == null)
-            return new ControlsOutput();
+            return new ControlsOutput().withBoost(true);
 
         if (!packet.gameInfo().isRoundActive()) {
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();

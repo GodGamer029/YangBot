@@ -33,10 +33,12 @@ public class RecoverStrategy extends Strategy {
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         CarData car = gameData.getCarData();
 
-        if (car.hasWheelContact || car.elapsedSeconds) {
+        if (car.hasWheelContact) {
             this.setDone();
             return;
         }
+
+        controlsOutput.withThrottle(1);
 
         Optional<CarCollisionInfo> carCollisionInfoOptional = YangBotJNAInterop.simulateCarWallCollision(car);
         if (!carCollisionInfoOptional.isPresent()) {

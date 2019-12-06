@@ -25,4 +25,12 @@ public class BallData {
         this.hasBeenTouched = ball.latestTouch() != null;
         this.latestTouch = this.hasBeenTouched ? new BallTouch(ball.latestTouch()) : null;
     }
+
+    public void step(float dt) {
+
+        this.velocity = this.velocity.add(this.velocity.mul(-0.0305).add(new Vector3(0, 0, -650)).mul(dt));
+        this.position = this.position.add(this.velocity.mul(dt));
+
+
+    }
 }

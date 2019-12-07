@@ -3,6 +3,7 @@ package yangbot.strategy;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.input.RLConstants;
 import yangbot.manuever.DribbleManeuver;
 import yangbot.util.ControlsOutput;
 
@@ -11,6 +12,8 @@ import java.util.Optional;
 public class DefaultStrategy extends Strategy {
 
     private Strategy newDecidedStrategy = null;
+    private int jumpFromWallTick = 0;
+
 
     @Override
     public void planStrategyInternal() {
@@ -42,10 +45,16 @@ public class DefaultStrategy extends Strategy {
         }
 
         if (!car.hasWheelContact) {
-            newDecidedStrategy = new RecoverStrategy();
-            this.setDone();
-            return;
-        } else if (car.position.z > 150) {
+            if (jumpFromWallTick > 0) {
+                jumpFromWallTick--;
+                controlsOutput.withJump(true);
+            } else {
+                newDecidedStrategy = new RecoverStrategy();
+                this.setDone();
+                return;
+            }
+        } else if (car.position.z > 150 && jumpFromWallTick == 0) {
+            jumpFromWallTick = (int) (0.2f / RLConstants.tickSpeed);
             controlsOutput.withThrottle(-1);
             controlsOutput.withJump(true);
         }

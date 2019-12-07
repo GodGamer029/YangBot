@@ -3,6 +3,7 @@ package yangbot.strategy;
 import rlbot.flat.BoxShape;
 import yangbot.cpp.CarCollisionInfo;
 import yangbot.cpp.YangBotJNAInterop;
+import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.manuever.TurnManeuver;
@@ -16,7 +17,8 @@ import java.util.Optional;
 
 public class RecoverStrategy extends Strategy {
 
-    private TurnManeuver turnManuver;
+    private TurnManeuver groundTurnManeuver;
+    private TurnManeuver boostTurnManeuver;
 
     @Override
     protected void planStrategyInternal() {
@@ -24,7 +26,8 @@ public class RecoverStrategy extends Strategy {
         CarData car = gameData.getCarData();
         if (car.hasWheelContact)
             this.setDone();
-        turnManuver = new TurnManeuver();
+        groundTurnManeuver = new TurnManeuver();
+        boostTurnManeuver = new TurnManeuver();
     }
 
     @Override
@@ -32,6 +35,7 @@ public class RecoverStrategy extends Strategy {
         GameData gameData = GameData.current();
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         CarData car = gameData.getCarData();
+        BallData ballData = gameData.getBallData();
 
         if (car.hasWheelContact) {
             this.setDone();
@@ -52,12 +56,17 @@ public class RecoverStrategy extends Strategy {
         Vector3 direction = new Vector3(carCollisionInfo.impact().direction());
         float simulationTime = carCollisionInfo.carData().elapsedSeconds();
         Matrix3x3 orientation = Matrix3x3.eulerToRotation(new Vector3(carCollisionInfo.carData().eulerRotation()));
-        turnManuver.target = Matrix3x3.roofTo(direction);
-        turnManuver.step(dt, controlsOutput);
+        Vector3 targetDirection = ballData.position.sub(car.position).normalized();
+
+        groundTurnManeuver.target = Matrix3x3.roofTo(direction, targetDirection);
+        groundTurnManeuver.step(dt, controlsOutput);
+
         renderer.drawCentered3dCube(Color.RED, car.position, 50);
         renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+
         if (simulationTime >= 2f / 60f)
             renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
+        // Draw red hitbox on ground
         {
             BoxShape real_hitbox = car.hitbox;
             Vector3 hitbox = new Vector3(real_hitbox.length(), real_hitbox.width(), real_hitbox.height()).mul(1.5f);
@@ -68,9 +77,6 @@ public class RecoverStrategy extends Strategy {
             Vector3 u = orientation.up();
             Vector3 r = orientation.left();
             p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
-            //Vector3 fL = f.mul(hitbox.length() / 2);
-            //Vector3 rW = r.mul(hitbox.width() / 2);
-            //Vector3 uH = u.mul(hitbox.height() / 2);
             Vector3 fL = f.mul(hitbox.x / 2);
             Vector3 rW = r.mul(hitbox.y / 2);
             Vector3 uH = u.mul(hitbox.z / 2);

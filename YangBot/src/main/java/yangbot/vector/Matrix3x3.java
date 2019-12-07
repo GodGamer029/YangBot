@@ -153,8 +153,17 @@ public class Matrix3x3 {
         return mat;
     }
 
-    public static Matrix3x3 roofTo(Vector3 up) {
-        Vector3 f = new Vector3(-up.x * up.y, (up.x * up.x) + (up.z * up.z), -up.y * up.z).normalized();
+    public static Matrix3x3 roofTo(Vector3 up, Vector3 generalDirection) {
+        Vector3 f;
+        {
+            Vector3 normal = up;
+            Vector3 point = generalDirection;
+
+            double dist = point.dot(normal);
+            Vector3 projected = point.sub(normal.mul(dist));
+            f = projected.normalized();
+        }
+
         if (f.isZero())
             f = new Vector3(0, 0, -1);
         Vector3 u = f.crossProduct(up.crossProduct(f)).normalized();

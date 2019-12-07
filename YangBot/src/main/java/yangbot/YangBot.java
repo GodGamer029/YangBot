@@ -106,7 +106,8 @@ public class YangBot implements Bot {
         // Print Throttle info
         {
             renderer.drawString2d("State: " + state.name(), Color.WHITE, new Point(10, 270), 2, 2);
-            renderer.drawString2d("Strategy: " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), Color.WHITE, new Point(10, 310), 2, 2);
+            if (state != State.KICKOFF)
+                renderer.drawString2d("Strategy: " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), Color.WHITE, new Point(10, 310), 2, 2);
             renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 350), 1, 1);
             renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 370), 1, 1);
             renderer.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, 390), 1, 1);

@@ -364,9 +364,9 @@ public class CarData {
                 jump(in, dt);
             } else {
                 if (!in.holdHandbrake()) {
-                    driving(in, dt);
+                    //driving(in, dt);
                 } else {
-                    driving_handbrake(in, dt);
+                    //driving_handbrake(in, dt);
                 }
             }
         } else { // In the Air

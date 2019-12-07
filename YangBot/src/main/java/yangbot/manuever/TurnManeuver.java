@@ -1,8 +1,6 @@
 package yangbot.manuever;
 
-import yangbot.input.BallData;
-import yangbot.input.CarData;
-import yangbot.input.GameData;
+import yangbot.input.*;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
@@ -214,6 +212,28 @@ public class TurnManeuver extends Maneuver {
 
     @Override
     public CarData simulate(CarData car) {
-        throw new IllegalStateException("not implemented");
+        CarData carCopy = new CarData(car);
+        carCopy.elapsedSeconds = 0;
+        TurnManeuver fakeTurn = new TurnManeuver();
+        fakeTurn.target = this.target;
+        fakeTurn.eps_omega = this.eps_omega;
+        fakeTurn.eps_phi = this.eps_phi;
+        fakeTurn.horizon_time = this.horizon_time;
+
+        FoolGameData foolGameData = GameData.current().fool();
+
+        float dt = RLConstants.simulationTickFrequency;
+        for (float t = dt; t < 3.0f; t += dt) {
+            ControlsOutput output = new ControlsOutput();
+            foolGameData.foolCar(carCopy);
+            fakeTurn.fool(foolGameData);
+            fakeTurn.step(dt, output);
+            carCopy.step(output, dt);
+
+            if (fakeTurn.isDone())
+                break;
+        }
+
+        return carCopy;
     }
 }

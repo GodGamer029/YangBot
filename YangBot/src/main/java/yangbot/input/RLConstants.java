@@ -16,6 +16,9 @@ public class RLConstants {
     public static int tickRate = 120;
     public static float tickFrequency = 1f / tickRate;
 
+    public static int simulationTickRate = 60;
+    public static float simulationTickFrequency = 1f / simulationTickRate;
+
     public static boolean isPosNearWall(Vector2 pos) {
         float x = Math.abs(pos.x);
         float y = Math.abs(pos.y);

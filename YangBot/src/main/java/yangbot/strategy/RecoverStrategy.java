@@ -7,6 +7,7 @@ import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.manuever.TurnManeuver;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
@@ -56,10 +57,37 @@ public class RecoverStrategy extends Strategy {
         Vector3 direction = new Vector3(carCollisionInfo.impact().direction());
         float simulationTime = carCollisionInfo.carData().elapsedSeconds();
         Matrix3x3 orientation = Matrix3x3.eulerToRotation(new Vector3(carCollisionInfo.carData().eulerRotation()));
+        Vector3 carPositionAtImpact = new Vector3(carCollisionInfo.carData().position());
+
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
+        if (carPositionAtImpact.z > 500) {
+            targetDirection = new Vector3(0, 0, -1);
+        } else {
+            Optional<YangBallPrediction.YangPredictionFrame> ballFrameAtImpact = gameData.getBallPrediction().getFrameAtRelativeTime(simulationTime + 0.5f);
+            if (ballFrameAtImpact.isPresent())
+                targetDirection = ballFrameAtImpact.get().ballData.position.sub(carPositionAtImpact).normalized();
+        }
+
         groundTurnManeuver.target = Matrix3x3.roofTo(direction, targetDirection);
-        groundTurnManeuver.step(dt, controlsOutput);
+
+        if (car.boost > 60 && groundTurnManeuver.simulate(car).elapsedSeconds < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
+            final float targetZModifier = -0.8f;
+            final float boostZModifier = -0.5f;
+
+            Vector3 boostDirection = targetDirection
+                    .flatten()
+                    .unitVectorWithZ(targetZModifier);
+
+            boostTurnManeuver.target = Matrix3x3.lookAt(boostDirection, groundTurnManeuver.target.up());
+            boostTurnManeuver.step(dt, controlsOutput);
+
+            Vector3 forward = car.forward();
+            if (boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.15f))
+                controlsOutput.withBoost(true);
+        } else {
+            groundTurnManeuver.step(dt, controlsOutput);
+        }
 
         renderer.drawCentered3dCube(Color.RED, car.position, 50);
         renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));

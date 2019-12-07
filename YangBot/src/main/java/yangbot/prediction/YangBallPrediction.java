@@ -11,6 +11,7 @@ import yangbot.input.RLConstants;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class YangBallPrediction {
 
@@ -73,6 +74,14 @@ public class YangBallPrediction {
         }
 
         throw new IllegalStateException("Ball Prediction Type '" + ballPredictionType.name() + "' not recognized");
+    }
+
+    public Optional<YangPredictionFrame> getFrameAtRelativeTime(float relativeTime) {
+        for (YangPredictionFrame frame : frames) {
+            if (frame.relativeTime >= relativeTime)
+                return Optional.of(frame);
+        }
+        return Optional.empty();
     }
 
     public boolean hasFrames() {

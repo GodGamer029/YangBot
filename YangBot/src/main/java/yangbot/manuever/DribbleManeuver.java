@@ -42,6 +42,9 @@ public class DribbleManeuver extends Maneuver {
             if (frame.absoluteTime - car.elapsedSeconds < 0.2f)
                 continue;
 
+            if (frame.absoluteTime - car.elapsedSeconds > 3.5f)
+                continue;
+
             if (RLConstants.isPosNearWall(loc.flatten()))
                 continue;
 
@@ -73,6 +76,9 @@ public class DribbleManeuver extends Maneuver {
 
                 float sliceSeconds = frame.absoluteTime;
                 if (sliceSeconds - (car.elapsedSeconds) < 0.2f)
+                    continue;
+
+                if (sliceSeconds - (car.elapsedSeconds) > 3.5f)
                     continue;
 
                 if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)

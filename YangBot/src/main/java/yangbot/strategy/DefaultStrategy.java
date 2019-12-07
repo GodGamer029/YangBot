@@ -43,10 +43,13 @@ public class DefaultStrategy extends Strategy {
                 this.setDone();
                 return;
             }
-        } else if (car.position.z > 150 && jumpFromWallTick == 0) {
-            jumpFromWallTick = (int) (0.2f / RLConstants.tickFrequency);
-            controlsOutput.withThrottle(-1);
-            controlsOutput.withJump(true);
+        } else {
+            jumpFromWallTick = 0;
+            if (car.position.z > 150) {
+                jumpFromWallTick = (int) (0.15f / RLConstants.tickFrequency);
+                controlsOutput.withThrottle(-1);
+                controlsOutput.withJump(true);
+            }
         }
 
         if (new DribbleManeuver().isViable()) {

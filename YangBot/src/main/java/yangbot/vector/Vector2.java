@@ -41,6 +41,17 @@ public class Vector2 {
         return 0;
     }
 
+    public Vector3 unitVectorWithZ(float z) {
+        if (z == 0)
+            return new Vector3(this);
+        if (isZero())
+            return new Vector3(0, 0, Math.signum(z));
+        Vector2 normed = normalized();
+
+        double magicBoi = Math.sqrt(1 - z * z);
+        return new Vector3(normed.mul(magicBoi), z);
+    }
+
     public Vector2 add(Vector2 other) {
         return new Vector2(x + other.x, y + other.y);
     }

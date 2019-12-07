@@ -154,8 +154,9 @@ public class Matrix3x3 {
     }
 
     public static Matrix3x3 roofTo(Vector3 up, Vector3 generalDirection) {
-        Vector3 f;
-        {
+        Vector3 f = new Vector3();
+
+        if (generalDirection != null) {
             // https://stackoverflow.com/a/9605695
             Vector3 normal = up;
             Vector3 point = generalDirection;

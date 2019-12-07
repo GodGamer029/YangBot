@@ -9,6 +9,7 @@ import yangbot.vector.Vector3;
 
 public class DodgeManeuver extends Maneuver {
 
+    public static final float startTimeout = 1.25f;
     public static final float max_duration = 0.2f;
     public static final float min_duration = 0.025f;
     public static final float speed = 291.667f;
@@ -59,7 +60,7 @@ public class DodgeManeuver extends Maneuver {
         if (duration > 0 && delay > 0)
             dodge_time = delay;
 
-        if (timer >= dodge_time && !car.double_jumped && !car.hasWheelContact) {
+        if (timer >= dodge_time && !car.doubleJumped && !car.hasWheelContact) {
             Vector2 direction_local = null;
 
             if ((target == null && direction == null) || (target != null && direction != null))
@@ -101,7 +102,7 @@ public class DodgeManeuver extends Maneuver {
             controlsOutput.withJump(true);
         }
 
-        if (car.double_jumped)
+        if (car.doubleJumped)
             controlsOutput.withJump(false);
 
         setIsDone(this.timer > timeout);

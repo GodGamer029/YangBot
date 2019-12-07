@@ -2,7 +2,6 @@ package yangbot.input;
 
 
 import com.google.flatbuffers.FlatBufferBuilder;
-import rlbot.flat.BoxShape;
 import rlbot.flat.Physics;
 import rlbot.flat.Rotator;
 import yangbot.cpp.FBSCarData;
@@ -64,15 +63,15 @@ public class CarData {
 
     public Matrix3x3 orientationMatrix;
     public Matrix2x2 orientationDodge;
-    public boolean double_jumped = false;
+    public final YangHitbox hitbox;
     private ControlsOutput controls = new ControlsOutput();
     private float jump_timer = -1.0f;
-    private boolean jumped = false;
+    public boolean doubleJumped;
     private float dodge_timer = -1.0f;
     private boolean enable_jump_acceleration = false;
     private Vector2 dodgeDir;
     private Vector3 dodgeTorque;
-    public final BoxShape hitbox;
+    public boolean jumped;
     public final boolean isBot;
     public final String name;
     public final String strippedName;
@@ -92,15 +91,18 @@ public class CarData {
         this.elapsedSeconds = elapsedSeconds;
         this.physics = playerInfo.physics();
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
-        this.hitbox = playerInfo.hitbox();
+        this.hitbox = new YangHitbox(playerInfo.hitbox(), this.orientationMatrix);
         this.isBot = playerInfo.isBot();
         this.name = playerInfo.name();
         this.playerIndex = index;
+        this.doubleJumped = playerInfo.doubleJumped();
+        this.jumped = playerInfo.jumped();
 
         if (isBot && name.endsWith("(" + (playerIndex + 1) + ")"))
-            strippedName = name.substring(0, name.length() - 3);
+            strippedName = name.substring(0, name.length() - 3).toLowerCase();
         else
-            strippedName = name;
+            strippedName = name.toLowerCase();
+
     }
 
     @SuppressWarnings("CopyConstructorMissesField")
@@ -122,6 +124,8 @@ public class CarData {
         this.name = o.name;
         this.playerIndex = o.playerIndex;
         this.strippedName = o.strippedName;
+        this.jumped = o.jumped;
+        this.doubleJumped = o.doubleJumped;
     }
 
     public void apply(FlatBufferBuilder builder) {
@@ -247,7 +251,7 @@ public class CarData {
 
         this.jump_timer = 0.0f;
         this.jumped = true;
-        this.double_jumped = false;
+        this.doubleJumped = false;
         this.enable_jump_acceleration = true;
         this.hasWheelContact = false;
     }
@@ -287,7 +291,7 @@ public class CarData {
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientationMatrix = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).dot(this.orientationMatrix);
 
-            this.double_jumped = true;
+            this.doubleJumped = true;
             this.dodge_timer = 0.0f;
         } else {
             // double jump
@@ -299,7 +303,7 @@ public class CarData {
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientationMatrix = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).dot(this.orientationMatrix);
 
-            this.double_jumped = true;
+            this.doubleJumped = true;
             this.dodge_timer = 1.01f * DodgeManeuver.torque_time;
         }
     }
@@ -374,7 +378,7 @@ public class CarData {
                     in.holdJump() &&
                             !this.controls.holdJump() &&
                             this.jump_timer < DodgeManeuver.timeout &&
-                            !this.double_jumped
+                            !this.doubleJumped
             ) {
                 air_dodge(in, dt);
             } else {

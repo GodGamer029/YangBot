@@ -38,6 +38,7 @@ public class DefaultStrategy extends Strategy {
             if (jumpFromWallTick > 0) {
                 jumpFromWallTick--;
                 controlsOutput.withJump(true);
+                return;
             } else {
                 newDecidedStrategy = new RecoverStrategy();
                 this.setDone();
@@ -45,10 +46,10 @@ public class DefaultStrategy extends Strategy {
             }
         } else {
             jumpFromWallTick = 0;
-            if (car.position.z > 150) {
+            if (car.position.z > 200) {
                 jumpFromWallTick = (int) (0.15f / RLConstants.tickFrequency);
-                controlsOutput.withThrottle(-1);
                 controlsOutput.withJump(true);
+                return;
             }
         }
 

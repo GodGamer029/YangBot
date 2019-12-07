@@ -1,11 +1,11 @@
 package yangbot.strategy;
 
-import rlbot.flat.BoxShape;
 import yangbot.cpp.CarCollisionInfo;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.TurnManeuver;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
@@ -20,6 +20,8 @@ public class RecoverStrategy extends Strategy {
 
     private TurnManeuver groundTurnManeuver;
     private TurnManeuver boostTurnManeuver;
+    private float recoverStartTime = 0;
+    private float recoverEndTime = -1;
 
     @Override
     protected void planStrategyInternal() {
@@ -29,10 +31,14 @@ public class RecoverStrategy extends Strategy {
             this.setDone();
         groundTurnManeuver = new TurnManeuver();
         boostTurnManeuver = new TurnManeuver();
+        recoverStartTime = car.elapsedSeconds;
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
+        final float targetZModifier = -0.8f;
+        final float boostZModifier = -0.4f;
+
         GameData gameData = GameData.current();
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         CarData car = gameData.getCarData();
@@ -53,12 +59,13 @@ public class RecoverStrategy extends Strategy {
 
         CarCollisionInfo carCollisionInfo = carCollisionInfoOptional.get();
 
-        Vector3 start = new Vector3(carCollisionInfo.impact().start());
-        Vector3 direction = new Vector3(carCollisionInfo.impact().direction());
-        float simulationTime = carCollisionInfo.carData().elapsedSeconds();
-        Matrix3x3 orientation = Matrix3x3.eulerToRotation(new Vector3(carCollisionInfo.carData().eulerRotation()));
+        Vector3 impactNormal = new Vector3(carCollisionInfo.impact().direction());
         Vector3 carPositionAtImpact = new Vector3(carCollisionInfo.carData().position());
+        float simulationTime = carCollisionInfo.carData().elapsedSeconds();
 
+        recoverEndTime = car.elapsedSeconds + simulationTime;
+
+        boolean speedflipPossible = recoverEndTime - recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1500;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
         if (carPositionAtImpact.z > 500) {
@@ -69,12 +76,14 @@ public class RecoverStrategy extends Strategy {
                 targetDirection = ballFrameAtImpact.get().ballData.position.sub(carPositionAtImpact).normalized();
         }
 
-        groundTurnManeuver.target = Matrix3x3.roofTo(direction, targetDirection);
+        Matrix3x3 targetOrientationMatrix = Matrix3x3.roofTo(impactNormal, targetDirection);
+        if (speedflipPossible) {
+            Vector3 left = targetOrientationMatrix.left();
+            targetOrientationMatrix = Matrix3x3.axisToRotation(left.mul(Math.PI * -0.175)).dot(targetOrientationMatrix);
+        }
+        groundTurnManeuver.target = targetOrientationMatrix;
 
         if (car.boost > 60 && groundTurnManeuver.simulate(car).elapsedSeconds < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
-            final float targetZModifier = -0.8f;
-            final float boostZModifier = -0.5f;
-
             Vector3 boostDirection = targetDirection
                     .flatten()
                     .unitVectorWithZ(targetZModifier);
@@ -83,44 +92,31 @@ public class RecoverStrategy extends Strategy {
             boostTurnManeuver.step(dt, controlsOutput);
 
             Vector3 forward = car.forward();
-            if (boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.15f))
+            if (boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.4f))
                 controlsOutput.withBoost(true);
         } else {
             groundTurnManeuver.step(dt, controlsOutput);
         }
 
+        Vector3 impactPosition = new Vector3(carCollisionInfo.impact().start());
+
         renderer.drawCentered3dCube(Color.RED, car.position, 50);
-        renderer.drawLine3d(Color.YELLOW, start, start.add(direction.mul(150)));
+        renderer.drawLine3d(Color.YELLOW, impactPosition, impactPosition.add(impactNormal.mul(150)));
 
         if (simulationTime >= 2f / 60f)
             renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
-        // Draw red hitbox on ground
-        {
-            BoxShape real_hitbox = car.hitbox;
-            Vector3 hitbox = new Vector3(real_hitbox.length(), real_hitbox.width(), real_hitbox.height()).mul(1.5f);
-            Color c = Color.RED;
-            Vector3 p = start;
-            Vector3 hitboxOffset = new Vector3(13.88f, 0f, 20.75f);
-            Vector3 f = orientation.forward();
-            Vector3 u = orientation.up();
-            Vector3 r = orientation.left();
-            p = p.add(f.mul(hitboxOffset.x)).add(r.mul(hitboxOffset.y)).add(u.mul(hitboxOffset.z));
-            Vector3 fL = f.mul(hitbox.x / 2);
-            Vector3 rW = r.mul(hitbox.y / 2);
-            Vector3 uH = u.mul(hitbox.z / 2);
-            renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).add(uH).sub(rW));
-            renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.add(fL).sub(uH).sub(rW));
-            renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).add(uH).sub(rW));
-            renderer.drawLine3d(c, p.sub(fL).sub(uH).add(rW), p.sub(fL).sub(uH).sub(rW));
-            renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.sub(fL).add(uH).add(rW));
-            renderer.drawLine3d(c, p.add(fL).sub(uH).add(rW), p.sub(fL).sub(uH).add(rW));
-            renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.sub(fL).add(uH).sub(rW));
-            renderer.drawLine3d(c, p.add(fL).sub(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
-            renderer.drawLine3d(c, p.add(fL).add(uH).add(rW), p.add(fL).sub(uH).add(rW));
-            renderer.drawLine3d(c, p.sub(fL).add(uH).add(rW), p.sub(fL).sub(uH).add(rW));
-            renderer.drawLine3d(c, p.add(fL).add(uH).sub(rW), p.add(fL).sub(uH).sub(rW));
-            renderer.drawLine3d(c, p.sub(fL).add(uH).sub(rW), p.sub(fL).sub(uH).sub(rW));
+        renderer.drawString2d(String.format("Total: %.1f", this.recoverEndTime - this.recoverStartTime), speedflipPossible ? Color.GREEN : Color.RED, new Point(400, 450), 2, 2);
+
+        if (speedflipPossible && simulationTime < 0.5f) {
+            double backWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, -1, 0, -1)).sub(impactPosition));
+            double frontWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, 1, 0, -1)).sub(impactPosition));
+            if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight - 15 > backWheelsHeight && !car.doubleJumped) {
+                controlsOutput.withJump(true);
+                controlsOutput.withPitch(-1);
+            }
         }
+
+        car.hitbox.draw(renderer, impactPosition, 1.5f, Color.RED);
     }
 
     @Override

@@ -153,7 +153,7 @@ ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 	for (int i = 0; i < simulationSteps; i++) {
 		simulationTime += simulationRate;
 		car.step(Input(), simulationRate);
-		contact = Field::collide(sphere{ car.position, 60 });
+		contact = Field::collide(sphere{ car.position, 18 });
 		if (norm(contact.direction) > 0.f) 
 			break;
 	}

@@ -4,7 +4,7 @@ import yangbot.util.ControlsOutput;
 
 import java.util.Optional;
 
-public class DefendStrategy extends Strategy {
+public class NeutralStrategy extends Strategy {
     @Override
     protected void planStrategyInternal() {
         this.setDone();

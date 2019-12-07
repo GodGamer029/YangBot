@@ -31,6 +31,8 @@ public abstract class Strategy {
 
     @SuppressWarnings("WeakerAccess")
     public final void planStrategy() {
+        if (plannedStrategy)
+            return;
         plannedStrategy = true;
         planStrategyInternal();
     }

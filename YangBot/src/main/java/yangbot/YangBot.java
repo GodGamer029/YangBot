@@ -91,10 +91,18 @@ public class YangBot implements Bot {
                 if (currentPlan == null)
                     currentPlan = new DefaultStrategy();
 
-                if (currentPlan.isDone())
+                int i = 0;
+                currentPlan.planStrategy();
+                while (currentPlan.isDone()) {
                     currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
+                    currentPlan.planStrategy();
+                    i++;
+                    if (i == 5) {
+                        System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
+                        currentPlan = new DefaultStrategy();
+                    }
+                }
 
-                //System.out.println("Plan: "+currentPlan.getClass().getSimpleName()+" time: "+input.gameInfo.secondsElapsed());
                 currentPlan.step(dt, output);
                 break;
             }

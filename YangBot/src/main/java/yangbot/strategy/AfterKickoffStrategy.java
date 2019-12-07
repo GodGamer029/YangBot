@@ -4,12 +4,9 @@ import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
-import java.util.Optional;
-
-public class AfterKickoffStrategy extends Strategy {
+public class AfterKickoffStrategy extends StrategyPlanner {
 
     private KickoffQuality kickoffQuality = KickoffQuality.NEUTRAL;
 
@@ -40,16 +37,21 @@ public class AfterKickoffStrategy extends Strategy {
                 kickoffQuality = KickoffQuality.BAD;
         } else
             kickoffQuality = KickoffQuality.NEUTRAL;
-    }
 
-    @Override
-    public void stepInternal(float dt, ControlsOutput controlsOutput) {
+        switch (kickoffQuality) {
+            case GOOD:
+                newDecidedStrategy = new OffensiveStrategy();
+                break;
+            case BAD:
+                newDecidedStrategy = new DefendStrategy();
+                break;
+            case NEUTRAL:
+                newDecidedStrategy = new NeutralStrategy();
+                break;
+            default:
+                assert false;
+        }
         this.setDone();
-    }
-
-    @Override
-    public Optional<Strategy> suggestStrategy() {
-        return Optional.of(new DefaultStrategy());
     }
 
     enum KickoffQuality {

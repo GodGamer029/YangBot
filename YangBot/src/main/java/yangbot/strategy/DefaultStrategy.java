@@ -14,7 +14,6 @@ public class DefaultStrategy extends Strategy {
     private Strategy newDecidedStrategy = null;
     private int jumpFromWallTick = 0;
 
-
     @Override
     public void planStrategyInternal() {
     }

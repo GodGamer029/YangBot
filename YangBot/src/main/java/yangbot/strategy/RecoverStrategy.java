@@ -5,6 +5,7 @@ import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.input.RLConstants;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.TurnManeuver;
 import yangbot.prediction.YangBallPrediction;
@@ -37,7 +38,7 @@ public class RecoverStrategy extends Strategy {
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
         final float targetZModifier = -0.8f;
-        final float boostZModifier = -0.4f;
+        final float boostZModifier = -0.5f;
 
         GameData gameData = GameData.current();
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
@@ -83,7 +84,7 @@ public class RecoverStrategy extends Strategy {
         }
         groundTurnManeuver.target = targetOrientationMatrix;
 
-        if (car.boost > 60 && groundTurnManeuver.simulate(car).elapsedSeconds < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
+        if (car.boost > 60 && groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
             Vector3 boostDirection = targetDirection
                     .flatten()
                     .unitVectorWithZ(targetZModifier);
@@ -92,7 +93,7 @@ public class RecoverStrategy extends Strategy {
             boostTurnManeuver.step(dt, controlsOutput);
 
             Vector3 forward = car.forward();
-            if (boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.4f))
+            if (boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.3f))
                 controlsOutput.withBoost(true);
         } else {
             groundTurnManeuver.step(dt, controlsOutput);

@@ -1,11 +1,9 @@
 package yangbot.strategy;
 
-import rlbot.cppinterop.RLBotDll;
-import rlbot.flat.BallPrediction;
-import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
@@ -22,18 +20,15 @@ public class AfterKickoffStrategy extends Strategy {
         BallData ball = gameData.getBallData();
 
         Vector3 predictedPos = ball.position;
-        try {
-            BallPrediction ballPrediction = RLBotDll.getBallPrediction();
-            for (int i = 0; i < ballPrediction.slicesLength(); i += 4) {
-                PredictionSlice slice = ballPrediction.slices(i);
-                if (slice.gameSeconds() > car.elapsedSeconds + 2) {
-                    predictedPos = new Vector3(slice.physics().location());
-                    break;
-                }
+
+        YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
+            if (frame.absoluteTime > car.elapsedSeconds + 2) {
+                predictedPos = frame.ballData.position;
+                break;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
         int ballInFavorOfTeam = predictedPos.y > 0 ? 0 : 1;
         int ourTeam = car.team;
         float distanceFromMiddle = Math.abs(predictedPos.y);

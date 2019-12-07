@@ -1,12 +1,10 @@
 package yangbot.manuever;
 
-import rlbot.cppinterop.RLBotDll;
-import rlbot.flat.BallPrediction;
-import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
@@ -33,28 +31,25 @@ public class DribbleManeuver extends Maneuver {
     public boolean isViable() {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
-        try {
-            BallPrediction ballPrediction = RLBotDll.getBallPrediction();
-            final float ballRadius = RLConstants.ballRadius;
-            for (int i = 0; i < ballPrediction.slicesLength(); i++) {
-                PredictionSlice slice = ballPrediction.slices(i);
-                Vector3 loc = new Vector3(slice.physics().location());
-                Vector3 vel = new Vector3(slice.physics().velocity());
 
-                if (slice.gameSeconds() - car.elapsedSeconds < 0.2f)
-                    continue;
+        YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        final float ballRadius = RLConstants.ballRadius;
+        for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
+            BallData frameBall = frame.ballData;
+            Vector3 loc = frameBall.position;
+            Vector3 vel = frameBall.velocity;
 
-                if (RLConstants.isPosNearWall(loc.flatten()))
-                    continue;
+            if (frame.absoluteTime - car.elapsedSeconds < 0.2f)
+                continue;
 
-                if (loc.z <= ballRadius + 2f && Math.abs(vel.z) <= 1f)
-                    break;
+            if (RLConstants.isPosNearWall(loc.flatten()))
+                continue;
 
-                if (vel.z < 0 && loc.z - ballRadius > car.position.z + 18f && loc.z - ballRadius < car.position.z + 30f)
-                    return true;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (loc.z <= ballRadius + 2f && Math.abs(vel.z) <= 1f)
+                break;
+
+            if (vel.z < 0 && loc.z - ballRadius > car.position.z + 18f && loc.z - ballRadius < car.position.z + 30f)
+                return true;
         }
 
         return false;
@@ -69,40 +64,33 @@ public class DribbleManeuver extends Maneuver {
 
         float vf = (float) car.velocity.dot(car.forward());
         if (state == BallState.FIND_BALL) {
-            try {
-                BallPrediction ballPrediction = RLBotDll.getBallPrediction();
-                for (int i = 0; i < ballPrediction.slicesLength(); i++) {
 
-                    PredictionSlice slice = ballPrediction.slices(i);
-                    Vector3 loc = new Vector3(slice.physics().location());
-                    Vector3 vel = new Vector3(slice.physics().velocity());
+            YangBallPrediction ballPrediction = gameData.getBallPrediction();
+            for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
+                BallData frameBall = frame.ballData;
+                Vector3 loc = frameBall.position;
+                Vector3 vel = frameBall.velocity;
 
-                    float sliceSeconds = slice.gameSeconds() - GameData.gameLatencyCompensation;
-                    if (sliceSeconds < ballPrediction.slices(0).gameSeconds() + GameData.gameLatencyCompensation)
-                        continue;
-                    if (sliceSeconds - (car.elapsedSeconds) < 0.2f)
-                        continue;
+                float sliceSeconds = frame.absoluteTime;
+                if (sliceSeconds - (car.elapsedSeconds) < 0.2f)
+                    continue;
 
-                    if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)
-                        break;
+                if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)
+                    break;
 
-                    if (RLConstants.isPosNearWall(loc.flatten()))
-                        continue;
+                if (RLConstants.isPosNearWall(loc.flatten()))
+                    continue;
 
-                    if (vel.z < 0 &&
-                            loc.z - RLConstants.ballRadius > car.position.z + RLConstants.carElevation &&
-                            loc.z - RLConstants.ballRadius < car.position.z + RLConstants.carElevation + 12f) {
-                        ballPredictionPos = loc.add(vel.mul(dt));
-                        ballPredictionVelocity = vel;
-                        ballArrival = sliceSeconds;
+                if (vel.z < 0 &&
+                        loc.z - RLConstants.ballRadius > car.position.z + RLConstants.carElevation &&
+                        loc.z - RLConstants.ballRadius < car.position.z + RLConstants.carElevation + 12f) {
+                    ballPredictionPos = loc.add(vel.mul(dt));
+                    ballPredictionVelocity = vel;
+                    ballArrival = sliceSeconds;
 
-                        state = BallState.GOTO_BALL;
-                        //System.out.println("Got a ball "+(slice.gameSeconds() - car.elapsedSeconds)+" seconds into the future");
-                        break;
-                    }
+                    state = BallState.GOTO_BALL;
+                    break;
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
 
             if (state != BallState.GOTO_BALL)
@@ -120,29 +108,27 @@ public class DribbleManeuver extends Maneuver {
                 }
                 return;
             }
-            try {
-                BallPrediction ballPrediction = RLBotDll.getBallPrediction();
-                boolean weFoundTheBall = false;
-                for (int i = 0; i < ballPrediction.slicesLength(); i++) {
-                    PredictionSlice slice = ballPrediction.slices(i);
-                    Vector3 loc = new Vector3(slice.physics().location());
-                    Vector3 vel = new Vector3(slice.physics().velocity());
-                    if (vel.z < 0 && loc.z - RLConstants.ballRadius > car.position.z + 17f && loc.z - RLConstants.ballRadius < car.position.z + 40f && Math.abs(ballArrival - slice.gameSeconds()) < 0.2f) {
-                        weFoundTheBall = true;
-                        ballPredictionPos = loc;
-                        ballPredictionVelocity = vel;
-                        ballArrival = slice.gameSeconds();
-                        break;
-                    }
+
+            YangBallPrediction ballPrediction = gameData.getBallPrediction();
+            boolean weFoundTheBall = false;
+            for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
+                BallData frameBall = frame.ballData;
+                Vector3 loc = frameBall.position;
+                Vector3 vel = frameBall.velocity;
+                if (vel.z < 0 && loc.z - RLConstants.ballRadius > car.position.z + 17f && loc.z - RLConstants.ballRadius < car.position.z + 40f && Math.abs(ballArrival - frame.absoluteTime) < 0.2f) {
+                    weFoundTheBall = true;
+                    ballPredictionPos = loc;
+                    ballPredictionVelocity = vel;
+                    ballArrival = frame.absoluteTime;
+                    break;
                 }
-                if (!weFoundTheBall) {
-                    state = BallState.FIND_BALL;
-                    // System.out.println("Couldn't get to ball timeLeft: "+(ballArrival - car.elapsedSeconds));
-                    return;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+            if (!weFoundTheBall) {
+                state = BallState.FIND_BALL;
+                // System.out.println("Couldn't get to ball timeLeft: "+(ballArrival - car.elapsedSeconds));
+                return;
+            }
+
 
             {
                 float targetVelocity = Math.max(((float) ballPredictionVelocity.flatten().magnitude() - 30), 0);

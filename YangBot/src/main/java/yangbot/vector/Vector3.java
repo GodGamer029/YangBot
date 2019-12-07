@@ -27,6 +27,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         this(vec.x(), vec.y(), vec.z());
     }
 
+    public Vector3(rlbot.flat.Rotator rot) {
+        this(rot.pitch(), rot.yaw(), rot.roll());
+    }
+
     public Vector3(FlatVec3 vec) {
         this(vec.x(), vec.y(), vec.z());
     }

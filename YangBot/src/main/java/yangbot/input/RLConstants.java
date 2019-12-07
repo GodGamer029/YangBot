@@ -1,6 +1,7 @@
 package yangbot.input;
 
 import yangbot.vector.Vector2;
+import yangbot.vector.Vector3;
 
 public class RLConstants {
 
@@ -8,8 +9,12 @@ public class RLConstants {
     public static final float carHeight = 36.16f;
     public static final float carElevation = 17.01f;
 
+    public static Vector3 gravity = new Vector3(0, 0, -650);
+
+    public static float gameLatencyCompensation = 0.f;
+
     public static int tickRate = 120;
-    public static float tickSpeed = 1f / tickRate;
+    public static float tickFrequency = 1f / tickRate;
 
     public static boolean isPosNearWall(Vector2 pos) {
         float x = Math.abs(pos.x);

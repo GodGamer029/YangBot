@@ -34,16 +34,6 @@ public class DefaultStrategy extends Strategy {
         if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)
             controlsOutput.withSlide(true);
 
-        if (new DribbleManeuver().isViable()) {
-            newDecidedStrategy = new DribbleStrategy();
-            this.setDone();
-            return;
-        }
-
-        if (ball.position.z > 300 && car.hasWheelContact) {
-
-        }
-
         if (!car.hasWheelContact) {
             if (jumpFromWallTick > 0) {
                 jumpFromWallTick--;
@@ -54,9 +44,15 @@ public class DefaultStrategy extends Strategy {
                 return;
             }
         } else if (car.position.z > 150 && jumpFromWallTick == 0) {
-            jumpFromWallTick = (int) (0.2f / RLConstants.tickSpeed);
+            jumpFromWallTick = (int) (0.2f / RLConstants.tickFrequency);
             controlsOutput.withThrottle(-1);
             controlsOutput.withJump(true);
+        }
+
+        if (new DribbleManeuver().isViable()) {
+            newDecidedStrategy = new DribbleStrategy();
+            this.setDone();
+            return;
         }
     }
 

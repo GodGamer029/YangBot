@@ -3,10 +3,7 @@ package yangbot;
 import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
-import yangbot.input.BallData;
-import yangbot.input.CarData;
-import yangbot.input.DataPacket;
-import yangbot.input.GameData;
+import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.manuever.DriveManeuver;
 import yangbot.manuever.RegularKickoffManeuver;
@@ -49,8 +46,8 @@ public class YangBot implements Bot {
         CarData car = input.car;
         BallData ball = input.ball;
 
-        float det = (1f / 120f);
-        for (float time = 0; time < GameData.gameLatencyCompensation; time += det) {
+        float det = RLConstants.tickFrequency;
+        for (float time = 0; time < RLConstants.gameLatencyCompensation; time += det) {
             car.step(new ControlsOutput(), det);
             ball.step(det);
         }

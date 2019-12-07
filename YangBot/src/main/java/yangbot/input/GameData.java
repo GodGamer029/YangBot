@@ -1,6 +1,7 @@
 package yangbot.input;
 
 import rlbot.flat.GameInfo;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
 import yangbot.vector.Vector3;
 
@@ -11,8 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GameData {
 
     public static float timeOfMatchStart = -1f;
-
-    public static final float gameLatencyCompensation = 0.f;
 
     protected CarData carData = null;
     protected BallData ballData = null;
@@ -53,6 +52,12 @@ public class GameData {
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
     }
+
+    public YangBallPrediction getBallPrediction() {
+        return YangBallPrediction.get();
+    }
+
+    ;
 
     public Vector3 getGravity() {
         return new Vector3(0f, 0f, gravityZ);

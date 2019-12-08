@@ -12,7 +12,7 @@ public class BallData {
     public static final float MAX_ANGULAR = 6.0f;
 
     public static final float RADIUS = 91.25f;
-    public static final float COLLISION_RADIUS = 93.15f + 10;
+    public static final float COLLISION_RADIUS = 93.15f;
     public static final float MASS = 30f;
     public static final float INERTIA = 0.4f * MASS * RADIUS * RADIUS;
     public static final float MU = 2;

@@ -24,6 +24,10 @@ public class MathUtils {
         return Math.max(min, Math.min(max, value));
     }
 
+    public static Vector3 getSurfaceVelocityOfPoint(Vector3 point, Vector3 centerOfRotation, Vector3 angularVelocity, Vector3 velocity) {
+        return velocity.add(angularVelocity.mul(point.sub(centerOfRotation)));
+    }
+
     public static float quadraticLerp(float start, float middle, float end, float t) {
         t *= 2;
         if (t <= 0)

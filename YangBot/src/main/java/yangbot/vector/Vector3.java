@@ -2,6 +2,7 @@ package yangbot.vector;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import yangbot.cpp.FlatVec3;
+import yangbot.util.MathUtils;
 
 /**
  * A simple 3d vector class with the most essential operations.
@@ -105,8 +106,36 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return new Vector3(x * other.x, y * other.y, z * other.z);
     }
 
+    public Vector3 mul(float xS, float yS, float zS) {
+        return new Vector3(x * xS, y * yS, z * zS);
+    }
+
+    public Vector3 scaleX(float xS) {
+        return new Vector3(x * xS, y, z);
+    }
+
+    public Vector3 scaleY(float yS) {
+        return new Vector3(x, y * yS, z);
+    }
+
+    public Vector3 scaleZ(float zS) {
+        return new Vector3(x, y, z * zS);
+    }
+
     public Vector3 div(double scale) {
         return new Vector3(x / scale, y / scale, z / scale);
+    }
+
+    public Vector3 clip(int index, float minimum, float maximum) {
+        switch (index) {
+            case 0:
+                return new Vector3(MathUtils.clip(x, minimum, maximum), y, z);
+            case 1:
+                return new Vector3(x, MathUtils.clip(y, minimum, maximum), z);
+            case 2:
+                return new Vector3(x, y, MathUtils.clip(z, minimum, maximum));
+        }
+        throw new IllegalArgumentException("Invalid index: " + index);
     }
 
     /**

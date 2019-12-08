@@ -22,8 +22,22 @@ import yangbot.vector.Vector3;
  */
 public class CarData {
 
-    public static final float velocity_max = 2300.0f;
-    public static final float angularVelocity_max = 5.5f;
+    public static final float MAX_VELOCITY = 2300.0f;
+    public static final float MAX_ANGULAR_VELOCITY = 5.5f;
+    public static final float MASS = 180f;
+    public static final Matrix3x3 INERTIA;
+    public static final Matrix3x3 INV_INERTIA;
+
+    static {
+        INERTIA = new Matrix3x3();
+
+        INERTIA.assign(0, 0, 751f);
+        INERTIA.assign(1, 1, 1334f);
+        INERTIA.assign(2, 2, 1836f);
+
+        INV_INERTIA = INERTIA.invert();
+    }
+
     /**
      * The orientation of the car
      */
@@ -77,6 +91,7 @@ public class CarData {
     public final String strippedName;
     public final int playerIndex;
 
+
     public CarData(rlbot.flat.PlayerInfo playerInfo, float elapsedSeconds, int index) {
         this.position = new Vector3(playerInfo.physics().location());
         this.velocity = new Vector3(playerInfo.physics().velocity());
@@ -97,6 +112,7 @@ public class CarData {
         this.playerIndex = index;
         this.doubleJumped = playerInfo.doubleJumped();
         this.jumped = playerInfo.jumped();
+
 
         if (isBot && name.endsWith("(" + (playerIndex + 1) + ")"))
             strippedName = name.substring(0, name.length() - 3).toLowerCase();
@@ -261,7 +277,7 @@ public class CarData {
             // directional dodge
 
             float vf = (float) this.velocity.dot(this.forward());
-            float s = Math.abs(vf) / CarData.velocity_max;
+            float s = Math.abs(vf) / CarData.MAX_VELOCITY;
 
             this.dodgeDir = new Vector2(-in.getPitch(), in.getYaw()).normalized();
 
@@ -386,8 +402,8 @@ public class CarData {
             }
         }
         // if the velocities exceed their maximum values, scale them back
-        this.velocity.div(Math.max(1.0f, this.velocity.magnitude() / CarData.velocity_max));
-        this.angularVelocity.div(Math.max(1.0f, this.angularVelocity.magnitude() / CarData.angularVelocity_max));
+        this.velocity.div(Math.max(1.0f, this.velocity.magnitude() / CarData.MAX_VELOCITY));
+        this.angularVelocity.div(Math.max(1.0f, this.angularVelocity.magnitude() / CarData.MAX_ANGULAR_VELOCITY));
 
         this.elapsedSeconds += dt;
 

@@ -77,7 +77,7 @@ public class DodgeManeuver extends Maneuver {
 
             if (direction_local.magnitude() > 0.0f) {
                 float vf = (float) car.velocity.dot(car.forward());
-                float s = Math.abs(vf) / CarData.velocity_max;
+                float s = Math.abs(vf) / CarData.MAX_VELOCITY;
 
                 boolean backward_dodge;
 

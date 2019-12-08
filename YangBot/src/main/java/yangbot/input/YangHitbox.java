@@ -52,9 +52,20 @@ public class YangHitbox {
         return point.add(permF.mul(frontDir)).add(permL.mul(leftDir)).add(permU.mul(upDir));
     }
 
-
     public Vector3 permutatePoint(Vector3 point, Vector3 direction) {
         return permutatePoint(point, direction.x, direction.y, direction.z);
+    }
+
+    public Vector3 getClosestPointOnHitbox(Vector3 hitboxPos, Vector3 point) {
+        Vector3 center = this.orientation.dot(hitboxOffset).add(hitboxPos);
+        Vector3 halfLengths = this.hitboxLengths.mul(0.5f);
+
+        Vector3 vLocal = point.sub(center).dot(this.orientation);
+        vLocal = vLocal.clip(0, -halfLengths.x, halfLengths.x);
+        vLocal = vLocal.clip(1, -halfLengths.y, halfLengths.y);
+        vLocal = vLocal.clip(2, -halfLengths.z, halfLengths.z);
+
+        return this.orientation.dot(vLocal).add(center);
     }
 
     public void draw(Renderer renderer, Vector3 p, float scale, Color c) {

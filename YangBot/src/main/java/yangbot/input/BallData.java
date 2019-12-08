@@ -2,12 +2,20 @@ package yangbot.input;
 
 import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
+import yangbot.util.MathUtils;
+import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 public class BallData {
     public static final float DRAG = -0.0305f;
     public static final float MAX_VELOCITY = 4000.0f;
     public static final float MAX_ANGULAR = 6.0f;
+
+    public static final float RADIUS = 91.25f;
+    public static final float COLLISION_RADIUS = 93.15f;
+    public static final float MASS = 30f;
+    public static final float INERTIA = 0.4f * MASS * RADIUS * RADIUS;
+    public static final float MU = 2;
 
     public Vector3 position;
     public Vector3 velocity;
@@ -31,6 +39,31 @@ public class BallData {
         this.latestTouch = null;
     }
 
+    private float psyonixImpulseScale(float dv) {
+
+        float[][] values = {
+                {0.0f, 0.65f},
+                {500.0f, 0.65f},
+                {2300.0f, 0.55f},
+                {4600.0f, 0.30f}
+        };
+
+        float input = MathUtils.clip(dv, 0, 4600);
+
+        for (int i = 0; i < values.length; i++) {
+            if (values[i][0] <= input && input < values[i + 1][0]) {
+                float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
+                return MathUtils.lerp(values[i][1], values[i + 1][1], u);
+            }
+        }
+
+        return -1;
+    }
+
+    public void stepWithCollide(float dt, CarData car) {
+        collide(car);
+        step(dt);
+    }
 
     public void step(float dt) {
         // https://github.com/samuelpmish/RLUtilities/blob/master/src/simulation/ball.cc#L36
@@ -47,5 +80,76 @@ public class BallData {
         this.velocity = velocity.mul(
                 Math.min(1, BallData.MAX_VELOCITY / velocity.magnitude())
         );
+    }
+
+    public boolean collide(CarData car) {
+        // https://github.com/samuelpmish/RLUtilities/blob/prerelease/src/simulation/ball.cc#L113
+
+        Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
+
+        if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS) {
+
+            Matrix3x3 L_b = Matrix3x3.antiSym(contactPoint.sub(this.position));
+            Matrix3x3 L_c = Matrix3x3.antiSym(contactPoint.sub(car.position));
+            Vector3 J1;
+
+            // Physics Engine Impulse
+            {
+                Vector3 n1 = contactPoint.sub(this.position).normalized(); // `Ball -> Contact` direction
+
+                Matrix3x3 invI_c = car.orientationMatrix.dot(
+                        CarData.INV_INERTIA.dot(car.orientationMatrix.transpose())
+                );
+
+                Matrix3x3 M = Matrix3x3.identity()
+                        .mul((1.0f / MASS) + (1.0f / CarData.MASS))
+                        .sub(L_b.dot(L_b).div(INERTIA))
+                        .sub(L_c.dot(invI_c.dot(L_c)))
+                        .invert();
+
+                Vector3 deltaV = car.velocity.sub(L_c.dot(car.angularVelocity)).sub(this.velocity.sub(L_b.dot(this.angularVelocity)));
+
+                J1 = M.dot(deltaV);
+
+                // Satisfy the Coulomb friction model
+                {
+                    Vector3 J1_perpendicular = n1.mul(Math.min(J1.dot(n1), -1));
+                    Vector3 J1_parallel = J1.sub(J1_perpendicular);
+
+                    double ratio = J1_perpendicular.magnitude() / Math.max(J1_parallel.magnitude(), 0.001f);
+
+                    // scale the parallel component of J1 such that the
+                    // Coulomb friction model is satisfied
+                    J1 = J1_perpendicular.add(
+                            J1_parallel.mul(Math.min(1, MU * ratio))
+                    );
+                }
+            }
+
+            Vector3 psyonixImpulse;
+            // Psyonix Impulse
+            {
+
+                Vector3 carForward = car.forward();
+                Vector3 contactNormal = this.position.sub(car.position); // Car to ball
+                contactNormal = contactNormal.scaleZ(0.35f); // Makes dribbling easier
+                contactNormal = contactNormal.sub(
+                        carForward
+                                .mul(contactNormal.dot(carForward))
+                                .mul(0.35f)
+                ).normalized();
+
+                float dv = (float) MathUtils.clip(this.velocity.sub(car.velocity).magnitude(), 0, 4600f);
+                // https://gyazo.com/a99918c911d15eb51116a5c03872b20d
+                psyonixImpulse = contactNormal.mul(MASS * dv * psyonixImpulseScale(dv));
+            }
+
+            this.angularVelocity = this.angularVelocity.add(L_b.dot(J1).div(INERTIA));
+            this.velocity = this.velocity.add(J1.add(psyonixImpulse).div(MASS));
+
+            return true;
+        }
+
+        return false;
     }
 }

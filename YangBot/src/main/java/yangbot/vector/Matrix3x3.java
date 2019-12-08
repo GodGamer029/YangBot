@@ -15,6 +15,27 @@ public class Matrix3x3 {
         System.arraycopy(other.data, 0, this.data, 0, data.length);
     }
 
+    public static Matrix3x3 identity() {
+        Matrix3x3 mat = new Matrix3x3();
+        mat.assign(0, 0, 1);
+        mat.assign(1, 1, 1);
+        mat.assign(2, 2, 1);
+        return mat;
+    }
+
+    public static Matrix3x3 antiSym(Vector3 w) {
+        Matrix3x3 mat = new Matrix3x3();
+        mat.assign(0, 1, -w.x);
+        mat.assign(0, 2, w.y);
+
+        mat.assign(1, 0, w.z);
+        mat.assign(1, 2, -w.x);
+
+        mat.assign(2, 0, -w.y);
+        mat.assign(2, 1, w.x);
+        return mat;
+    }
+
     public static Matrix3x3 R3_basis(Vector3 n) {
         float sign = n.z >= 0f ? 1f : -1f;
         float a = -1f / (sign + n.z);
@@ -247,6 +268,46 @@ public class Matrix3x3 {
         invA.assign(2, 2, (this.get(0, 0) * this.get(1, 1) - this.get(0, 1) * this.get(1, 0)) * inv_detA);
 
         return invA;
+    }
+
+    public Matrix3x3 div(float denominator) {
+        Matrix3x3 B = new Matrix3x3();
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                B.assign(i, j, this.get(i, j) / denominator);
+            }
+        }
+        return B;
+    }
+
+    public Matrix3x3 mul(float denominator) {
+        Matrix3x3 B = new Matrix3x3();
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                B.assign(i, j, this.get(i, j) * denominator);
+            }
+        }
+        return B;
+    }
+
+    public Matrix3x3 add(Matrix3x3 other) {
+        Matrix3x3 B = new Matrix3x3();
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                B.assign(i, j, this.get(i, j) + other.get(i, j));
+            }
+        }
+        return B;
+    }
+
+    public Matrix3x3 sub(Matrix3x3 other) {
+        Matrix3x3 B = new Matrix3x3();
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                B.assign(i, j, this.get(i, j) - other.get(i, j));
+            }
+        }
+        return B;
     }
 
     public Matrix3x3 transpose() {

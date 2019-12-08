@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class MainClass {
 
     private static final Integer DEFAULT_PORT = 19265;
-    public static final boolean useTestBot = false;
+    public static final boolean useTestBot = true;
 
     private static void lazyLoadNavigator() {
         new Thread(MainClass::loadNavigator).start();

@@ -25,7 +25,7 @@ public class Matrix3x3 {
 
     public static Matrix3x3 antiSym(Vector3 w) {
         Matrix3x3 mat = new Matrix3x3();
-        mat.assign(0, 1, -w.x);
+        mat.assign(0, 1, -w.z);
         mat.assign(0, 2, w.y);
 
         mat.assign(1, 0, w.z);
@@ -172,6 +172,14 @@ public class Matrix3x3 {
         mat.assign(2, 1, l.z);
         mat.assign(2, 2, u.z);
         return mat;
+    }
+
+    public float[][] getFloatMatrix() {
+        return new float[][]{
+                {get(0, 0), get(0, 1), get(0, 2)},
+                {get(1, 0), get(1, 1), get(1, 2)},
+                {get(2, 0), get(2, 1), get(2, 2)}
+        };
     }
 
     public static Matrix3x3 roofTo(Vector3 up, Vector3 generalDirection) {
@@ -350,5 +358,16 @@ public class Matrix3x3 {
 
     public float angle(Matrix3x3 other) {
         return (float) Math.acos(0.5f * (this.dot(other.transpose()).tr() - 1.0f));
+    }
+
+    @Override
+    public String toString() {
+        float[][] dat = getFloatMatrix();
+        final StringBuilder sb = new StringBuilder("Matrix3x3[\n");
+        sb.append(Arrays.toString(dat[0])).append(",\n");
+        sb.append(Arrays.toString(dat[1])).append(",\n");
+        sb.append(Arrays.toString(dat[2])).append("\n");
+        sb.append(']');
+        return sb.toString();
     }
 }

@@ -12,7 +12,7 @@ public class BallData {
     public static final float MAX_ANGULAR = 6.0f;
 
     public static final float RADIUS = 91.25f;
-    public static final float COLLISION_RADIUS = 93.15f;
+    public static final float COLLISION_RADIUS = 93.15f + 10;
     public static final float MASS = 30f;
     public static final float INERTIA = 0.4f * MASS * RADIUS * RADIUS;
     public static final float MU = 2;
@@ -29,6 +29,14 @@ public class BallData {
         this.angularVelocity = new Vector3(ball.physics().angularVelocity());
         this.hasBeenTouched = ball.latestTouch() != null;
         this.latestTouch = this.hasBeenTouched ? new BallTouch(ball.latestTouch()) : null;
+    }
+
+    public BallData(Vector3 position, Vector3 velocity, Vector3 angularVelocity) {
+        this.position = position;
+        this.velocity = velocity;
+        this.angularVelocity = angularVelocity;
+        this.latestTouch = null;
+        this.hasBeenTouched = false;
     }
 
     public BallData(final Physics ballPhysics) {
@@ -82,23 +90,28 @@ public class BallData {
         );
     }
 
-    public boolean collide(CarData car) {
+    public Vector3 collide(CarData car) {
         // https://github.com/samuelpmish/RLUtilities/blob/prerelease/src/simulation/ball.cc#L113
 
         Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
 
         if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS) {
 
+            Vector3 cx = car.position;
+            Vector3 cv = car.velocity;
+            Vector3 cw = car.angularVelocity;
+            Matrix3x3 co = car.orientationMatrix;
+
             Matrix3x3 L_b = Matrix3x3.antiSym(contactPoint.sub(this.position));
             Matrix3x3 L_c = Matrix3x3.antiSym(contactPoint.sub(car.position));
-            Vector3 J1;
+            Vector3 J1 = new Vector3();
 
             // Physics Engine Impulse
-            {
+            if (true) {
                 Vector3 n1 = contactPoint.sub(this.position).normalized(); // `Ball -> Contact` direction
 
-                Matrix3x3 invI_c = car.orientationMatrix.dot(
-                        CarData.INV_INERTIA.dot(car.orientationMatrix.transpose())
+                Matrix3x3 invI_c = co.dot(
+                        CarData.INV_INERTIA.dot(co.transpose())
                 );
 
                 Matrix3x3 M = Matrix3x3.identity()
@@ -107,7 +120,9 @@ public class BallData {
                         .sub(L_c.dot(invI_c.dot(L_c)))
                         .invert();
 
-                Vector3 deltaV = car.velocity.sub(L_c.dot(car.angularVelocity)).sub(this.velocity.sub(L_b.dot(this.angularVelocity)));
+                Vector3 deltaV = cv
+                        .sub(L_c.dot(cw))
+                        .sub(this.velocity.sub(L_b.dot(this.angularVelocity)));
 
                 J1 = M.dot(deltaV);
 
@@ -126,9 +141,9 @@ public class BallData {
                 }
             }
 
-            Vector3 psyonixImpulse;
+            Vector3 psyonixImpulse = new Vector3();
             // Psyonix Impulse
-            {
+            if (true) {
 
                 Vector3 carForward = car.forward();
                 Vector3 contactNormal = this.position.sub(car.position); // Car to ball
@@ -147,9 +162,9 @@ public class BallData {
             this.angularVelocity = this.angularVelocity.add(L_b.dot(J1).div(INERTIA));
             this.velocity = this.velocity.add(J1.add(psyonixImpulse).div(MASS));
 
-            return true;
+            return contactPoint;
         }
 
-        return false;
+        return null;
     }
 }

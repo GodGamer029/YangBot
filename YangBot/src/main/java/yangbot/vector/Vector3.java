@@ -1,6 +1,7 @@
 package yangbot.vector;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import rlbot.gamestate.DesiredVector3;
 import yangbot.cpp.FlatVec3;
 import yangbot.util.MathUtils;
 
@@ -208,6 +209,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         double ty = z * v.x - x * v.z;
         double tz = x * v.y - y * v.x;
         return new Vector3(tx, ty, tz);
+    }
+
+    public DesiredVector3 toDesiredVector() {
+        return new DesiredVector3(x, y, z);
     }
 
     public float[] getContents() {

@@ -26,6 +26,20 @@ public class YangHitbox {
         setOrientation(orientation);
     }
 
+    public YangHitbox(Vector3 hitbox, Matrix3x3 orientation) {
+        this.hitboxLengths = new Vector3(hitbox);
+        this.hitboxOffset = octaneHitboxOffset;
+
+        setOrientation(orientation);
+    }
+
+    public YangHitbox(Matrix3x3 orientation) {
+        this.hitboxLengths = new Vector3(118.01f, 84.2f, 36.16f);
+        this.hitboxOffset = octaneHitboxOffset;
+
+        setOrientation(orientation);
+    }
+
     private void setOrientation(Matrix3x3 orientation) {
         this.orientation = orientation;
 

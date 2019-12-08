@@ -70,10 +70,10 @@ public class DodgeManeuver extends Maneuver {
                 direction_local = target.sub(car.position)
                         .normalized()
                         .flatten()
-                        .dot(car.orientationDodge);
+                        .dot(car.getDodgeOrientation());
 
             if (target == null && direction != null)
-                direction_local = direction.normalized().dot(car.orientationDodge);
+                direction_local = direction.normalized().dot(car.getDodgeOrientation());
 
             if (direction_local.magnitude() > 0.0f) {
                 float vf = (float) car.velocity.dot(car.forward());

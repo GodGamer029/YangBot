@@ -117,7 +117,7 @@ public class DriveManeuver extends Maneuver {
     }
 
     private void steer_controller(float dt, ControlsOutput output, CarData car) {
-        Vector3 target_local = target.sub(car.position).dot(car.orientationMatrix);
+        Vector3 target_local = target.sub(car.position).dot(car.orientation);
 
         float angle = (float) Math.atan2(target_local.y, target_local.x);
         output.withSteer(MathUtils.clip(3.0f * angle * Math.signum(this.speed), -1f, 1f));

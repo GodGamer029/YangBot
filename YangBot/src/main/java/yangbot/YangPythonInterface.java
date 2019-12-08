@@ -12,9 +12,14 @@ public class YangPythonInterface extends SocketServer {
 
     @Override
     protected Bot initBot(int index, String botType, int team) {
-        if (MainClass.useTestBot)
-            return new TestBot(index);
-        else
-            return new YangBot(index);
+        switch (MainClass.BOT_TYPE) {
+            case PRODUCTION:
+                return new YangBot(index);
+            case TEST:
+                return new TestBot(index);
+            case TRAINING:
+                return new TrainingBot(index);
+        }
+        throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
     }
 }

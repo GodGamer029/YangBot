@@ -32,7 +32,7 @@ public class DriveToPointManeuver extends Maneuver {
         {
             double angle = targetPosition
                     .sub(car.position)
-                    .dot(car.orientationMatrix)
+                    .dot(car.orientation)
                     .flatten()
                     .angle();
             steer = (float) MathUtils.clip(MathUtils.speedbot_steer(angle), -1, 1);

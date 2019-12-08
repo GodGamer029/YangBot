@@ -9,6 +9,8 @@ public class RLConstants {
     public static final float carHeight = 36.16f;
     public static final float carElevation = 17.01f;
 
+    public static final float goalDistance = 5120f; // Distance from center to goal
+
     public static Vector3 gravity = new Vector3(0, 0, -650);
 
     public static float gameLatencyCompensation = 0.f;

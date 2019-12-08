@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class YangBallPrediction {
 
@@ -82,6 +83,27 @@ public class YangBallPrediction {
                 return Optional.of(frame);
         }
         return Optional.empty();
+    }
+
+    public List<YangPredictionFrame> getFramesBeforeRelative(float relativeTime) {
+        return this.frames
+                .stream()
+                .filter((f) -> f.relativeTime < relativeTime)
+                .collect(Collectors.toList());
+    }
+
+    public List<YangPredictionFrame> getFramesAfterRelative(float relativeTime) {
+        return this.frames
+                .stream()
+                .filter((f) -> f.relativeTime > relativeTime)
+                .collect(Collectors.toList());
+    }
+
+    public List<YangPredictionFrame> getFramesBetweenRelative(float start, float end) {
+        return this.frames
+                .stream()
+                .filter((f) -> f.relativeTime > start && f.relativeTime < end)
+                .collect(Collectors.toList());
     }
 
     public boolean hasFrames() {

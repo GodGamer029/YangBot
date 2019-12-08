@@ -126,9 +126,6 @@ public class YangBot implements Bot {
         return output;
     }
 
-    /**
-     * This is a nice example of using the rendering feature.
-     */
     private void drawDebugLines(DataPacket input, CarData myCar) {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
 

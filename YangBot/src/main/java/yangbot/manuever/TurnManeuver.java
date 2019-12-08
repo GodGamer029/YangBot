@@ -153,7 +153,7 @@ public class TurnManeuver extends Maneuver {
         final BallData ball = gameData.getBallData();
 
         omega = target.transpose().dot(car.angularVelocity);
-        theta = target.transpose().dot(car.orientationMatrix);
+        theta = target.transpose().dot(car.orientation);
         omega_local = omega.dot(theta);
         phi = Vector3.rotationToAxis(theta);
 

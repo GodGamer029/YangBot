@@ -59,7 +59,7 @@ public class BallData {
         float input = MathUtils.clip(dv, 0, 4600);
 
         for (int i = 0; i < values.length; i++) {
-            if (values[i][0] <= input && input < values[i + 1][0]) {
+            if (values[i][0] <= input && input <= values[i + 1][0]) {
                 float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
@@ -93,50 +93,45 @@ public class BallData {
     public Vector3 collide(CarData car) {
         // https://github.com/samuelpmish/RLUtilities/blob/prerelease/src/simulation/ball.cc#L113
 
-        Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
+        final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
 
         if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS) {
 
-            Vector3 cx = car.position;
-            Vector3 cv = car.velocity;
-            Vector3 cw = car.angularVelocity;
-            Matrix3x3 co = car.orientationMatrix;
-
-            Matrix3x3 L_b = Matrix3x3.antiSym(contactPoint.sub(this.position));
-            Matrix3x3 L_c = Matrix3x3.antiSym(contactPoint.sub(car.position));
-            Vector3 J1 = new Vector3();
+            final Matrix3x3 L_ball = Matrix3x3.antiSym(contactPoint.sub(this.position));
+            final Matrix3x3 L_car = Matrix3x3.antiSym(contactPoint.sub(car.position));
+            Vector3 physImpulse = new Vector3();
 
             // Physics Engine Impulse
             if (true) {
-                Vector3 n1 = contactPoint.sub(this.position).normalized(); // `Ball -> Contact` direction
+                final Vector3 ballContactNormal = contactPoint.sub(this.position).normalized(); // `Ball -> Contact` direction
 
-                Matrix3x3 invI_c = co.dot(
-                        CarData.INV_INERTIA.dot(co.transpose())
+                final Matrix3x3 invInertiaCar = car.orientation.dot(
+                        CarData.INV_INERTIA.dot(car.orientation.transpose())
                 );
 
-                Matrix3x3 M = Matrix3x3.identity()
+                final Matrix3x3 M = Matrix3x3.identity()
                         .mul((1.0f / MASS) + (1.0f / CarData.MASS))
-                        .sub(L_b.dot(L_b).div(INERTIA))
-                        .sub(L_c.dot(invI_c.dot(L_c)))
+                        .sub(L_ball.dot(L_ball).div(INERTIA))
+                        .sub(L_car.dot(invInertiaCar.dot(L_car)))
                         .invert();
 
-                Vector3 deltaV = cv
-                        .sub(L_c.dot(cw))
-                        .sub(this.velocity.sub(L_b.dot(this.angularVelocity)));
+                final Vector3 deltaV = car.velocity
+                        .sub(L_car.dot(car.angularVelocity))
+                        .sub(this.velocity.sub(L_ball.dot(this.angularVelocity)));
 
-                J1 = M.dot(deltaV);
+                physImpulse = M.dot(deltaV);
 
                 // Satisfy the Coulomb friction model
                 {
-                    Vector3 J1_perpendicular = n1.mul(Math.min(J1.dot(n1), -1));
-                    Vector3 J1_parallel = J1.sub(J1_perpendicular);
+                    final Vector3 impulsePerpendicular = ballContactNormal.mul(Math.min(physImpulse.dot(ballContactNormal), -1));
+                    final Vector3 impulseParallel = physImpulse.sub(impulsePerpendicular);
 
-                    double ratio = J1_perpendicular.magnitude() / Math.max(J1_parallel.magnitude(), 0.001f);
+                    double ratio = impulsePerpendicular.magnitude() / Math.max(impulseParallel.magnitude(), 0.001f);
 
                     // scale the parallel component of J1 such that the
                     // Coulomb friction model is satisfied
-                    J1 = J1_perpendicular.add(
-                            J1_parallel.mul(Math.min(1, MU * ratio))
+                    physImpulse = impulsePerpendicular.add(
+                            impulseParallel.mul(Math.min(1, MU * ratio))
                     );
                 }
             }
@@ -154,13 +149,13 @@ public class BallData {
                                 .mul(0.35f)
                 ).normalized();
 
-                float dv = (float) MathUtils.clip(this.velocity.sub(car.velocity).magnitude(), 0, 4600f);
+                float deltaVelocity = (float) MathUtils.clip(this.velocity.sub(car.velocity).magnitude(), 0, 4600f);
                 // https://gyazo.com/a99918c911d15eb51116a5c03872b20d
-                psyonixImpulse = contactNormal.mul(MASS * dv * psyonixImpulseScale(dv));
+                psyonixImpulse = contactNormal.mul(MASS * deltaVelocity * psyonixImpulseScale(deltaVelocity));
             }
 
-            this.angularVelocity = this.angularVelocity.add(L_b.dot(J1).div(INERTIA));
-            this.velocity = this.velocity.add(J1.add(psyonixImpulse).div(MASS));
+            this.angularVelocity = this.angularVelocity.add(L_ball.dot(physImpulse).div(INERTIA));
+            this.velocity = this.velocity.add(physImpulse.add(psyonixImpulse).div(MASS));
 
             return contactPoint;
         }

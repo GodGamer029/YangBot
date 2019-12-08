@@ -129,7 +129,7 @@ public class RegularKickoffManeuver extends Maneuver {
                         } else
                             dodgeManeuver.step(dt, controlsOutput);
                     } else {
-                        Vector3 target_local = new Vector3(0, Math.signum(car.position.y) * 2850, 0).sub(car.position).dot(car.orientationMatrix);
+                        Vector3 target_local = new Vector3(0, Math.signum(car.position.y) * 2850, 0).sub(car.position).dot(car.orientation);
 
                         float angle = (float) Math.atan2(target_local.y, target_local.x);
                         controlsOutput.withSteer(3.0f * angle);
@@ -196,7 +196,7 @@ public class RegularKickoffManeuver extends Maneuver {
                         controlsOutput.withSlide(true);
                         controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ball.position.flatten().sub(car.position.flatten().withX(ball.position.x))));
                     } else {
-                        Vector3 target_local = ball.position.sub(car.position).dot(car.orientationMatrix);
+                        Vector3 target_local = ball.position.sub(car.position).dot(car.orientation);
 
                         float angle = (float) Math.atan2(target_local.y, target_local.x);
                         controlsOutput.withSteer(3.0f * angle);

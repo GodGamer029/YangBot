@@ -165,7 +165,7 @@ public class TestBot implements Bot {
 
     @Override
     public void retire() {
-        System.out.println("Retiring sample bot " + playerIndex);
+        System.out.println("Retiring Test bot " + playerIndex);
     }
 
     enum State {

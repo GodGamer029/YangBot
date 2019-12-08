@@ -19,7 +19,11 @@ applicationDefaultJvmArgs = ["-Djna.library.path=" + dllDirectory, "-Xms256m", "
 
 dependencies {
     // Fetch the framework jar file
+    compile('org.jetbrains:annotations:17.0.0')
     compile('org.rlbot.commons:framework:1.10.1') { changing = true }
+    testCompile('org.junit.jupiter:junit-jupiter:5.4.2')
+    testCompile('org.openjdk.jmh:jmh-core:1.22')
+    testAnnotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.22')
     // This is makes it easy to find the dll when running in intellij, where JVM args don't get passed from gradle.
     runtime files(dllDirectory)
 }
@@ -68,6 +72,16 @@ task updateRLBot {
 updateRLBot.dependsOn pipInstallRequirements
 
 applicationDistribution.exclude(dllDirectory)
+
+test {
+    useJUnitPlatform()
+}
+
+run {
+    if ( project.hasProperty("training") ){
+        args training;
+    }
+}
 
 // You can run gradew.bat distZip to generate a zip file suitable for tournament submissions.
 // It will be generated in build/distributions

@@ -1,5 +1,6 @@
 package yangbot.strategy;
 
+import yangbot.input.GameData;
 import yangbot.util.ControlsOutput;
 
 import java.util.Optional;
@@ -8,6 +9,7 @@ public abstract class Strategy {
 
     private boolean isDone = false;
     private boolean plannedStrategy = false;
+    private float lastStrategyPlan = 0;
 
     public final boolean didPlanStrategy() {
         return plannedStrategy;
@@ -29,12 +31,28 @@ public abstract class Strategy {
 
     protected abstract void planStrategyInternal();
 
-    @SuppressWarnings("WeakerAccess")
     public final void planStrategy() {
-        if (plannedStrategy)
+        planStrategy(false);
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public final void planStrategy(boolean force) {
+        if (plannedStrategy && !force)
             return;
+        lastStrategyPlan = GameData.current().getCarData().elapsedSeconds;
         plannedStrategy = true;
         planStrategyInternal();
+    }
+
+    protected final boolean reevaluateStrategy(float timeout) {
+        float currentSeconds = GameData.current().getCarData().elapsedSeconds;
+        if (currentSeconds < lastStrategyPlan)
+            lastStrategyPlan = -10; // Something wierd is going on, replan strat
+
+        if (currentSeconds - lastStrategyPlan > timeout)
+            planStrategy(true);
+
+        return this.isDone();
     }
 
     protected abstract void stepInternal(float dt, ControlsOutput controlsOutput);

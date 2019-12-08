@@ -1,6 +1,6 @@
 package yangbot.vector;
 
-import yangbot.input.CarOrientation;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 
@@ -11,10 +11,11 @@ public class Matrix3x3 {
         Arrays.fill(data, 0);
     }
 
-    public Matrix3x3(Matrix3x3 other) {
+    public Matrix3x3(@NotNull Matrix3x3 other) {
         System.arraycopy(other.data, 0, this.data, 0, data.length);
     }
 
+    @NotNull
     public static Matrix3x3 identity() {
         Matrix3x3 mat = new Matrix3x3();
         mat.assign(0, 0, 1);
@@ -23,7 +24,8 @@ public class Matrix3x3 {
         return mat;
     }
 
-    public static Matrix3x3 antiSym(Vector3 w) {
+    @NotNull
+    public static Matrix3x3 antiSym(@NotNull Vector3 w) {
         Matrix3x3 mat = new Matrix3x3();
         mat.assign(0, 1, -w.z);
         mat.assign(0, 2, w.y);
@@ -36,7 +38,8 @@ public class Matrix3x3 {
         return mat;
     }
 
-    public static Matrix3x3 R3_basis(Vector3 n) {
+    @NotNull
+    public static Matrix3x3 R3_basis(@NotNull Vector3 n) {
         float sign = n.z >= 0f ? 1f : -1f;
         float a = -1f / (sign + n.z);
         float b = n.x * n.y * a;
@@ -58,7 +61,8 @@ public class Matrix3x3 {
         return mat;
     }
 
-    public static Matrix3x3 axisToRotation(Vector3 omega) {
+    @NotNull
+    public static Matrix3x3 axisToRotation(@NotNull Vector3 omega) {
         float norm_omega = (float) omega.magnitude();
 
         if (Math.abs(norm_omega) == 0)
@@ -87,7 +91,8 @@ public class Matrix3x3 {
         }
     }
 
-    public static Matrix3x3 eulerToRotation(Vector3 pyr) {
+    @NotNull
+    public static Matrix3x3 eulerToRotation(@NotNull Vector3 pyr) {
         Matrix3x3 mat = new Matrix3x3();
         float CP = (float) Math.cos(pyr.x);
         float SP = (float) Math.sin(pyr.x);
@@ -111,29 +116,8 @@ public class Matrix3x3 {
         return mat;
     }
 
-    public static Matrix3x3 from(CarOrientation carOrientation) {
-        Matrix3x3 mat = new Matrix3x3();
-
-        Vector3 forward = carOrientation.noseVector;
-        Vector3 up = carOrientation.roofVector;
-        Vector3 left = carOrientation.rightVector.mul(-1);
-
-        mat.assign(0, 0, forward.x);
-        mat.assign(1, 0, forward.y);
-        mat.assign(2, 0, forward.z);
-
-        mat.assign(0, 1, left.x);
-        mat.assign(1, 1, left.y);
-        mat.assign(2, 1, left.z);
-
-        mat.assign(0, 2, up.x);
-        mat.assign(1, 2, up.y);
-        mat.assign(2, 2, up.z);
-
-        return mat;
-    }
-
-    public static Matrix3x3 from(Vector3 forward, Vector3 up, Vector3 left) {
+    @NotNull
+    public static Matrix3x3 from(@NotNull Vector3 forward, @NotNull Vector3 up, @NotNull Vector3 left) {
         Matrix3x3 mat = new Matrix3x3();
 
         mat.assign(0, 0, forward.x);
@@ -151,6 +135,7 @@ public class Matrix3x3 {
         return mat;
     }
 
+    @NotNull
     public static Matrix3x3 lookAt(Vector3 direction, Vector3 up) {
         if (up == null)
             up = new Vector3(0, 0, 1);
@@ -182,16 +167,15 @@ public class Matrix3x3 {
         };
     }
 
+    @NotNull
     public static Matrix3x3 roofTo(Vector3 up, Vector3 generalDirection) {
         Vector3 f = new Vector3();
 
         if (generalDirection != null) {
             // https://stackoverflow.com/a/9605695
-            Vector3 normal = up;
-            Vector3 point = generalDirection;
 
-            double dist = point.dot(normal);
-            Vector3 projected = point.sub(normal.mul(dist));
+            double dist = generalDirection.dot(up);
+            Vector3 projected = generalDirection.sub(up.mul(dist));
             f = projected.normalized();
         }
 
@@ -356,7 +340,7 @@ public class Matrix3x3 {
         return C;
     }
 
-    public float angle(Matrix3x3 other) {
+    public float angle(@NotNull Matrix3x3 other) {
         return (float) Math.acos(0.5f * (this.dot(other.transpose()).tr() - 1.0f));
     }
 

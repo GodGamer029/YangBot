@@ -229,7 +229,7 @@ public class CarData {
         position = position.add(velocity.mul(dt));
 
         angularVelocity = angularVelocity.add(torque.mul(dt));
-        orientation = Matrix3x3.axisToRotation(angularVelocity.mul(dt)).dot(orientation);
+        orientation = Matrix3x3.axisToRotation(angularVelocity.mul(dt)).matrixMul(orientation);
     }
 
     private void driving_handbrake(ControlsOutput in, float dt) {
@@ -245,7 +245,7 @@ public class CarData {
         this.position = this.position.add(this.velocity.mul(dt));
 
         this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt))
-                .dot(this.orientation);
+                .matrixMul(this.orientation);
 
         this.jumpTimer = 0.0f;
         this.jumped = true;
@@ -287,7 +287,7 @@ public class CarData {
             this.position = this.position.add(this.velocity.mul(dt));
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
-            this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).dot(this.orientation);
+            this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
 
             this.doubleJumped = true;
             this.dodgeTimer = 0.0f;
@@ -299,7 +299,7 @@ public class CarData {
             this.position = this.position.add(this.velocity.mul(dt));
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
-            this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).dot(this.orientation);
+            this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
 
             this.doubleJumped = true;
             this.dodgeTimer = 1.01f * DodgeManeuver.torque_time;
@@ -357,7 +357,7 @@ public class CarData {
         }
         this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt));
         this.position = this.position.add(this.velocity.mul(dt));
-        this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).dot(this.orientation);
+        this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
     }
 
     public void step(ControlsOutput in, float dt) {

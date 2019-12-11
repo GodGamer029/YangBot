@@ -33,7 +33,7 @@ public class FollowPathManeuver extends Maneuver {
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
 
-        dt = Math.max(dt, 1f / 60f);
+        dt = Math.max(dt, 1f / 120f);
         if (path.length <= 0) {
             System.err.println("Invalid path");
             this.setIsDone(true);

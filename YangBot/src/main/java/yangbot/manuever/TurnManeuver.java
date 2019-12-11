@@ -1,6 +1,9 @@
 package yangbot.manuever;
 
-import yangbot.input.*;
+import yangbot.input.CarData;
+import yangbot.input.FoolGameData;
+import yangbot.input.GameData;
+import yangbot.input.RLConstants;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
@@ -148,12 +151,10 @@ public class TurnManeuver extends Maneuver {
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
-        final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
 
         omega = target.transpose().dot(car.angularVelocity);
-        theta = target.transpose().dot(car.orientation);
+        theta = target.transpose().matrixMul(car.orientation);
         omega_local = omega.dot(theta);
         phi = Vector3.rotationToAxis(theta);
 

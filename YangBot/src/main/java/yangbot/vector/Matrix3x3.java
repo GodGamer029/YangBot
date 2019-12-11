@@ -26,14 +26,16 @@ public class Matrix3x3 {
 
     @NotNull
     public static Matrix3x3 antiSym(@NotNull Vector3 w) {
+        // http://mathworld.wolfram.com/AntisymmetricMatrix.html
+
         Matrix3x3 mat = new Matrix3x3();
         mat.assign(0, 1, -w.z);
-        mat.assign(0, 2, w.y);
-
         mat.assign(1, 0, w.z);
-        mat.assign(1, 2, -w.x);
 
         mat.assign(2, 0, -w.y);
+        mat.assign(0, 2, w.y);
+
+        mat.assign(1, 2, -w.x);
         mat.assign(2, 1, w.x);
         return mat;
     }
@@ -325,7 +327,7 @@ public class Matrix3x3 {
         return new Vector3(vecArr[0], vecArr[1], vecArr[2]);
     }
 
-    public Matrix3x3 dot(Matrix3x3 other) {
+    public Matrix3x3 matrixMul(Matrix3x3 other) {
         Matrix3x3 C = new Matrix3x3();
 
         for (int i = 0; i < 3; i++) {
@@ -341,7 +343,7 @@ public class Matrix3x3 {
     }
 
     public float angle(@NotNull Matrix3x3 other) {
-        return (float) Math.acos(0.5f * (this.dot(other.transpose()).tr() - 1.0f));
+        return (float) Math.acos(0.5f * (this.matrixMul(other.transpose()).tr() - 1.0f));
     }
 
     @Override

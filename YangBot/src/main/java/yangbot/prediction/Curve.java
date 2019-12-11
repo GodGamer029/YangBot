@@ -1,12 +1,14 @@
 package yangbot.prediction;
 
 import yangbot.manuever.DriveManeuver;
+import yangbot.util.AdvancedRenderer;
 import yangbot.util.CubicHermite;
 import yangbot.util.MathUtils;
 import yangbot.util.OGH;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +37,7 @@ public class Curve {
         curvatures = new ArrayList<>();
         maxSpeeds = new float[0];
 
-        int ndiv = 16;
+        int ndiv = 32;
         int num_segments = info.size() - 1;
 
         points.ensureCapacity(ndiv * num_segments + 2);
@@ -244,6 +246,18 @@ public class Curve {
         kappa1 = (float) MathUtils.clip(Math.asin(m.magnitude()) / ds, 0f, kappa_max);
         kappa2 = (float) Math.asin(Math.abs(m.dot(n))) / ds;
         curvatures.set(last, MathUtils.lerp(kappa1, kappa2, inPlaneWeight));
+    }
+
+    public void draw(AdvancedRenderer renderer) {
+        Vector3 lastPoint = null;
+        for (Vector3 point : this.points) {
+            if (lastPoint == null) {
+                lastPoint = point;
+                continue;
+            }
+            renderer.drawLine3d(Color.RED, lastPoint, point);
+            lastPoint = point;
+        }
     }
 
     public Vector3 pointAt(float s) {

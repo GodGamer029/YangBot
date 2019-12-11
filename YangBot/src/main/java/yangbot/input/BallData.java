@@ -105,19 +105,19 @@ public class BallData {
             if (true) {
                 final Vector3 ballContactNormal = contactPoint.sub(this.position).normalized(); // `Ball -> Contact` direction
 
-                final Matrix3x3 invInertiaCar = car.orientation.dot(
-                        CarData.INV_INERTIA.dot(car.orientation.transpose())
+                final Matrix3x3 invInertiaCar = car.orientation.matrixMul(
+                        CarData.INV_INERTIA.matrixMul(car.orientation.transpose())
                 );
 
                 final Matrix3x3 M = Matrix3x3.identity()
                         .mul((1.0f / MASS) + (1.0f / CarData.MASS))
-                        .sub(L_ball.dot(L_ball).div(INERTIA))
-                        .sub(L_car.dot(invInertiaCar.dot(L_car)))
+                        .sub(L_ball.matrixMul(L_ball).div(INERTIA))
+                        .sub(L_car.matrixMul(invInertiaCar.matrixMul(L_car)))
                         .invert();
 
-                final Vector3 deltaV = car.velocity
-                        .sub(L_car.dot(car.angularVelocity))
-                        .sub(this.velocity.sub(L_ball.dot(this.angularVelocity)));
+                final Vector3 deltaV =
+                        car.velocity.sub(L_car.dot(car.angularVelocity))
+                                .sub(this.velocity.sub(L_ball.dot(this.angularVelocity)));
 
                 physImpulse = M.dot(deltaV);
 
@@ -126,7 +126,7 @@ public class BallData {
                     final Vector3 impulsePerpendicular = ballContactNormal.mul(Math.min(physImpulse.dot(ballContactNormal), -1));
                     final Vector3 impulseParallel = physImpulse.sub(impulsePerpendicular);
 
-                    double ratio = impulsePerpendicular.magnitude() / Math.max(impulseParallel.magnitude(), 0.001f);
+                    final double ratio = impulsePerpendicular.magnitude() / Math.max(impulseParallel.magnitude(), 0.001f);
 
                     // scale the parallel component of J1 such that the
                     // Coulomb friction model is satisfied
@@ -140,7 +140,7 @@ public class BallData {
             // Psyonix Impulse
             if (true) {
 
-                Vector3 carForward = car.forward();
+                final Vector3 carForward = car.forward();
                 Vector3 contactNormal = this.position.sub(car.position); // Car to ball
                 contactNormal = contactNormal.scaleZ(0.35f); // Makes dribbling easier
                 contactNormal = contactNormal.sub(
@@ -149,13 +149,21 @@ public class BallData {
                                 .mul(0.35f)
                 ).normalized();
 
-                float deltaVelocity = (float) MathUtils.clip(this.velocity.sub(car.velocity).magnitude(), 0, 4600f);
+                final float deltaVelocity = (float) MathUtils.clip(this.velocity.sub(car.velocity).magnitude(), 0, 4600f);
                 // https://gyazo.com/a99918c911d15eb51116a5c03872b20d
                 psyonixImpulse = contactNormal.mul(MASS * deltaVelocity * psyonixImpulseScale(deltaVelocity));
             }
 
-            this.angularVelocity = this.angularVelocity.add(L_ball.dot(physImpulse).div(INERTIA));
-            this.velocity = this.velocity.add(physImpulse.add(psyonixImpulse).div(MASS));
+            this.angularVelocity = this.angularVelocity.add(
+                    L_ball
+                            .dot(physImpulse)
+                            .div(INERTIA)
+            );
+            this.velocity = this.velocity.add(
+                    physImpulse
+                            .add(psyonixImpulse)
+                            .div(MASS)
+            );
 
             return contactPoint;
         }

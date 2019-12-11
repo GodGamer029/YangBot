@@ -49,4 +49,13 @@ public class MathUtils {
             value *= 0.5f;
         return value;
     }
+
+    // The following isn't really useful, just writing down my thoughts
+    public double getSpeedInDirection(Vector3 velocity, Vector3 direction) {
+        return velocity.dot(direction);
+    }
+
+    public Vector3 getVelocityInDirection(Vector3 velocity, Vector3 direction) {
+        return direction.mul(getSpeedInDirection(velocity, direction));
+    }
 }

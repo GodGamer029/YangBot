@@ -72,9 +72,24 @@ public class FollowPathManeuver extends Maneuver {
             this.setIsDone(s <= 50f);
         }
 
-        driveManeuver.speed = Math.min(driveManeuver.speed, path.maxSpeedAt(s - 4f * speed * dt));
+        float maxSpeedAtPathSection = path.maxSpeedAt(s - 4f * speed * dt);
+
+        driveManeuver.speed = Math.min(driveManeuver.speed, maxSpeedAtPathSection);
+        boolean enableSlide = false;
+
+        if (Math.abs(maxSpeedAtPathSection) < 50) { // Very likely to be stuck in a turn that is impossible
+            //driveManeuver.speed = Math.signum(driveManeuver.speed) * 200;
+            //if(driveManeuver.speed == 0)
+            driveManeuver.speed = 200;
+            enableSlide = true;
+        }
 
         driveManeuver.step(dt, controlsOutput);
+        if (enableSlide) {
+            controlsOutput.withSlide();
+            controlsOutput.withSteer(Math.signum(controlsOutput.getSteer()));
+        }
+
     }
 
     float interpolate_quadratic(float v0, float vT, float aT, float t, float T) {

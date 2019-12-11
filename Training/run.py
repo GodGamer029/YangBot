@@ -1,11 +1,14 @@
 from pathlib import Path
+import importlib
 
-from rlbottraining.common_exercises.bronze_goalie import BallRollingToGoalie
+from rlbottraining.common_exercises.bronze_goalie import BallRollingToGoalie as BronzeBallRollingToGoalie
+from rlbottraining.common_exercises.silver_goalie import TryNotToOwnGoal
 from rlbot.matchconfig.match_config import PlayerConfig, Team
-
+import gold_goalie
+from gold_goalie import GoldBallRollingToGoalie
 def make_default_playlist():
     exercises =  [
-        BallRollingToGoalie('Hi!')
+        GoldBallRollingToGoalie('Gold')
     ]
 
     for exercise in exercises:

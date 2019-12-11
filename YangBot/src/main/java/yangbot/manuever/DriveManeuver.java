@@ -43,7 +43,7 @@ public class DriveManeuver extends Maneuver {
         return dist;
     }
 
-    public static float maxTurningSpeed(float curvature) {
+    public static float maxTurningSpeed(float curvature) { // Curvature -> Max speed
         final int n = 6;
 
         float[][] values = {

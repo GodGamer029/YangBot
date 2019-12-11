@@ -7,9 +7,11 @@ import yangbot.input.RLConstants;
 import yangbot.manuever.FollowPathManeuver;
 import yangbot.prediction.Curve;
 import yangbot.prediction.YangBallPrediction;
+import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,31 +37,31 @@ public class DefendStrategy extends Strategy {
                 .findFirst();
 
         if (firstConcedingGoalFrame.isPresent()) { // We getting scored on
-            criticalness = Criticalness.GETTING_SCORED_ON;
+            criticalness = Criticalness.GETTING_SCORED_ON_GROUND;
         }
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        if (this.reevaluateStrategy(0.5f))
+        if (this.reevaluateStrategy(criticalness == Criticalness.FOLLOW_PATH ? 1.2f : 0.5f))
             return; // Return if we are done
 
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
         BallData ball = gameData.getBallData();
+        AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         int teamSign = car.team * 2 - 1;
 
         switch (criticalness) {
-            case GETTING_SCORED_ON:
+            case GETTING_SCORED_ON_GROUND:
                 Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.frames
                         .stream()
                         .filter((f) -> Math.signum(f.ballData.position.y) == teamSign && Math.abs(f.ballData.position.y) > RLConstants.goalDistance - 50 && f.ballData.position.z <= BallData.COLLISION_RADIUS + 10)
                         .findFirst();
 
                 if (!firstConcedingGoalFrame.isPresent()) {
-
                     this.reevaluateStrategy(0);
                     return;
                 }
@@ -77,9 +79,9 @@ public class DefendStrategy extends Strategy {
 
                 List<Curve.ControlPoint> controlPoints = new ArrayList<>();
                 controlPoints.add(new Curve.ControlPoint(car.position, car.forward(), new Vector3(0, 0, 1)));
-                controlPoints.add(new Curve.ControlPoint(car.position.add(car.forward().mul(20)), car.forward(), new Vector3(0, 0, 1)));
+                //controlPoints.add(new Curve.ControlPoint(car.position.add(car.forward().mul(20)), car.forward(), new Vector3(0, 0, 1)));
 
-                controlPoints.add(new Curve.ControlPoint(targetPos, new Vector3(0, -teamSign, 0), new Vector3(0, 0, 1)));
+                controlPoints.add(new Curve.ControlPoint(targetPos.withZ(car.position.z), new Vector3(0, -teamSign, 0).normalized(), new Vector3(0, 0, 1)));
 
                 followPathManeuver.path = new Curve(controlPoints);
                 followPathManeuver.arrivalTime = interceptFrame.absoluteTime;
@@ -87,13 +89,14 @@ public class DefendStrategy extends Strategy {
 
                 break;
             case FOLLOW_PATH:
-                followPathManeuver.path.draw(gameData.getAdvancedRenderer());
+                renderer.drawString2d(String.format("Arriving in %.1fs", followPathManeuver.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 500), 2, 2);
+                followPathManeuver.path.draw(renderer);
                 followPathManeuver.step(dt, controlsOutput);
                 if (followPathManeuver.isDone())
                     this.reevaluateStrategy(0);
                 break;
             case IDK:
-                System.out.println("IDK");
+                System.err.println("IDK"); // Fall through to ballchaser
             default:
 
                 controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ballPrediction.getFrameAtRelativeTime(0.3f).get().ballData.position.flatten().sub(car.position.flatten())));
@@ -113,7 +116,7 @@ public class DefendStrategy extends Strategy {
     }
 
     enum Criticalness {
-        GETTING_SCORED_ON,
+        GETTING_SCORED_ON_GROUND,
         FOLLOW_PATH,
         IDK
     }

@@ -123,6 +123,18 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return new Vector3(x, y, z * zS);
     }
 
+    public Vector3 withX(float x) {
+        return new Vector3(x, y, z);
+    }
+
+    public Vector3 withY(float y) {
+        return new Vector3(x, y, z);
+    }
+
+    public Vector3 withZ(float z) {
+        return new Vector3(x, y, z);
+    }
+
     public Vector3 div(double scale) {
         return new Vector3(x / scale, y / scale, z / scale);
     }

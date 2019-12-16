@@ -40,7 +40,7 @@ public class TrainingBot implements Bot {
         CarData car = input.car;
         BallData ball = input.ball;
         if (ball.position.distance(lastBallPos) > Math.max(700, ball.velocity.mul(0.5f).magnitude())) {
-            System.out.println("Ball teleported, new exercise! (" + ball.position.distance(lastBallPos) + ")");
+            System.out.println("#################");
             state = State.RESET;
         }
         lastBallPos = ball.position;
@@ -64,8 +64,8 @@ public class TrainingBot implements Bot {
                     currentPlan.planStrategy();
                     i++;
                     if (i == 5) {
-                        System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
-                        System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        //System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
+                        //System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         currentPlan = new DefaultStrategy();
                     }
                 }

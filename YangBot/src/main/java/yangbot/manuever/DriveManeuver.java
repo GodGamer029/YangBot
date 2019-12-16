@@ -123,18 +123,18 @@ public class DriveManeuver extends Maneuver {
         output.withSteer(MathUtils.clip(3.0f * angle * Math.signum(this.speed), -1f, 1f));
     }
 
-    private void speed_controller(float dt, ControlsOutput output, CarData car) {
-        float vf = (float) car.velocity.dot(car.forward());
+    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float targetSpeed) {
+        float vf = (float) currentSpeed;
 
-        float acceleration = (speed - vf) / reaction_time;
+        float acceleration = (targetSpeed - vf) / reaction_time;
 
         float brake_coast_transition = -(0.45f * brake_acceleration + 0.55f * coasting_acceleration);
         float coasting_throttle_transition = -0.5f * coasting_acceleration;
         float throttle_boost_transition = 1.0f * throttle_acceleration(vf) + 0.5f * boost_acceleration;
 
-        if (car.up().z < 0.7f) {
-            brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
-        }
+        //if (car.up().z < 0.7f) {
+        //    brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
+        //}
 
         if (acceleration <= brake_coast_transition) {
             output.withThrottle(-1.0f);
@@ -157,7 +157,7 @@ public class DriveManeuver extends Maneuver {
         final CarData car = gameData.getCarData();
 
         steer_controller(dt, controlsOutput, car);
-        speed_controller(dt, controlsOutput, car);
+        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), speed);
 
         if (car.position.sub(target).magnitude() < 100.f)
             this.setIsDone(true);

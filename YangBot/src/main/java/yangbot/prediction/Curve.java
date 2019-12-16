@@ -1,10 +1,9 @@
 package yangbot.prediction;
 
+import yangbot.input.CarData;
+import yangbot.input.RLConstants;
 import yangbot.manuever.DriveManeuver;
-import yangbot.util.AdvancedRenderer;
-import yangbot.util.CubicHermite;
-import yangbot.util.MathUtils;
-import yangbot.util.OGH;
+import yangbot.util.*;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
@@ -37,7 +36,7 @@ public class Curve {
         curvatures = new ArrayList<>();
         maxSpeeds = new float[0];
 
-        int ndiv = 32;
+        int ndiv = 20;
         int num_segments = info.size() - 1;
 
         points.ensureCapacity(ndiv * num_segments + 2);
@@ -45,11 +44,11 @@ public class Curve {
         curvatures.ensureCapacity(ndiv * num_segments + 2);
 
         for (int i = 1; i < num_segments - 1; i++) {
-            Vector3 delta_before = info.get(i).p.sub(info.get(i - 1).p).normalized();
-            Vector3 delta_after = info.get(i + 1).p.sub(info.get(i).p).normalized();
+            Vector3 delta_before = info.get(i).point.sub(info.get(i - 1).point).normalized();
+            Vector3 delta_after = info.get(i + 1).point.sub(info.get(i).point).normalized();
 
-            float phi_before = (float) Math.asin(info.get(i).t.crossProduct(delta_before).dot(info.get(i).n));
-            float phi_after = (float) Math.asin(info.get(i).t.crossProduct(delta_after).dot(info.get(i).n));
+            float phi_before = (float) Math.asin(info.get(i).tangent.crossProduct(delta_before).dot(info.get(i).normal));
+            float phi_after = (float) Math.asin(info.get(i).tangent.crossProduct(delta_after).dot(info.get(i).normal));
 
             if (phi_before * phi_after > 0f) {
                 float phi;
@@ -60,7 +59,7 @@ public class Curve {
                     phi = phi_after;
 
                 ControlPoint p = info.get(i);
-                p.t = Matrix3x3.axisToRotation(p.n.mul(phi)).dot(p.t);
+                p.tangent = Matrix3x3.axisToRotation(p.normal.mul(phi)).dot(p.tangent);
                 info.set(i, p);
             }
         }
@@ -69,14 +68,14 @@ public class Curve {
             ControlPoint our = info.get(i);
             ControlPoint next = info.get(i + 1);
 
-            Vector3 P0 = our.p;
-            Vector3 P1 = next.p;
+            Vector3 P0 = our.point;
+            Vector3 P1 = next.point;
 
-            Vector3 V0 = our.t;
-            Vector3 V1 = next.t;
+            Vector3 V0 = our.tangent;
+            Vector3 V1 = next.tangent;
 
-            Vector3 N0 = our.n;
-            Vector3 N1 = next.n;
+            Vector3 N0 = our.normal;
+            Vector3 N1 = next.normal;
 
             OGH piece = new OGH(P0, V0, P1, V1);
 
@@ -91,18 +90,18 @@ public class Curve {
 
                 float dgMag = (float) dg.magnitude();
 
-                float kappa = (float) (dg
+                Vector3 normalAtT = N0.mul(1f - t)
+                        .add(N1.mul(t))
+                        .normalized();
+
+                double kappa = dg
                         .crossProduct(d2g)
-                        .dot(
-                                N0
-                                        .mul(1f - t)
-                                        .add(N1.mul(t))
-                                        .normalized()
-                        ) / (dgMag * dgMag * dgMag));
+                        .dot(normalAtT)
+                        / (dgMag * dgMag * dgMag);
 
                 points.add(g);
                 tangents.add(dg.normalized());
-                curvatures.add(kappa);
+                curvatures.add((float) kappa);
             }
         }
 
@@ -131,14 +130,14 @@ public class Curve {
             ControlPoint our = info.get(i);
             ControlPoint next = info.get(i + 1);
 
-            Vector3 P0 = our.p;
-            Vector3 P1 = next.p;
+            Vector3 P0 = our.point;
+            Vector3 P1 = next.point;
 
-            Vector3 V0 = our.t;
-            Vector3 V1 = next.t;
+            Vector3 V0 = our.tangent;
+            Vector3 V1 = next.tangent;
 
-            Vector3 N0 = our.n;
-            Vector3 N1 = next.n;
+            Vector3 N0 = our.normal;
+            Vector3 N1 = next.normal;
 
             OGH piece = new OGH(P0, V0, P1, V1);
 
@@ -246,6 +245,50 @@ public class Curve {
         kappa1 = (float) MathUtils.clip(Math.asin(m.magnitude()) / ds, 0f, kappa_max);
         kappa2 = (float) Math.asin(Math.abs(m.dot(n))) / ds;
         curvatures.set(last, MathUtils.lerp(kappa1, kappa2, inPlaneWeight));
+    }
+
+    public boolean isPathReachable(CarData car, float arrivalTime) {
+        final float dt = RLConstants.simulationTickFrequency;
+        final float relativeArrivalTime = arrivalTime - car.elapsedSeconds;
+        final float averageSpeed = this.length / Math.max(relativeArrivalTime, RLConstants.tickFrequency);
+
+        if (averageSpeed > CarData.MAX_VELOCITY + 25)
+            return false;
+
+        if (this.maxSpeeds.length == 0)
+            this.calculateMaxSpeeds(DriveManeuver.max_speed, DriveManeuver.max_speed);
+
+        float currentSpeed = (float) car.velocity.dot(car.forward());
+        float distToTarget = this.findNearest(car.position);
+        double boost = car.boost;
+
+        for (float t = 0; t < relativeArrivalTime; t += dt) {
+            if (distToTarget <= 0) // Made it there before time ran out, shouldn't usually happen
+                break;
+            final float timeUntilArrival = relativeArrivalTime - t;
+            final float maxSpeed = Math.max(10, this.maxSpeedAt(distToTarget));
+
+            final float avgSpeedAhead = distToTarget / Math.max(timeUntilArrival, dt);
+
+            // Simulate the car
+            {
+                ControlsOutput sampleOutput = new ControlsOutput();
+                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead));
+
+                if (boost <= 0)
+                    sampleOutput.withBoost(false);
+                else if (sampleOutput.holdBoost())
+                    boost -= 33.3f * dt;
+
+                final float forceForward = CarData.driveForceForward(sampleOutput, currentSpeed, 0, 0);
+                final float forceLeft = CarData.driveForceLeft(sampleOutput, currentSpeed, 0, 0);
+
+                currentSpeed += forceForward * dt + Math.abs(forceLeft * dt);
+                distToTarget -= currentSpeed * dt;
+            }
+        }
+
+        return distToTarget < 150;
     }
 
     public void draw(AdvancedRenderer renderer) {
@@ -368,6 +411,7 @@ public class Curve {
         );
     }
 
+
     @SuppressWarnings("UnusedReturnValue")
     public float calculateMaxSpeeds(float v0, float vf) {
         final Vector3 gravity = new Vector3(0, 0, -650);
@@ -435,14 +479,20 @@ public class Curve {
     }
 
     public static class ControlPoint {
-        public final Vector3 p;
-        public Vector3 t;
-        public final Vector3 n;
+        public final Vector3 point;
+        public final Vector3 normal;
+        public Vector3 tangent;
 
-        public ControlPoint(Vector3 p, Vector3 t, Vector3 n) {
-            this.p = p;
-            this.t = t;
-            this.n = n;
+        public ControlPoint(Vector3 point, Vector3 tangent, Vector3 normal) {
+            this.point = point;
+            this.tangent = tangent;
+            this.normal = normal;
+        }
+
+        public ControlPoint(Vector3 point, Vector3 tangent) {
+            this.point = point;
+            this.tangent = tangent;
+            this.normal = new Vector3(0, 0, 1);
         }
     }
 }

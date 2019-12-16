@@ -28,19 +28,12 @@ public class MathUtils {
         return velocity.add(angularVelocity.mul(point.sub(centerOfRotation)));
     }
 
-    public static float quadraticLerp(float start, float middle, float end, float t) {
-        t *= 2;
-        if (t <= 0)
-            return start;
-        if (t == 1)
-            return middle;
-        if (t >= 2)
-            return end;
-        if (t <= 1) {
-            return (start - middle) * (t - 1) * (t - 1) + middle;
-        } else {
-            return (end - middle) * (t - 1) * (t - 1) + middle;
-        }
+    public static float interpolateQuadratic(float v0, float vT, float aT, float t, float T) {
+        float tau = t / T;
+        float dv = aT * T;
+        return v0 * (tau - 1.0f) * (tau - 1.0f) +
+                dv * (tau - 1.0f) * tau +
+                vT * (2.0f - tau) * tau;
     }
 
     public static double speedbot_steer(double angle) {

@@ -72,14 +72,6 @@ public class Navigator {
         loadedStatics.set(true);
     }
 
-    public static float interpolate_quadratic(float v0, float vT, float aT, float t, float T) {
-        float tau = t / T;
-        float dv = aT * T;
-        return v0 * (tau - 1.0f) * (tau - 1.0f) +
-                dv * (tau - 1.0f) * tau +
-                vT * (2.0f - tau) * tau;
-    }
-
     private int to_id(int x, int y, int theta, int v) {
         return (((x + nx) * strides[0] + (y + nx) * strides[1] + theta * strides[2] + v));
     }
@@ -226,11 +218,11 @@ public class Navigator {
 
         Collections.reverse(ctrl_pts);
 
-        Vector3 dx1 = source.add(car.forward().mul(offset)).sub(ctrl_pts.get(0).p);
-        Vector3 dt1 = car.forward().sub(ctrl_pts.get(0).t);
+        Vector3 dx1 = source.add(car.forward().mul(offset)).sub(ctrl_pts.get(0).point);
+        Vector3 dt1 = car.forward().sub(ctrl_pts.get(0).tangent);
 
-        Vector3 dx2 = destination.sub(unitTangent.mul(offset)).sub(ctrl_pts.get(ctrl_pts.size() - 1).p);
-        Vector3 dt2 = unitTangent.sub(ctrl_pts.get(ctrl_pts.size() - 1).t);
+        Vector3 dx2 = destination.sub(unitTangent.mul(offset)).sub(ctrl_pts.get(ctrl_pts.size() - 1).point);
+        Vector3 dt2 = unitTangent.sub(ctrl_pts.get(ctrl_pts.size() - 1).tangent);
 
         return new Curve(ctrl_pts, dx1, dt1, dx2, dt2, source, destination);
     }

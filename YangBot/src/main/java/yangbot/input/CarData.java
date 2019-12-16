@@ -147,7 +147,7 @@ public class CarData {
         return new Vector3(this.orientation.get(0, 1), this.orientation.get(1, 1), this.orientation.get(2, 1));
     }
 
-    private float driveForceForward(ControlsOutput in) {
+    public static float driveForceForward(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
         final float driving_speed = 1450.0f;
         final float braking_force = -3500.0f;
         final float coasting_force = -525.0f;
@@ -160,9 +160,9 @@ public class CarData {
         final float braking_threshold = -0.001f;
         final float supersonic_turn_drag = -98.25f;
 
-        final float v_f = (float) velocity.dot(forward());
-        final float v_l = (float) velocity.dot(left());
-        final float w_u = (float) angularVelocity.dot(up());
+        final float v_f = (float) velocityForward;
+        final float v_l = (float) velocityLeft;
+        final float w_u = (float) angularUp;
 
         final float dir = Math.signum(v_f);
         final float speed = Math.abs(v_f);
@@ -203,10 +203,10 @@ public class CarData {
         }
     }
 
-    private float driveForceLeft(ControlsOutput in, float dt) {
-        final float v_f = (float) velocity.dot(forward());
-        final float v_l = (float) velocity.dot(left());
-        final float w_u = (float) angularVelocity.dot(up());
+    public static float driveForceLeft(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
+        final float v_f = (float) velocityForward;
+        final float v_l = (float) velocityLeft;
+        final float w_u = (float) angularUp;
 
         return (float) ((1380.4531378f * in.getSteer() + 7.8281188f * in.getThrottle() -
                 15.0064029f * v_l + 668.1208332f * w_u) *
@@ -221,7 +221,11 @@ public class CarData {
     }
 
     private void driving(ControlsOutput in, float dt) {
-        Vector3 force = forward().mul(driveForceForward(in)).add(left().mul(driveForceLeft(in, dt)));
+        final float v_f = (float) velocity.dot(forward());
+        final float v_l = (float) velocity.dot(left());
+        final float w_u = (float) angularVelocity.dot(up());
+
+        Vector3 force = forward().mul(driveForceForward(in, v_f, v_l, w_u)).add(left().mul(driveForceLeft(in, v_f, v_l, w_u)));
 
         Vector3 torque = up().mul(driveTorqueUp(in));
 

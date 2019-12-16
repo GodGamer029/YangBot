@@ -43,7 +43,7 @@ public class DefendStrategy extends Strategy {
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        if (this.reevaluateStrategy(criticalness == Criticalness.FOLLOW_PATH ? 1.2f : 0.5f))
+        if (this.reevaluateStrategy(criticalness == Criticalness.FOLLOW_PATH ? 0.1f : 0.5f))
             return; // Return if we are done
 
         GameData gameData = GameData.current();
@@ -55,8 +55,8 @@ public class DefendStrategy extends Strategy {
         int teamSign = car.team * 2 - 1;
 
         switch (criticalness) {
-            case GETTING_SCORED_ON_GROUND:
-                Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.frames
+            case GETTING_SCORED_ON_GROUND: {
+                final Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.frames
                         .stream()
                         .filter((f) -> Math.signum(f.ballData.position.y) == teamSign && Math.abs(f.ballData.position.y) > RLConstants.goalDistance - 50 && f.ballData.position.z <= BallData.COLLISION_RADIUS + 10)
                         .findFirst();
@@ -66,37 +66,52 @@ public class DefendStrategy extends Strategy {
                     return;
                 }
 
-                YangBallPrediction.YangPredictionFrame frameConceding = firstConcedingGoalFrame.get();
+                final YangBallPrediction.YangPredictionFrame frameConceding = firstConcedingGoalFrame.get();
 
-                List<YangBallPrediction.YangPredictionFrame> framesBeforeGoal = ballPrediction.getFramesBeforeRelative(frameConceding.relativeTime);
+                final List<YangBallPrediction.YangPredictionFrame> framesBeforeGoal = ballPrediction.getFramesBeforeRelative(frameConceding.relativeTime);
                 if (framesBeforeGoal.size() == 0) {
                     this.reevaluateStrategy(0);
                     return;
                 }
-                YangBallPrediction.YangPredictionFrame interceptFrame = framesBeforeGoal.get(Math.max(0, framesBeforeGoal.size() - 1));
+                final YangBallPrediction.YangPredictionFrame interceptFrame = framesBeforeGoal.get(Math.max(0, framesBeforeGoal.size() - 1));
 
-                Vector3 targetPos = interceptFrame.ballData.position;
+                final Vector3 targetPos = interceptFrame.ballData.position;
 
-                List<Curve.ControlPoint> controlPoints = new ArrayList<>();
-                controlPoints.add(new Curve.ControlPoint(car.position, car.forward(), new Vector3(0, 0, 1)));
-                //controlPoints.add(new Curve.ControlPoint(car.position.add(car.forward().mul(20)), car.forward(), new Vector3(0, 0, 1)));
 
-                controlPoints.add(new Curve.ControlPoint(targetPos.withZ(car.position.z), new Vector3(0, -teamSign, 0).normalized(), new Vector3(0, 0, 1)));
+                Curve path;
+                boolean isValidPath = true;
 
-                followPathManeuver.path = new Curve(controlPoints);
-                followPathManeuver.arrivalTime = interceptFrame.absoluteTime;
+                // Path finder
+                {
+                    // Construct Path
+                    {
+                        final List<Curve.ControlPoint> controlPoints = new ArrayList<>();
+                        controlPoints.add(new Curve.ControlPoint(car.position, car.forward()));
+                        controlPoints.add(new Curve.ControlPoint(targetPos.withZ(car.position.z), new Vector3(0, -teamSign, 0)));
+
+                        path = new Curve(controlPoints);
+                    }
+
+                    // Check if path is valid
+                    {
+
+                    }
+                }
+                //if(isValidPath)
                 criticalness = Criticalness.FOLLOW_PATH;
+                //else
+                //    criticalness = Criticalness.IDK;
 
+                followPathManeuver.path = path;
+                followPathManeuver.arrivalTime = interceptFrame.absoluteTime;
                 break;
+            }
+
             case FOLLOW_PATH:
-                renderer.drawString2d(String.format("Arriving in %.1fs", followPathManeuver.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 500), 2, 2);
-                followPathManeuver.path.draw(renderer);
-                followPathManeuver.step(dt, controlsOutput);
-                if (followPathManeuver.isDone())
-                    this.reevaluateStrategy(0);
                 break;
             case IDK:
-                System.err.println("IDK"); // Fall through to ballchaser
+                //System.err.println("IDK"); // Fall through to ballchaser
+                break;
             default:
 
                 controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ballPrediction.getFrameAtRelativeTime(0.3f).get().ballData.position.flatten().sub(car.position.flatten())));
@@ -107,6 +122,17 @@ public class DefendStrategy extends Strategy {
                 if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)
                     controlsOutput.withSlide(true);
                 break;
+        }
+
+        if (criticalness == Criticalness.FOLLOW_PATH) {
+            followPathManeuver.path.draw(renderer);
+            followPathManeuver.step(dt, controlsOutput);
+            if (followPathManeuver.isDone())
+                this.reevaluateStrategy(0);
+
+            renderer.drawString2d(String.format("Arriving in %.1fs", followPathManeuver.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 450), 2, 2);
+            renderer.drawString2d(String.format("Max speed: %.0fuu/s", followPathManeuver.path.maxSpeedAt(followPathManeuver.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
+            renderer.drawString2d(String.format("Max drive: %.0fuu/s", followPathManeuver.driveManeuver.speed), Color.WHITE, new Point(500, 530), 2, 2);
         }
     }
 

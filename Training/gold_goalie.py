@@ -14,17 +14,17 @@ class GoldBallRollingToGoalie(GoalieExercise):
     def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
         return GameState(
             ball=BallState(physics=Physics(
-                location=Vector3(rng.uniform(-820, 820), -2000, 100),
-                velocity=Vector3(0, -2000, 0), # rng.uniform(-100, 800)
+                location=Vector3(rng.uniform(-800, -800), -000, 100),
+                velocity=Vector3(0, -2300, 0), # rng.uniform(-100, 800)
                 angular_velocity=Vector3(0, 0, 0))),
             cars={
                 0: CarState(
                     physics=Physics(
-                        location=Vector3(1000, -4500, 0),
+                        location=Vector3(2000, -4700, 0),
                         rotation=Rotator(0, pi * 1, 0),
                         velocity=Vector3(0, 0, 0),
                         angular_velocity=Vector3(0, 0, 0)),
-                    boost_amount=40)
+                    boost_amount=100)
             },
         )
 

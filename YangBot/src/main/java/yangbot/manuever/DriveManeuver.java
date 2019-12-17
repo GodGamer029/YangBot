@@ -9,7 +9,6 @@ import yangbot.vector.Vector3;
 
 public class DriveManeuver extends Maneuver {
 
-    public static final float max_speed = 2300f;
     public static final float min_speed = 10f;
     public static final float max_throttle_speed = 1410.0f;
     public static final float boost_acceleration = 991.667f;
@@ -33,8 +32,8 @@ public class DriveManeuver extends Maneuver {
             float force = 0;
             {
                 if (newSpeed < drivingSpeed)
-                    force = DriveManeuver.max_speed - newSpeed;
-                else if (newSpeed < DriveManeuver.max_speed)
+                    force = CarData.MAX_VELOCITY - newSpeed;
+                else if (newSpeed < CarData.MAX_VELOCITY)
                     force = AerialManeuver.boost_acceleration;
             }
             newSpeed += force * dt;
@@ -46,7 +45,7 @@ public class DriveManeuver extends Maneuver {
     public static float maxTurningSpeed(float curvature) { // Curvature -> Max speed
         final int n = 6;
 
-        float[][] values = {
+        final float[][] values = {
                 {0.00088f, 2300.0f},
                 {0.00110f, 1750.0f},
                 {0.00138f, 1500.0f},
@@ -55,12 +54,12 @@ public class DriveManeuver extends Maneuver {
                 {0.00690f, 0.0f}
         };
 
-        float input = MathUtils.clip(Math.abs(curvature), values[0][0], values[n - 1][0]);
+        final float input = MathUtils.clip(Math.abs(curvature), values[0][0], values[n - 1][0]);
 
         for (int i = 0; i < (n - 1); i++) {
             if (values[i][0] <= input && input <= values[i + 1][0]) {
                 float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
-                return MathUtils.clip(MathUtils.lerp(values[i][1], values[i + 1][1], u), 0.0f, 2300.0f);
+                return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
         }
 
@@ -91,7 +90,7 @@ public class DriveManeuver extends Maneuver {
         return -1.0f;
     }
 
-    public static float throttle_acceleration(float v) {
+    public static float throttleAcceleration(float v) {
         final int n = 3;
         float[][] values = {
                 {0f, 1600f},
@@ -116,13 +115,6 @@ public class DriveManeuver extends Maneuver {
         return false;
     }
 
-    private void steer_controller(float dt, ControlsOutput output, CarData car) {
-        Vector3 target_local = target.sub(car.position).dot(car.orientation);
-
-        float angle = (float) Math.atan2(target_local.y, target_local.x);
-        output.withSteer(MathUtils.clip(3.0f * angle * Math.signum(this.speed), -1f, 1f));
-    }
-
     public static void speedController(float dt, ControlsOutput output, float currentSpeed, float targetSpeed) {
         float vf = (float) currentSpeed;
 
@@ -130,7 +122,7 @@ public class DriveManeuver extends Maneuver {
 
         float brake_coast_transition = -(0.45f * brake_acceleration + 0.55f * coasting_acceleration);
         float coasting_throttle_transition = -0.5f * coasting_acceleration;
-        float throttle_boost_transition = 1.0f * throttle_acceleration(vf) + 0.5f * boost_acceleration;
+        float throttle_boost_transition = 1.0f * throttleAcceleration(vf) + 0.5f * boost_acceleration;
 
         //if (car.up().z < 0.7f) {
         //    brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
@@ -143,7 +135,7 @@ public class DriveManeuver extends Maneuver {
             output.withThrottle(0);
             output.withBoost(false);
         } else if ((coasting_throttle_transition <= acceleration) && (acceleration <= throttle_boost_transition)) {
-            output.withThrottle(Math.max(0.001f, acceleration / throttle_acceleration(vf)));
+            output.withThrottle(Math.max(0.001f, acceleration / throttleAcceleration(vf)));
             output.withBoost(false);
         } else if (throttle_boost_transition < acceleration) {
             output.withThrottle(1.0f);
@@ -151,12 +143,19 @@ public class DriveManeuver extends Maneuver {
         }
     }
 
+    private void steerController(float dt, ControlsOutput output, CarData car) {
+        Vector3 target_local = target.sub(car.position).dot(car.orientation);
+
+        float angle = (float) Math.atan2(target_local.y, target_local.x);
+        output.withSteer(MathUtils.clip(3.0f * angle * Math.signum(this.speed), -1f, 1f));
+    }
+
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
 
-        steer_controller(dt, controlsOutput, car);
+        steerController(dt, controlsOutput, car);
         speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), speed);
 
         if (car.position.sub(target).magnitude() < 100.f)

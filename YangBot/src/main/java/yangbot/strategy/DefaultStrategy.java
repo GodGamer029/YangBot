@@ -22,8 +22,6 @@ public class DefaultStrategy extends Strategy {
         BallData ball = gameData.getBallData();
         CarData car = gameData.getCarData();
 
-
-
         if (!car.hasWheelContact) {
             if (jumpFromWallTick > 0) {
                 jumpFromWallTick--;

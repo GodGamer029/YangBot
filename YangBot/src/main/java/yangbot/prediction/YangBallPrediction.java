@@ -93,11 +93,10 @@ public class YangBallPrediction {
     }
 
     public Optional<YangPredictionFrame> getFrameAtRelativeTime(float relativeTime) {
-        for (YangPredictionFrame frame : frames) {
-            if (frame.relativeTime >= relativeTime)
-                return Optional.of(frame);
-        }
-        return Optional.empty();
+        return this.frames
+                .stream()
+                .filter((f) -> f.relativeTime >= relativeTime)
+                .findFirst();
     }
 
     public List<YangPredictionFrame> getFramesBeforeRelative(float relativeTime) {

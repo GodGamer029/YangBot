@@ -40,7 +40,7 @@ public class FollowPathManeuver extends Maneuver {
         }
 
         if (path.maxSpeeds.length == 0)
-            path.calculateMaxSpeeds(DriveManeuver.max_speed, DriveManeuver.max_speed);
+            path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
 
         final float currentSpeed = (float) car.velocity.dot(car.forward());
 
@@ -109,7 +109,7 @@ public class FollowPathManeuver extends Maneuver {
         float v0 = (float) car.velocity.magnitude();
         float vf = arrivalSpeed;
 
-        float a = DriveManeuver.boost_acceleration + DriveManeuver.throttle_acceleration(vf);
+        float a = DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(vf);
         float error = distanceError(s, T, dt, v0, vf, a);
 
         float a_old = -DriveManeuver.brake_acceleration;

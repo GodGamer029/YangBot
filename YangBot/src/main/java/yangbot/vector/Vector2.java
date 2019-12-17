@@ -124,6 +124,10 @@ public class Vector2 {
         return new Vector2(vA[0], vA[1]);
     }
 
+    public float dot(Vector2 other) {
+        return x * other.x + y * other.y;
+    }
+
     public boolean isZero() {
         return x == 0 && y == 0;
     }

@@ -20,6 +20,14 @@ public class YangSphereHitbox extends YangHitbox {
 
     @Override
     public Vector3 getClosestPointOnHitbox(Vector3 hitboxPos, Vector3 point) {
-        return point.sub(hitboxPos).normalized().mul(radius);
+        return point
+                .sub(hitboxPos)
+                .normalized()
+                .mul(radius)
+                .add(hitboxPos);
+    }
+
+    public boolean collidesWith(Vector3 myPosition, YangSphereHitbox sphereHitbox, Vector3 theirPosition) {
+        return myPosition.sub(theirPosition).magnitudeSquared() < ((this.radius + sphereHitbox.radius) * (this.radius + sphereHitbox.radius));
     }
 }

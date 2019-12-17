@@ -55,7 +55,7 @@ public class YangCarHitbox extends YangHitbox {
 
     public YangSphereHitbox asSphere(float scale) {
         // Take the distance from the most distant point on the hitbox to the center as radius for the sphere
-        return new YangSphereHitbox((float) this.permutatePoint(new Vector3(), 1, 1, 1, scale).magnitude());
+        return new YangSphereHitbox((float) this.permutatePoint(removeOffset(new Vector3()), 1, 1, 1, scale).magnitude());
     }
 
     public Vector3 applyOffset(Vector3 p) {

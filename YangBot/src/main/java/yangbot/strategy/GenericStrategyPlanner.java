@@ -11,6 +11,7 @@ public class GenericStrategyPlanner extends StrategyPlanner {
     protected void planStrategyInternal() {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
+        YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         int teamSign = car.team * 2 - 1;
 
@@ -23,8 +24,7 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         float distanceCarToDefend = (float) car.position.flatten().distance(myGoal);
         float distanceCarToAttack = (float) car.position.flatten().distance(attackingGoal);
 
-        YangBallPrediction ballPrediction = gameData.getBallPrediction();
-        for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.getFramesBeforeRelative(3f)) {
+        for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.getFramesBeforeRelative(3.5f)) {
             counter++;
             if (Math.signum(frame.ballData.position.y) == teamSign) { // On defensive side
                 if (Math.abs(frame.ballData.position.y) > RLConstants.goalDistance * 0.5f && Math.signum(frame.ballData.velocity.y) == teamSign) {
@@ -56,6 +56,8 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         } else {
             newDecidedStrategy = new NeutralStrategy();
         }
+
+        System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
 
         this.setDone();
     }

@@ -5,7 +5,6 @@ import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.manuever.DriveManeuver;
 import yangbot.manuever.RegularKickoffManeuver;
 import yangbot.strategy.AfterKickoffStrategy;
 import yangbot.strategy.DefaultStrategy;
@@ -66,39 +65,30 @@ public class YangBot implements Bot {
                     state = State.KICKOFF;
                     output.withThrottle(1);
                     output.withBoost(true);
-                } else
-                    state = State.INIT;
-
+                } else {
+                    currentPlan = new DefaultStrategy();
+                    state = State.RUN;
+                }
                 break;
             }
             case KICKOFF: {
                 kickoffManeuver.step(dt, output);
                 if (kickoffManeuver.isDone()) {
-                    state = State.INIT;
+                    state = State.RUN;
                     currentPlan = new AfterKickoffStrategy();
                 }
 
                 break;
             }
-            case INIT: {
-                state = State.RUN;
-                if (currentPlan == null || currentPlan.isDone())
-                    currentPlan = new DefaultStrategy();
-
-                break;
-            }
             case RUN: {
-                if (currentPlan == null)
-                    currentPlan = new DefaultStrategy();
-
                 int i = 0;
-                currentPlan.planStrategy();
                 while (currentPlan.isDone()) {
                     currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
                     currentPlan.planStrategy();
                     i++;
                     if (i == 5) {
                         System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
+                        System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         currentPlan = new DefaultStrategy();
                     }
                 }
@@ -108,7 +98,7 @@ public class YangBot implements Bot {
             }
         }
 
-        if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= DriveManeuver.max_speed - 50)
+        if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= CarData.MAX_VELOCITY - 20)
             output.withBoost(false);
 
         // Print Throttle info
@@ -195,7 +185,6 @@ public class YangBot implements Bot {
 
     enum State {
         RESET,
-        INIT,
         RUN,
         KICKOFF
     }

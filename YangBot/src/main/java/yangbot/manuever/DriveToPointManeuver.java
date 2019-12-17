@@ -97,10 +97,10 @@ public class DriveToPointManeuver extends Maneuver {
                 }
             } else {
                 if (lastDistance < 30)
-                    throttle = velocityDifference / DriveManeuver.throttle_acceleration(velocityForward);
+                    throttle = velocityDifference / DriveManeuver.throttleAcceleration(velocityForward);
                 else
                     throttle = 1;
-                if (targetVelocity > DriveManeuver.max_throttle_speed || velocityDifference > DriveManeuver.throttle_acceleration(velocityForward))
+                if (targetVelocity > DriveManeuver.max_throttle_speed || velocityDifference > DriveManeuver.throttleAcceleration(velocityForward))
                     boost = true;
             }
         }

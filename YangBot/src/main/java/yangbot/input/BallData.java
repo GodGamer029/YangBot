@@ -4,6 +4,7 @@ import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
 import yangbot.util.MathUtils;
 import yangbot.util.hitbox.YangHitbox;
+import yangbot.util.hitbox.YangSphereHitbox;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
@@ -69,6 +70,10 @@ public class BallData {
         return -1;
     }
 
+    public static YangSphereHitbox hitbox() {
+        return new YangSphereHitbox(COLLISION_RADIUS);
+    }
+
     public void stepWithCollide(float dt, CarData car) {
         collide(car);
         step(dt);
@@ -92,19 +97,19 @@ public class BallData {
     }
 
     public boolean collidesWith(YangHitbox obb, Vector3 position) {
+        if (obb instanceof YangSphereHitbox) {
+            return BallData.hitbox().collidesWith(this.position, (YangSphereHitbox) obb, position);
+        }
         final Vector3 contactPoint = obb.getClosestPointOnHitbox(position, this.position);
-
         return contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS;
     }
 
     public boolean collidesWith(CarData car) {
-        final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
-
-        return contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS;
+        return collidesWith(car.hitbox, car.position);
     }
 
-    public boolean collidesWith(Vector3 sphere, float radius) {
-        return sphere.sub(this.position).magnitude() < (COLLISION_RADIUS + radius);
+    public boolean collidesWith(Vector3 spherePosition, float radius) {
+        return BallData.hitbox().collidesWith(this.position, new YangSphereHitbox(radius), spherePosition);
     }
 
     public Vector3 collide(CarData car) {

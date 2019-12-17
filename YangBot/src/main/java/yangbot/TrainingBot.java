@@ -57,7 +57,6 @@ public class TrainingBot implements Bot {
                 state = State.RUN;
                 break;
             case RUN:
-
                 int i = 0;
                 while (currentPlan.isDone()) {
                     currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());

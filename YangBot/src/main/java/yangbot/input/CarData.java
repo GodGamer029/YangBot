@@ -8,6 +8,7 @@ import yangbot.manuever.AerialManeuver;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.DriveManeuver;
 import yangbot.util.ControlsOutput;
+import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.vector.Matrix2x2;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
@@ -48,7 +49,7 @@ public class CarData {
     public boolean hasWheelContact;
     public float elapsedSeconds;
 
-    public final YangHitbox hitbox;
+    public final YangCarHitbox hitbox;
     public boolean doubleJumped;
     public boolean jumped;
 
@@ -73,7 +74,7 @@ public class CarData {
         this.hasWheelContact = playerInfo.hasWheelContact();
         this.elapsedSeconds = elapsedSeconds;
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
-        this.hitbox = new YangHitbox(playerInfo.hitbox(), this.orientation);
+        this.hitbox = new YangCarHitbox(playerInfo.hitbox(), this.orientation);
         this.isBot = playerInfo.isBot();
         this.name = playerInfo.name();
         this.playerIndex = index;
@@ -119,7 +120,7 @@ public class CarData {
         this.name = "unknown";
         this.strippedName = this.name;
         this.playerIndex = -1;
-        this.hitbox = new YangHitbox(this.orientation);
+        this.hitbox = new YangCarHitbox(this.orientation);
     }
 
     public Matrix2x2 getDodgeOrientation() {

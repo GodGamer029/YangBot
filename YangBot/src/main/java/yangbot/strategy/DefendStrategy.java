@@ -43,7 +43,7 @@ public class DefendStrategy extends Strategy {
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        if (this.reevaluateStrategy(criticalness == Criticalness.FOLLOW_PATH ? 0.1f : 0.5f))
+        if (this.reevaluateStrategy(criticalness == Criticalness.FOLLOW_PATH ? 0.8f : 0.5f))
             return; // Return if we are done
 
         GameData gameData = GameData.current();
@@ -68,42 +68,55 @@ public class DefendStrategy extends Strategy {
 
                 final YangBallPrediction.YangPredictionFrame frameConceding = firstConcedingGoalFrame.get();
 
-                final List<YangBallPrediction.YangPredictionFrame> framesBeforeGoal = ballPrediction.getFramesBeforeRelative(frameConceding.relativeTime);
-                if (framesBeforeGoal.size() == 0) {
+                final YangBallPrediction framesBeforeGoal = ballPrediction.getBeforeRelative(frameConceding.relativeTime);
+                if (framesBeforeGoal.frames.size() == 0) {
                     this.reevaluateStrategy(0);
                     return;
                 }
-                final YangBallPrediction.YangPredictionFrame interceptFrame = framesBeforeGoal.get(Math.max(0, framesBeforeGoal.size() - 1));
 
-                final Vector3 targetPos = interceptFrame.ballData.position;
+                Curve validPath = null;
+                float arrivalTime = 0;
 
-
-                Curve path;
-                boolean isValidPath = true;
+                float t = frameConceding.relativeTime - RLConstants.simulationTickFrequency * 2;
 
                 // Path finder
-                {
+                do {
+                    final Optional<YangBallPrediction.YangPredictionFrame> interceptFrameOptional = framesBeforeGoal.getFrameAtRelativeTime(t);
+                    if (!interceptFrameOptional.isPresent())
+                        break;
+
+                    final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
+                    final Vector3 targetPos = interceptFrame.ballData.position;
+
+                    Curve currentPath;
                     // Construct Path
                     {
                         final List<Curve.ControlPoint> controlPoints = new ArrayList<>();
-                        controlPoints.add(new Curve.ControlPoint(car.position, car.forward()));
+                        controlPoints.add(new Curve.ControlPoint(car.position.add(car.forward().mul(10)), car.forward()));
                         controlPoints.add(new Curve.ControlPoint(targetPos.withZ(car.position.z), new Vector3(0, -teamSign, 0)));
 
-                        path = new Curve(controlPoints);
+                        currentPath = new Curve(controlPoints);
                     }
 
                     // Check if path is valid
                     {
-
+                        Curve.PathStatus pathStatus = currentPath.doPathChecking(car, interceptFrame.absoluteTime, ballPrediction);
+                        if (pathStatus == Curve.PathStatus.VALID || validPath == null) {
+                            validPath = currentPath;
+                            arrivalTime = interceptFrame.absoluteTime;
+                        }
                     }
-                }
-                //if(isValidPath)
-                criticalness = Criticalness.FOLLOW_PATH;
-                //else
-                //    criticalness = Criticalness.IDK;
+                    t -= RLConstants.simulationTickFrequency * 1;
+                } while (t > 0);
 
-                followPathManeuver.path = path;
-                followPathManeuver.arrivalTime = interceptFrame.absoluteTime;
+                criticalness = Criticalness.FOLLOW_PATH;
+
+                if (validPath == null) {
+                    this.reevaluateStrategy(0);
+                    return;
+                }
+                followPathManeuver.path = validPath;
+                followPathManeuver.arrivalTime = arrivalTime;
                 break;
             }
 

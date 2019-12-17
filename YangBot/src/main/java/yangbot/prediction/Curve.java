@@ -1,5 +1,6 @@
 package yangbot.prediction;
 
+import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.RLConstants;
 import yangbot.manuever.DriveManeuver;
@@ -11,6 +12,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public class Curve {
 
@@ -247,13 +249,15 @@ public class Curve {
         curvatures.set(last, MathUtils.lerp(kappa1, kappa2, inPlaneWeight));
     }
 
-    public boolean isPathReachable(CarData car, float arrivalTime) {
+    public PathStatus doPathChecking(CarData car, float absoluteArrivalTime, YangBallPrediction ballPrediction) {
+        if (ballPrediction == null)
+            ballPrediction = YangBallPrediction.empty();
         final float dt = RLConstants.simulationTickFrequency;
-        final float relativeArrivalTime = arrivalTime - car.elapsedSeconds;
+        final float relativeArrivalTime = absoluteArrivalTime - car.elapsedSeconds;
         final float averageSpeed = this.length / Math.max(relativeArrivalTime, RLConstants.tickFrequency);
 
         if (averageSpeed > CarData.MAX_VELOCITY + 25)
-            return false;
+            return PathStatus.SPEED_EXCEEDED;
 
         if (this.maxSpeeds.length == 0)
             this.calculateMaxSpeeds(DriveManeuver.max_speed, DriveManeuver.max_speed);
@@ -269,6 +273,16 @@ public class Curve {
             final float maxSpeed = Math.max(10, this.maxSpeedAt(distToTarget));
 
             final float avgSpeedAhead = distToTarget / Math.max(timeUntilArrival, dt);
+
+            final Optional<YangBallPrediction.YangPredictionFrame> ballAtFrameOptional = ballPrediction.getFrameAtRelativeTime(t);
+
+            // Check for ball collisions
+            if (ballAtFrameOptional.isPresent() && distToTarget > Math.max(currentSpeed, 500f) * 0.2f + 50) {
+                BallData ballAtFrame = ballAtFrameOptional.get().ballData;
+                if (ballAtFrame.collidesWith(car.hitbox.asSphere(1.1f), this.pointAt(distToTarget))) { // Collide with ball
+                    System.out.println("Colliding with ball at t=" + t + " arr=" + (relativeArrivalTime - t));
+                }
+            }
 
             // Simulate the car
             {
@@ -288,7 +302,14 @@ public class Curve {
             }
         }
 
-        return distToTarget < 150;
+        return distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED_SIM;
+    }
+
+    public enum PathStatus {
+        VALID,
+        SPEED_EXCEEDED,
+        SPEED_EXCEEDED_SIM,
+        BALL_HIT
     }
 
     public void draw(AdvancedRenderer renderer) {

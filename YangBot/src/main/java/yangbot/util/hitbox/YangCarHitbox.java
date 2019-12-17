@@ -1,4 +1,4 @@
-package yangbot.input;
+package yangbot.util.hitbox;
 
 import rlbot.flat.BoxShape;
 import rlbot.render.Renderer;
@@ -7,45 +7,55 @@ import yangbot.vector.Vector3;
 
 import java.awt.*;
 
-public class YangHitbox {
+public class YangCarHitbox extends YangHitbox {
 
     public static Vector3 octaneHitboxOffset = new Vector3(13.88f, 0f, 20.75f);
 
     public final Vector3 hitboxOffset;
     public final Vector3 hitboxLengths;
+
     private Matrix3x3 orientation;
 
     private Vector3 permF;
     private Vector3 permL;
     private Vector3 permU;
 
-    public YangHitbox(BoxShape hitbox, Matrix3x3 orientation) {
+    public YangCarHitbox(BoxShape hitbox, Matrix3x3 orientation) {
         this.hitboxLengths = new Vector3(hitbox.length(), hitbox.width(), hitbox.height());
         this.hitboxOffset = octaneHitboxOffset;
 
         setOrientation(orientation);
     }
 
-    public YangHitbox(Vector3 hitbox, Matrix3x3 orientation) {
+    public YangCarHitbox(Vector3 hitbox, Matrix3x3 orientation) {
         this.hitboxLengths = new Vector3(hitbox);
         this.hitboxOffset = octaneHitboxOffset;
 
         setOrientation(orientation);
     }
 
-    public YangHitbox(Matrix3x3 orientation) {
+    public YangCarHitbox(Matrix3x3 orientation) {
         this.hitboxLengths = new Vector3(118.01f, 84.2f, 36.16f);
         this.hitboxOffset = octaneHitboxOffset;
 
         setOrientation(orientation);
     }
 
-    private void setOrientation(Matrix3x3 orientation) {
+    protected void setOrientation(Matrix3x3 orientation) {
         this.orientation = orientation;
 
         permF = this.orientation.forward().mul(this.hitboxLengths.x / 2);
         permL = this.orientation.left().mul(this.hitboxLengths.y / 2);
         permU = this.orientation.up().mul(this.hitboxLengths.z / 2);
+    }
+
+    public YangCarHitbox withOrientation(Matrix3x3 orientation) {
+        return new YangCarHitbox(this.hitboxLengths, orientation);
+    }
+
+    public YangSphereHitbox asSphere(float scale) {
+        // Take the distance from the most distant point on the hitbox to the center as radius for the sphere
+        return new YangSphereHitbox((float) this.permutatePoint(new Vector3(), 1, 1, 1, scale).magnitude());
     }
 
     public Vector3 applyOffset(Vector3 p) {
@@ -70,6 +80,7 @@ public class YangHitbox {
         return permutatePoint(point, direction.x, direction.y, direction.z);
     }
 
+    @Override
     public Vector3 getClosestPointOnHitbox(Vector3 hitboxPos, Vector3 point) {
         Vector3 center = this.orientation.dot(hitboxOffset).add(hitboxPos);
         Vector3 halfLengths = this.hitboxLengths.mul(0.5f);
@@ -82,6 +93,7 @@ public class YangHitbox {
         return this.orientation.dot(vLocal).add(center);
     }
 
+    @Override
     public void draw(Renderer renderer, Vector3 p, float scale, Color c) {
         renderer.drawLine3d(c, permutatePoint(p, 1, 1, 1, scale), permutatePoint(p, 1, 1, -1, scale));
         renderer.drawLine3d(c, permutatePoint(p, 1, -1, 1, scale), permutatePoint(p, 1, -1, -1, scale));

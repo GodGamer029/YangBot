@@ -22,6 +22,8 @@ public class YangBallPrediction {
     public final List<YangPredictionFrame> frames;
 
     private YangBallPrediction(List<YangPredictionFrame> frames, float tickFrequency) {
+        if (frames == null)
+            frames = new ArrayList<>();
         float latencyCompensation = RLConstants.gameLatencyCompensation;
         if (latencyCompensation > 0) {
             List<YangPredictionFrame> newFrames = new ArrayList<>(frames.size());
@@ -39,6 +41,10 @@ public class YangBallPrediction {
         this.frames = frames;
         this.tickFrequency = tickFrequency;
         this.tickRate = Math.round(1 / tickFrequency);
+    }
+
+    public static YangBallPrediction empty() {
+        return new YangBallPrediction(null, RLConstants.tickFrequency);
     }
 
     private static YangBallPrediction from(BallPrediction ballPrediction) {
@@ -77,6 +83,15 @@ public class YangBallPrediction {
         throw new IllegalStateException("Ball Prediction Type '" + ballPredictionType.name() + "' not recognized");
     }
 
+    public YangBallPrediction trim(float relativeStartTime, float relativeEndTime) {
+        if (relativeEndTime < relativeStartTime)
+            throw new IllegalArgumentException("Relative end time smaller than relative start time");
+        if (relativeEndTime - relativeStartTime == 0)
+            return YangBallPrediction.empty();
+
+        return new YangBallPrediction(this.getFramesBetweenRelative(relativeStartTime, relativeEndTime), this.tickFrequency);
+    }
+
     public Optional<YangPredictionFrame> getFrameAtRelativeTime(float relativeTime) {
         for (YangPredictionFrame frame : frames) {
             if (frame.relativeTime >= relativeTime)
@@ -90,6 +105,10 @@ public class YangBallPrediction {
                 .stream()
                 .filter((f) -> f.relativeTime < relativeTime)
                 .collect(Collectors.toList());
+    }
+
+    public YangBallPrediction getBeforeRelative(float relativeTime) {
+        return new YangBallPrediction(getFramesBeforeRelative(relativeTime), this.tickFrequency);
     }
 
     public List<YangPredictionFrame> getFramesAfterRelative(float relativeTime) {

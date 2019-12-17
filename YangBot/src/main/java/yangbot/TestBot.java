@@ -11,6 +11,7 @@ import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
+import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
@@ -25,7 +26,7 @@ public class TestBot implements Bot {
     private boolean hasSetPriority = false;
 
     private Vector3 lastContact = null;
-    private YangHitbox lastHitbox = null;
+    private YangCarHitbox lastHitbox = null;
     private Vector3 lastPos = null;
 
     public TestBot(int playerIndex) {

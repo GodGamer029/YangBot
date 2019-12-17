@@ -3,6 +3,7 @@ package yangbot.input;
 import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
 import yangbot.util.MathUtils;
+import yangbot.util.hitbox.YangHitbox;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
@@ -88,6 +89,22 @@ public class BallData {
         this.velocity = velocity.mul(
                 Math.min(1, BallData.MAX_VELOCITY / velocity.magnitude())
         );
+    }
+
+    public boolean collidesWith(YangHitbox obb, Vector3 position) {
+        final Vector3 contactPoint = obb.getClosestPointOnHitbox(position, this.position);
+
+        return contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS;
+    }
+
+    public boolean collidesWith(CarData car) {
+        final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
+
+        return contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS;
+    }
+
+    public boolean collidesWith(Vector3 sphere, float radius) {
+        return sphere.sub(this.position).magnitude() < (COLLISION_RADIUS + radius);
     }
 
     public Vector3 collide(CarData car) {

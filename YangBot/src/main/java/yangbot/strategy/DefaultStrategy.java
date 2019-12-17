@@ -1,5 +1,9 @@
 package yangbot.strategy;
 
+import yangbot.input.BallData;
+import yangbot.input.CarData;
+import yangbot.input.GameData;
+import yangbot.input.RLConstants;
 import yangbot.util.ControlsOutput;
 
 import java.util.Optional;
@@ -11,6 +15,15 @@ public class DefaultStrategy extends Strategy {
 
     @Override
     public void planStrategyInternal() {
+        GameData gameData = GameData.current();
+        BallData ball = gameData.getBallData();
+        CarData car = gameData.getCarData();
+
+        if (!car.hasWheelContact) {
+            newDecidedStrategy = new RecoverStrategy();
+            this.setDone();
+            return;
+        }
         newDecidedStrategy = new GenericStrategyPlanner();
         this.setDone();
     }
@@ -18,7 +31,8 @@ public class DefaultStrategy extends Strategy {
     @Override
     public void stepInternal(float dt, ControlsOutput controlsOutput) {
         // Chase the ball like a pro
-       /* GameData gameData = GameData.current();
+
+        GameData gameData = GameData.current();
         BallData ball = gameData.getBallData();
         CarData car = gameData.getCarData();
 
@@ -41,11 +55,12 @@ public class DefaultStrategy extends Strategy {
             }
         }
 
-        if (new DribbleManeuver().isViable()) {
-            newDecidedStrategy = new DribbleStrategy();
-            this.setDone();
-            return;
-        }*/
+        controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ball.position.sub(car.position).flatten()));
+        controlsOutput.withThrottle(1);
+
+        if (Math.abs(controlsOutput.getSteer()) > 0.95f && car.angularVelocity.magnitude() < 4f)
+            controlsOutput.withSlide(true);
+
         this.setDone();
     }
 

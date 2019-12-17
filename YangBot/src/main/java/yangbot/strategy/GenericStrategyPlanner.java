@@ -57,7 +57,7 @@ public class GenericStrategyPlanner extends StrategyPlanner {
             newDecidedStrategy = new NeutralStrategy();
         }
 
-        System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
+        //System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
 
         this.setDone();
     }

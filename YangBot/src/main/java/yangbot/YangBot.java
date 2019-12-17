@@ -76,8 +76,8 @@ public class YangBot implements Bot {
                 if (kickoffManeuver.isDone()) {
                     state = State.RUN;
                     currentPlan = new AfterKickoffStrategy();
+                    currentPlan.planStrategy();
                 }
-
                 break;
             }
             case RUN: {
@@ -87,8 +87,8 @@ public class YangBot implements Bot {
                     currentPlan.planStrategy();
                     i++;
                     if (i == 5) {
-                        System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
-                        System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        //System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
+                        //System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         currentPlan = new DefaultStrategy();
                     }
                 }
@@ -139,14 +139,22 @@ public class YangBot implements Bot {
             Thread.currentThread().setPriority(10);
         }
 
-        if (packet.playersLength() <= playerIndex || packet.ball() == null)
+        if (packet.playersLength() <= playerIndex || packet.ball() == null) {
+            GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
+            state = State.RESET;
             return new ControlsOutput().withBoost(true);
+        }
 
         if (!packet.gameInfo().isRoundActive()) {
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
             state = State.RESET;
             return new ControlsOutput().withThrottle(1).withBoost(true);
         }
+
+        /*if(state != State.RESET && state != State.KICKOFF && packet.gameInfo().isKickoffPause() && new Vector3(packet.players(this.playerIndex).physics().velocity()).magnitude() < 10){
+            GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
+            state = State.RESET;
+        }*/
 
         if (GameData.timeOfMatchStart < 0)
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();

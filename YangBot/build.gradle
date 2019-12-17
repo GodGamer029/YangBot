@@ -78,8 +78,10 @@ test {
 }
 
 run {
-    if ( project.hasProperty("training") ){
-        args training;
+    if ( project.hasProperty("trainingbot") ){
+        args "training";
+    }else if ( project.hasProperty("testbot") ){
+        args "test";
     }
 }
 

@@ -8,7 +8,7 @@ import gold_goalie
 from gold_goalie import GoldBallRollingToGoalie
 def make_default_playlist():
     exercises =  [
-        GoldBallRollingToGoalie('Gold')
+        GoldBallRollingToGoalie('Try')
     ]
 
     for exercise in exercises:

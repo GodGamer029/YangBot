@@ -15,6 +15,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,7 @@ import java.util.stream.Collectors;
 public class MainClass {
 
     private static final Integer DEFAULT_PORT = 19265;
-    public static final BotType BOT_TYPE = BotType.TRAINING;
+    public static BotType BOT_TYPE = BotType.PRODUCTION;
 
     enum BotType {
         PRODUCTION,
@@ -119,7 +120,14 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
-        // TODO: use java navigator as fallback for RLU
+        if (args.length > 0) {
+            System.out.println(Arrays.toString(args));
+            if (args[0].equalsIgnoreCase("training"))
+                BOT_TYPE = BotType.TRAINING;
+            else if (args[0].equalsIgnoreCase("test"))
+                BOT_TYPE = BotType.TEST;
+        }
+        System.out.println("Using Bot type: " + BOT_TYPE);
         //lazyLoadNavigator();
         lazyLoadRLU();
         BotManager botManager = new BotManager();

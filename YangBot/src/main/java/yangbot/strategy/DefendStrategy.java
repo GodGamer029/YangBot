@@ -31,6 +31,14 @@ public class DefendStrategy extends Strategy {
         BallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
+        if (this.checkReset(2f))
+            return;
+
+        if (!car.hasWheelContact || car.position.z > 100) {
+            this.setDone();
+            return;
+        }
+
         int teamSign = car.team * 2 - 1;
 
         Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.getFramesBeforeRelative(4f)

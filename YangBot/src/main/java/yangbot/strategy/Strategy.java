@@ -10,6 +10,7 @@ public abstract class Strategy {
     private boolean isDone = false;
     private boolean plannedStrategy = false;
     private float lastStrategyPlan = 0;
+    private float lastResetCheck = -1;
 
     public final boolean didPlanStrategy() {
         return plannedStrategy;
@@ -37,9 +38,12 @@ public abstract class Strategy {
 
     @SuppressWarnings("WeakerAccess")
     public final void planStrategy(boolean force) {
+        float currentGameTime = GameData.current().getCarData().elapsedSeconds;
+        if (lastResetCheck < 0)
+            lastResetCheck = currentGameTime;
         if (plannedStrategy && !force)
             return;
-        lastStrategyPlan = GameData.current().getCarData().elapsedSeconds;
+        lastStrategyPlan = currentGameTime;
         plannedStrategy = true;
         planStrategyInternal();
     }
@@ -51,6 +55,17 @@ public abstract class Strategy {
 
         if (currentSeconds - lastStrategyPlan > timeout)
             planStrategy(true);
+
+        return this.isDone();
+    }
+
+    protected final boolean checkReset(float timeout) {
+        float currentSeconds = GameData.current().getCarData().elapsedSeconds;
+        if (currentSeconds < lastResetCheck)
+            lastResetCheck = -10; // Something wierd is going on, replan strat
+
+        if (currentSeconds - lastResetCheck > timeout)
+            this.setDone();
 
         return this.isDone();
     }

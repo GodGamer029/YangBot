@@ -4,6 +4,7 @@ import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.util.ControlsOutput;
+import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
 
@@ -33,6 +34,14 @@ public class DodgeManeuver extends Maneuver {
     public Vector2 direction = null;
     public Vector2 controllerInput = null;
 
+    public boolean enablePreorient = false;
+    public Matrix3x3 preorientOrientation = null;
+    private TurnManeuver turnManeuver = null;
+
+    public DodgeManeuver() {
+        this.turnManeuver = new TurnManeuver();
+    }
+
     @Override
     public boolean isViable() {
         throw new IllegalStateException("Not implemented");
@@ -47,8 +56,9 @@ public class DodgeManeuver extends Maneuver {
 
         float timeout = 0.9f;
 
-        if (duration >= 0 && timer <= duration)
+        if (duration >= 0 && timer <= duration) {
             controlsOutput.withJump(true);
+        }
 
         float dodge_time = 0;
         if (duration <= 0 && delay <= 0)
@@ -100,6 +110,11 @@ public class DodgeManeuver extends Maneuver {
                 controlsOutput.withYaw(controllerInput.x);
             }
             controlsOutput.withJump(true);
+        } else if (!car.hasWheelContact) {
+            if (this.enablePreorient) {
+                this.turnManeuver.target = this.preorientOrientation;
+                this.turnManeuver.step(dt, controlsOutput);
+            }
         }
 
         if (car.doubleJumped)

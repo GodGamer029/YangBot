@@ -26,13 +26,14 @@ public class GenericStrategyPlanner extends StrategyPlanner {
 
         for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.getFramesBeforeRelative(3.5f)) {
             counter++;
+            float absoluteBallY = Math.abs(frame.ballData.position.y);
             if (Math.signum(frame.ballData.position.y) == teamSign) { // On defensive side
-                if (Math.abs(frame.ballData.position.y) > RLConstants.goalDistance * 0.5f && Math.signum(frame.ballData.velocity.y) == teamSign) {
+                if (absoluteBallY > RLConstants.goalDistance * 0.8f && Math.signum(frame.ballData.velocity.y) == teamSign) {
                     newDecidedStrategy = new DefendStrategy();
                     this.setDone();
-                    break;
+                    return;
                 }
-                awareness--;
+                awareness -= Math.min(1, Math.pow(absoluteBallY / RLConstants.goalDistance, 2));
             } else { // On attacking side
                 awareness++;
             }
@@ -44,20 +45,20 @@ public class GenericStrategyPlanner extends StrategyPlanner {
                 awareness -= 0.5f;
 
             if (distanceBallToAttack < distanceCarToAttack)
-                awareness += 0.2f;
+                awareness += 0.3f;
         }
 
         awareness /= counter;
 
         if (awareness >= 0.5f) {
             newDecidedStrategy = new OffensiveStrategy();
-        } else if (awareness <= 0.5f) {
+        } else if (awareness <= 0f) {
             newDecidedStrategy = new DefendStrategy();
         } else {
             newDecidedStrategy = new NeutralStrategy();
         }
 
-        //System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
+        System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
 
         this.setDone();
     }

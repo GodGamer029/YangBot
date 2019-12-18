@@ -34,7 +34,6 @@ public class BoostManager {
     }
 
     private static void loadFieldInfo(FieldInfo fieldInfo) {
-
         synchronized (orderedBoosts) {
 
             orderedBoosts.clear();

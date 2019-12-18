@@ -274,6 +274,8 @@ public class Curve {
         Vector3 ballCollisionContactPoint = new Vector3();
         Vector3 ballCollisionBallPosition = new Vector3();
 
+        final YangSphereHitbox carBox = car.hitbox.asSphere(1.1f);
+
         for (float t = 0; t < relativeArrivalTime; t += dt) {
             if (distToTarget <= 0) // Made it there before time ran out, shouldn't usually happen
                 break;
@@ -287,7 +289,7 @@ public class Curve {
             // Check for ball collisions
             if (!collidedWithBall && ballAtFrameOptional.isPresent() && distToTarget > Math.max(currentSpeed, 500f) * 0.2f + 50) {
                 BallData ballAtFrame = ballAtFrameOptional.get().ballData;
-                YangSphereHitbox carBox = car.hitbox.asSphere(1.0f);
+
                 Vector3 carPos = this.pointAt(distToTarget);
                 if (ballAtFrame.collidesWith(carBox, carPos)) { // Collide with ball
                     collidedWithBall = true;
@@ -295,7 +297,7 @@ public class Curve {
 
                     ballCollisionContactPoint = carBox.getClosestPointOnHitbox(carPos, ballAtFrame.position);
                     ballCollisionBallPosition = ballAtFrame.position;
-                    System.out.println("Colliding with ball at t=" + t + " arr=" + (relativeArrivalTime - t));
+                    //System.out.println("Colliding with ball at t=" + t + " arr=" + (relativeArrivalTime - t));
                 }
             }
             // Simulate the car
@@ -333,8 +335,8 @@ public class Curve {
         }
 
         if (this.points.size() > 1) {
-            renderer.drawCentered3dCube(Color.BLUE, this.points.get(0), 50);
-            renderer.drawCentered3dCube(Color.BLUE, this.points.get(this.points.size() - 1), 50);
+            renderer.drawCentered3dCube(Color.YELLOW, this.points.get(0), 50);
+            renderer.drawCentered3dCube(Color.YELLOW, this.points.get(this.points.size() - 1), 50);
         }
     }
 

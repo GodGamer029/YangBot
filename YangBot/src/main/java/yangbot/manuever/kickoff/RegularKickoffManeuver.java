@@ -1,8 +1,11 @@
-package yangbot.manuever;
+package yangbot.manuever.kickoff;
 
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.manuever.DodgeManeuver;
+import yangbot.manuever.Maneuver;
+import yangbot.manuever.TurnManeuver;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
@@ -13,20 +16,12 @@ public class RegularKickoffManeuver extends Maneuver {
     @SuppressWarnings("WeakerAccess")
     public boolean doSecondFlip = true;
     private KickOffState kickOffState = KickOffState.INIT;
-    private KickOffLocation kickOffLocation = null;
+    private KickoffTester.KickOffLocation kickOffLocation = null;
     private DodgeManeuver dodgeManeuver;
     private TurnManeuver turnManeuver;
     private boolean reachedTheBoost = false;
     private boolean doingFlip = false;
     private float timer = 0;
-
-    public static boolean isKickoff() {
-        GameData g = GameData.current();
-        BallData ball = g.getBallData();
-        if (g.getCarData().elapsedSeconds - GameData.timeOfMatchStart >= 3)
-            return false;
-        return (ball.velocity.flatten().isZero() && ball.position.flatten().isZero());
-    }
 
     @Override
     public boolean isViable() {
@@ -36,49 +31,38 @@ public class RegularKickoffManeuver extends Maneuver {
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
-        final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
         final BallData ball = gameData.getBallData();
 
         timer += dt;
 
         if (ball.position.flatten().magnitude() > 5) {
-            //System.out.println("Kickoff done!" + ball.position.flatten().magnitude() + " : "+ball.position.flatten());
             this.setIsDone(true);
             return;
         }
+
         switch (kickOffState) {
             case INIT:
                 reachedTheBoost = false;
                 doingFlip = false;
-                int xPos = Math.abs(Math.round(car.position.x));
-                if (xPos >= 2040 && xPos <= 2056)
-                    kickOffLocation = KickOffLocation.CORNER;
-                else if (xPos >= 250 && xPos <= 262)
-                    kickOffLocation = KickOffLocation.MIDDLE;
-                else if (xPos == 0)
-                    kickOffLocation = KickOffLocation.CENTER;
-                else {
-                    this.setIsDone(true);
-                    // System.out.println("Couldn't determine kickoff location: "+car.position.toString()+" xPos: "+xPos);
-                    return;
-                }
 
                 dodgeManeuver = new DodgeManeuver();
                 turnManeuver = new TurnManeuver();
 
-                //System.out.println("kickoff location: "+kickOffLocation.name());
-
                 controlsOutput.withThrottle(1);
                 controlsOutput.withBoost(true);
 
-                if (kickOffLocation == KickOffLocation.CENTER)
+                kickOffLocation = KickoffTester.getKickoffLocation(car);
+                if (kickOffLocation == KickoffTester.KickOffLocation.UNKNOWN)
+                    this.setDone();
+
+                if (kickOffLocation == KickoffTester.KickOffLocation.CENTER)
                     kickOffState = KickOffState.REACH_BALL;
                 else
                     kickOffState = KickOffState.REACH_BOOST;
                 break;
             case REACH_BOOST:
-                if (kickOffLocation == KickOffLocation.CORNER) {
+                if (kickOffLocation == KickoffTester.KickOffLocation.CORNER) {
                     controlsOutput.withThrottle(1);
                     if (car.boost >= 13)
                         controlsOutput.withBoost(true);
@@ -150,7 +134,7 @@ public class RegularKickoffManeuver extends Maneuver {
                 controlsOutput.withThrottle(1);
                 break;
             case SECOND_FlIP: {
-                if (car.boost > 13 && kickOffLocation == KickOffLocation.CORNER)
+                if (car.boost > 13 && kickOffLocation == KickoffTester.KickOffLocation.CORNER)
                     controlsOutput.withBoost(true);
 
                 if ((car.hasWheelContact && (Math.abs(car.position.x) < 150 || Math.abs(car.position.x + car.velocity.x * dt) < 150)) || dodgeManeuver.timer > 0) {
@@ -205,7 +189,7 @@ public class RegularKickoffManeuver extends Maneuver {
                     controlsOutput.withThrottle(1);
                 } else {
                     if (turnManeuver.target == null) {
-                        if (kickOffLocation == KickOffLocation.CORNER)
+                        if (kickOffLocation == KickoffTester.KickOffLocation.CORNER)
                             turnManeuver.target = Matrix3x3.lookAt(new Vector3(-0.18f * Math.signum(car.position.x), -Math.signum(car.position.y), 0), new Vector3(0, 0, 1));
                         else
                             turnManeuver.target = Matrix3x3.lookAt(new Vector3(0, -Math.signum(car.position.y), 0.3f).normalized(), new Vector3(0, 0, 1));
@@ -235,11 +219,5 @@ public class RegularKickoffManeuver extends Maneuver {
         REACH_BOOST,
         REACH_BALL,
         SECOND_FlIP
-    }
-
-    enum KickOffLocation {
-        CORNER,
-        MIDDLE,
-        CENTER
     }
 }

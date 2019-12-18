@@ -18,9 +18,8 @@ import java.util.Optional;
 
 public class DefendStrategy extends Strategy {
 
-    private Criticalness state = Criticalness.IDK;
+    private Criticalness state = Criticalness.BALLCHASE;
     private FollowPathManeuver followPathManeuver = new FollowPathManeuver();
-    private List<Curve.ControlPoint> drawingPoints = null;
     private Vector3 collision = null;
 
     @Override
@@ -31,7 +30,7 @@ public class DefendStrategy extends Strategy {
         BallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
-        if (this.checkReset(2f))
+        if (this.checkReset(0.5f))
             return;
 
         if (!car.hasWheelContact || car.position.z > 100) {
@@ -43,7 +42,7 @@ public class DefendStrategy extends Strategy {
 
         Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.getFramesBeforeRelative(4f)
                 .stream()
-                .filter((f) -> (int) Math.signum(f.ballData.position.y) == teamSign && Math.abs(f.ballData.position.y) > RLConstants.goalDistance + BallData.RADIUS && f.ballData.position.z <= BallData.COLLISION_RADIUS + 10)
+                .filter((f) -> (int) Math.signum(f.ballData.position.y) == teamSign && Math.abs(f.ballData.position.y) > RLConstants.goalDistance + BallData.RADIUS && f.ballData.position.z <= 300)
                 .findFirst();
 
         if (firstConcedingGoalFrame.isPresent()) { // We getting scored on
@@ -51,7 +50,10 @@ public class DefendStrategy extends Strategy {
             return;
         }
 
-        state = Criticalness.ROTATE;
+        if (car.position.y * teamSign > RLConstants.goalDistance * 0.7f || car.position.distance(ball.position) < 400)
+            state = Criticalness.BALLCHASE;
+        else
+            state = Criticalness.ROTATE;
     }
 
     @Override
@@ -71,7 +73,7 @@ public class DefendStrategy extends Strategy {
             case GETTING_SCORED_ON_GROUND: {
                 final Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.getFramesBeforeRelative(4f)
                         .stream()
-                        .filter((f) -> Math.signum(f.ballData.position.y) == teamSign && Math.abs(f.ballData.position.y) > RLConstants.goalDistance + BallData.RADIUS && f.ballData.position.z <= BallData.COLLISION_RADIUS + 10)
+                        .filter((f) -> Math.signum(f.ballData.position.y) == teamSign && Math.abs(f.ballData.position.y) > RLConstants.goalDistance + BallData.RADIUS && f.ballData.position.z <= 300)
                         .findFirst();
 
                 if (!firstConcedingGoalFrame.isPresent()) {
@@ -123,7 +125,7 @@ public class DefendStrategy extends Strategy {
                     t -= RLConstants.simulationTickFrequency * 2;
                 } while (t > 0);
 
-                state = Criticalness.FOLLOW_PATH;
+                state = Criticalness.FOLLOW_PATH_STRIKE;
 
                 if (validPath == null) {
                     this.reevaluateStrategy(0);
@@ -134,6 +136,7 @@ public class DefendStrategy extends Strategy {
                 break;
             }
             case FOLLOW_PATH:
+            case FOLLOW_PATH_STRIKE:
                 break;
             case ROTATE: {
                 Curve nextPath;
@@ -167,7 +170,6 @@ public class DefendStrategy extends Strategy {
                             else
                                 controlPoints.set(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(car.position).normalized()));
                             controlPoints.get(2).tangent = controlPoints.get(2).point.sub(controlPoints.get(1).point);
-                            drawingPoints = controlPoints;
                             this.collision = status.ballCollisionContactPoint;
                             nextPath = new Curve(controlPoints);
                         } else
@@ -179,20 +181,18 @@ public class DefendStrategy extends Strategy {
                 followPathManeuver.arrivalTime = -1;
                 state = Criticalness.FOLLOW_PATH;
             }
-            case IDK:
+            case BALLCHASE:
+                DefaultStrategy.smartBallChaser(dt, controlsOutput);
+                break;
+            case HIT_BALL_AWAY:
+
                 break;
             default:
-                controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ballPrediction.getFrameAtRelativeTime(0.3f).get().ballData.position.flatten().sub(car.position.flatten())));
-                controlsOutput.withThrottle(Math.max(0.1f, (float) (ball.position.flatten().distance(car.position.flatten()) - 100f) / 100f));
-                if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.distance(ball.position) > 1000)
-                    controlsOutput.withBoost(true);
-
-                if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)
-                    controlsOutput.withSlide(true);
+                assert false;
                 break;
         }
 
-        if (state == Criticalness.FOLLOW_PATH) {
+        if (state == Criticalness.FOLLOW_PATH || state == Criticalness.FOLLOW_PATH_STRIKE) {
             followPathManeuver.path.draw(renderer);
             followPathManeuver.step(dt, controlsOutput);
             float distanceOffPath = (float) car.position.flatten().distance(followPathManeuver.path.pointAt(followPathManeuver.path.findNearest(car.position)).flatten());
@@ -201,11 +201,7 @@ public class DefendStrategy extends Strategy {
             else if (distanceOffPath > 100)
                 this.reevaluateStrategy(0.25f);
 
-            if (this.drawingPoints != null && this.drawingPoints.size() > 0) {
-                for (Curve.ControlPoint point : this.drawingPoints) {
-                    renderer.drawLine3d(Color.GREEN, point.point, point.point.add(point.normal.mul(100)));
-                    renderer.drawCentered3dCube(Color.YELLOW, point.point, 70);
-                }
+            if (this.collision != null && !this.collision.isZero()) {
                 renderer.drawCentered3dCube(Color.MAGENTA, this.collision, 70);
                 renderer.drawCentered3dCube(Color.MAGENTA, this.collision, 170);
             }
@@ -227,6 +223,8 @@ public class DefendStrategy extends Strategy {
         GETTING_SCORED_ON_GROUND,
         ROTATE,
         FOLLOW_PATH,
-        IDK
+        FOLLOW_PATH_STRIKE,
+        BALLCHASE,
+        HIT_BALL_AWAY
     }
 }

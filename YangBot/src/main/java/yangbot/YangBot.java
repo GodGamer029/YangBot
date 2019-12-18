@@ -5,7 +5,9 @@ import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.manuever.RegularKickoffManeuver;
+import yangbot.manuever.Maneuver;
+import yangbot.manuever.kickoff.KickoffTester;
+import yangbot.manuever.kickoff.SimpleKickoffManeuver;
 import yangbot.strategy.AfterKickoffStrategy;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.Strategy;
@@ -27,7 +29,7 @@ public class YangBot implements Bot {
     private State state = State.RESET;
     private float timer = -1.0f;
     private float lastTick = -1;
-    private RegularKickoffManeuver kickoffManeuver = null;
+    private Maneuver kickoffManeuver = null;
     private Strategy currentPlan = null;
     private boolean hasSetPriority = false;
 
@@ -60,8 +62,8 @@ public class YangBot implements Bot {
         switch (state) {
             case RESET: {
                 timer = 0.0f;
-                if (RegularKickoffManeuver.isKickoff()) {
-                    kickoffManeuver = new RegularKickoffManeuver();
+                if (KickoffTester.isKickoff()) {
+                    kickoffManeuver = new SimpleKickoffManeuver();
                     state = State.KICKOFF;
                     output.withThrottle(1);
                     output.withBoost(true);

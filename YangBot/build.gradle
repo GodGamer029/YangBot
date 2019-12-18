@@ -83,6 +83,7 @@ run {
     }else if ( project.hasProperty("testbot") ){
         args "test";
     }
+    enableAssertions(true)
 }
 
 // You can run gradew.bat distZip to generate a zip file suitable for tournament submissions.

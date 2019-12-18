@@ -66,7 +66,8 @@ public class RecoverStrategy extends Strategy {
 
         recoverEndTime = car.elapsedSeconds + simulationTime;
 
-        boolean speedflipPossible = recoverEndTime - recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1500;
+        final boolean isCarNearWall = RLConstants.isPosNearWall(car.position.flatten());
+        final boolean speedflipPossible = recoverEndTime - recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
         if (carPositionAtImpact.z > 500) {

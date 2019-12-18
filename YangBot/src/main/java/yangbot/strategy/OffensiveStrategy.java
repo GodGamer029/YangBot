@@ -7,12 +7,15 @@ import java.util.Optional;
 public class OffensiveStrategy extends Strategy {
     @Override
     protected void planStrategyInternal() {
-        this.setDone();
+        if (this.checkReset(0.5f))
+            return;
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        this.setDone();
+        if (this.reevaluateStrategy(0.5f))
+            return;
+        DefaultStrategy.smartBallChaser(dt, controlsOutput);
     }
 
     @Override

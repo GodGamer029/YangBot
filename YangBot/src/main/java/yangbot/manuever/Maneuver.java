@@ -33,6 +33,10 @@ public abstract class Maneuver {
         this.isDone = done;
     }
 
+    public void setDone() {
+        this.isDone = true;
+    }
+
     public boolean isDone() {
         return isDone;
     }

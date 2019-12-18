@@ -44,8 +44,8 @@ public abstract class Strategy {
         if (plannedStrategy && !force)
             return;
         lastStrategyPlan = currentGameTime;
-        plannedStrategy = true;
         planStrategyInternal();
+        plannedStrategy = true;
     }
 
     protected final boolean reevaluateStrategy(float timeout) {
@@ -61,11 +61,15 @@ public abstract class Strategy {
 
     protected final boolean checkReset(float timeout) {
         float currentSeconds = GameData.current().getCarData().elapsedSeconds;
+        if (!this.plannedStrategy)
+            lastResetCheck = currentSeconds;
         if (currentSeconds < lastResetCheck)
             lastResetCheck = -10; // Something wierd is going on, replan strat
 
-        if (currentSeconds - lastResetCheck > timeout)
+        if (currentSeconds - lastResetCheck > timeout) {
             this.setDone();
+            this.lastResetCheck = currentSeconds;
+        }
 
         return this.isDone();
     }

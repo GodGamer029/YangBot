@@ -9,7 +9,7 @@ import yangbot.util.MathUtils;
 
 public class FollowPathManeuver extends Maneuver {
 
-    public Curve path;
+    public Curve path = null;
     public float arrivalTime = -1;
     public float arrivalSpeed = -1;
     float expected_error;
@@ -17,7 +17,6 @@ public class FollowPathManeuver extends Maneuver {
     public DriveManeuver driveManeuver;
 
     public FollowPathManeuver() {
-        path = new Curve();
         driveManeuver = new DriveManeuver();
     }
 
@@ -36,7 +35,7 @@ public class FollowPathManeuver extends Maneuver {
         if (path.length <= 0) {
             System.err.println("Invalid path");
             this.setIsDone(true);
-            return;
+            throw new IllegalArgumentException("Path has no control points");
         }
 
         if (path.maxSpeeds.length == 0)

@@ -24,6 +24,8 @@ public class Curve {
     private float[] curvatures;
     private float[] distances;
 
+    private static int ndiv = 20;
+
     public Curve() {
         length = -1f;
         points = new ArrayList<>();
@@ -39,7 +41,6 @@ public class Curve {
         curvatures = new float[0];
         maxSpeeds = new float[0];
 
-        int ndiv = 20;
         int num_segments = info.size() - 1;
 
         points.ensureCapacity(ndiv * num_segments + 2);
@@ -116,7 +117,6 @@ public class Curve {
     }
 
     public Curve(List<ControlPoint> info, Vector3 dx0, Vector3 dt0, Vector3 dx1, Vector3 dt1, Vector3 start, Vector3 end) {
-        int ndiv = 16;
         int num_segments = info.size() - 1;
 
         points = new ArrayList<>();
@@ -389,6 +389,20 @@ public class Curve {
             }
         }
         return 0f;
+    }
+
+    public float getControlPoint(float s) {
+        s = MathUtils.clip(s, 0, distances[0]);
+
+        for (int i = 0; i < (points.size() - 1); i++) {
+            if (distances[i] >= s && s >= distances[i + 1]) {
+                if (i == 0)
+                    return 0;
+                float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
+                return MathUtils.lerp(maxSpeeds[i + 1], maxSpeeds[i], u);
+            }
+        }
+        return (points.size() - 2f) / ndiv;
     }
 
     public float findNearest(Vector3 c) {

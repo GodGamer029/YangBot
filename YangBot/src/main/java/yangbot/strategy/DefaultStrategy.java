@@ -5,6 +5,7 @@ import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.util.ControlsOutput;
+import yangbot.vector.Vector3;
 
 import java.util.Optional;
 
@@ -18,9 +19,11 @@ public class DefaultStrategy extends Strategy {
         BallData ball = gameData.getBallData();
         CarData car = gameData.getCarData();
 
-        controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(ball.position.flatten().sub(car.position.flatten())) * 0.9f);
-        controlsOutput.withThrottle(Math.max(0.1f, (float) (ball.position.flatten().distance(car.position.flatten()) - 100f) / 100f));
-        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.distance(ball.position) > 1000 && car.boost > 40)
+        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.flatten().sub(ball.position.flatten()).magnitude() / car.velocity.flatten().magnitude())));
+
+        controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
+        controlsOutput.withThrottle(Math.max(0.1f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
+        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.distance(futureBallPos) > 1000 && car.boost > 40)
             controlsOutput.withBoost(true);
 
         if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)

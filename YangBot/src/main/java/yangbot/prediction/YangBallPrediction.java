@@ -99,6 +99,13 @@ public class YangBallPrediction {
                 .findFirst();
     }
 
+    public Optional<YangPredictionFrame> getFrameAtAbsoluteTime(float absolute) {
+        return this.frames
+                .stream()
+                .filter((f) -> f.absoluteTime >= absolute)
+                .findFirst();
+    }
+
     public List<YangPredictionFrame> getFramesBeforeRelative(float relativeTime) {
         return this.frames
                 .stream()

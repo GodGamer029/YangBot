@@ -78,7 +78,7 @@ public class TestBot implements Bot {
 
                 Vector3 c = customBall.collide(controlCar);
                 if (c != null && timer > RLConstants.tickFrequency * 4) {
-                    customBall.step(dt);
+                    //customBall.step(dt);
                     lastContact = c;
                     lastPos = controlCar.position;
                     lastHitbox = controlCar.hitbox;
@@ -122,7 +122,8 @@ public class TestBot implements Bot {
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 210), 1, 1);
         renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 230), 1, 1);
-        renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
+        //renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
+        renderer.drawString2d("CarL: " + myCar.velocity.dot(myCar.left()), Color.WHITE, new Point(10, 250), 1, 1);
     }
 
     @Override

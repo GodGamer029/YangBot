@@ -26,6 +26,8 @@ extern "C" {
 
 	JNIEXPORT ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize);
 
+	JNIEXPORT ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall);
+	
 	JNIEXPORT void JNICALL Free( void*);
 
 #ifdef __cplusplus

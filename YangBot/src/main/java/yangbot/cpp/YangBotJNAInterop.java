@@ -6,6 +6,7 @@ import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import rlbot.cppinterop.ByteBufferStruct;
+import yangbot.input.BallData;
 import yangbot.input.CarData;
 
 import java.nio.ByteBuffer;
@@ -88,9 +89,56 @@ public class YangBotJNAInterop {
         return Optional.empty();
     }
 
+    public static Optional<FBSCarData> simulateCarBallCollision(float dt, CarData carData, BallData ballData) {
+        try {
+            Memory carMemory;
+            Memory ballMemory;
+            {
+                FlatBufferBuilder builder = new FlatBufferBuilder(128);
+
+                FBSCarData.startFBSCarData(builder);
+                carData.apply(builder);
+                int offset = FBSCarData.endFBSCarData(builder);
+                builder.finish(offset);
+
+                final byte[] proto = builder.sizedByteArray();
+                carMemory = getMemory(proto);
+            }
+
+            {
+                FlatBufferBuilder builder = new FlatBufferBuilder(128);
+
+                FBSCarData.startFBSCarData(builder);
+                ballData.apply(builder);
+                FBSCarData.addElapsedSeconds(builder, dt);
+                int offset = FBSCarData.endFBSCarData(builder);
+                builder.finish(offset);
+
+                final byte[] proto = builder.sizedByteArray();
+                ballMemory = getMemory(proto);
+            }
+
+            final ByteBufferStruct struct = simulateCarBallCollision(carMemory, ballMemory);
+            if (struct.size < 4) {
+                if (struct.size > 0)
+                    Free(struct.ptr);
+                System.out.println("Got nothign back");
+                return Optional.empty();
+            }
+            final byte[] protoBytes = struct.ptr.getByteArray(0, struct.size);
+            Free(struct.ptr);
+            return Optional.ofNullable(FBSCarData.getRootAsFBSCarData(ByteBuffer.wrap(protoBytes)));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Optional.empty();
+    }
+
     private static native ByteBufferStruct simulateCarCollision(Pointer ptr, int size);
 
     private static native ByteBufferStruct simulateSimpleCar(Pointer ptr, int size);
+
+    private static native ByteBufferStruct simulateCarBallCollision(Pointer car, Pointer ball);
 
     private static native void Free(Pointer ptr);
 }

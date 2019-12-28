@@ -123,6 +123,59 @@ ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize) {
 	return result;
 }
 
+ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall) {
+
+	const FBSCarData* inputCarData = flatbuffers::GetRoot<FBSCarData>(inputCar);
+	const FBSCarData* inputBallData = flatbuffers::GetRoot<FBSCarData>(inputBall);
+
+	ByteBuffer result = ByteBuffer();
+	if (!init)
+		return result;
+
+	const vec3 positionCar = *reinterpret_cast<const vec3*>(inputCarData->position());
+	const vec3 velocityCar = *reinterpret_cast<const vec3*>(inputCarData->velocity());
+	const vec3 angularCar = *reinterpret_cast<const vec3*>(inputCarData->angularVelocity());
+	const vec3 rotateCar = *reinterpret_cast<const vec3*>(inputCarData->eulerRotation());
+
+	const vec3 positionBall = *reinterpret_cast<const vec3*>(inputBallData->position());
+	const vec3 velocityBall = *reinterpret_cast<const vec3*>(inputBallData->velocity());
+	const vec3 angularBall = *reinterpret_cast<const vec3*>(inputBallData->angularVelocity());
+
+	const vec3 g = { 0, 0, -650 };
+
+	Car car = Car();
+	car.position = positionCar;
+	car.velocity = velocityCar;
+	car.angular_velocity = angularCar;
+	car.orientation = euler_to_rotation(rotateCar);
+
+	Ball ball = Ball();
+	ball.position = positionBall;
+	ball.velocity = velocityBall;
+	ball.angular_velocity = angularBall;
+
+	ball.step(inputBallData->elapsedSeconds(), car);
+
+	flatbuffers::FlatBufferBuilder builder(256);
+	FBSCarDataBuilder outputBallData(builder);
+
+	auto newPos = FlatVec3(ball.position[0], ball.position[1], ball.position[2]);
+	auto newAng = FlatVec3(ball.angular_velocity[0], ball.angular_velocity[1], ball.angular_velocity[2]);
+	auto newVel = FlatVec3(ball.velocity[0], ball.velocity[1], ball.velocity[2]);
+
+	outputBallData.add_position(&newPos);
+	outputBallData.add_angularVelocity(&newAng);
+	outputBallData.add_velocity(&newVel);
+
+	builder.Finish(outputBallData.Finish());
+	result.ptr = new unsigned char[builder.GetSize()];
+	result.size = builder.GetSize();
+
+	memcpy(result.ptr, builder.GetBufferPointer(), result.size);
+
+	return result;
+}
+
 ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 	constexpr float simulationRate = 1.f / 60.f;
 	constexpr float secondsSimulated = 3.5f;

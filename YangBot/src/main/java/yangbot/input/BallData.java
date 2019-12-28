@@ -1,7 +1,10 @@
 package yangbot.input;
 
+import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
+import yangbot.cpp.FBSCarData;
+import yangbot.cpp.YangBotJNAInterop;
 import yangbot.util.MathUtils;
 import yangbot.util.hitbox.YangHitbox;
 import yangbot.util.hitbox.YangSphereHitbox;
@@ -77,6 +80,19 @@ public class BallData {
     public void stepWithCollide(float dt, CarData car) {
         collide(car);
         step(dt);
+    }
+
+    public void stepWithCollideChip(float dt, CarData car) {
+        FBSCarData fbsCarData = YangBotJNAInterop.simulateCarBallCollision(dt, car, this).get();
+        this.position = new Vector3(fbsCarData.position());
+        this.velocity = new Vector3(fbsCarData.velocity());
+        this.angularVelocity = new Vector3(fbsCarData.angularVelocity());
+    }
+
+    public void apply(FlatBufferBuilder builder) {
+        FBSCarData.addAngularVelocity(builder, this.angularVelocity.toYangbuffer(builder));
+        FBSCarData.addVelocity(builder, this.velocity.toYangbuffer(builder));
+        FBSCarData.addPosition(builder, this.position.toYangbuffer(builder));
     }
 
     public void step(float dt) {

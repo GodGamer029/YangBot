@@ -1,59 +1,103 @@
 package yangbot.input;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.openjdk.jmh.runner.options.TimeValue;
-import org.openjdk.jmh.runner.options.VerboseMode;
+import yangbot.cpp.YangBotCppInterop;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BallDataTest {
 
+    @BeforeAll
+    public static void setup() {
+        YangBotCppInterop.init((byte) 0, (byte) 0);
+    }
+
     @Test
-    public void launchBenchmark() throws RunnerException {
-        if (getClass().getSimpleName().contains("_jmhType")) // Fix because JMH doesnt like gradle for some reason
-            return;
-        Options opt = new OptionsBuilder()
-                .include(this.getClass().getName() + ".*")
-                .mode(Mode.AverageTime)
-                .timeUnit(TimeUnit.MICROSECONDS)
-                .warmupTime(TimeValue.seconds(1))
-                .warmupIterations(6)
-                .measurementTime(TimeValue.milliseconds(200))
-                .measurementIterations(4)
-                .threads(1)
-                .forks(0)
-                .shouldFailOnError(true)
-                .shouldDoGC(true)
-                .verbosity(VerboseMode.NORMAL)
-                .build();
+    public void predictCollisionTest1() {
+        BallData ballData = new BallData(new Vector3(0, -4594.94, 142.56999), new Vector3(0, 28.821f, 10.931f), new Vector3(0.27231002f, 0.0f, 0.0f));
+        CarData carData = new CarData(new Vector3(-0.0, -4607.73, 16.97), new Vector3(-0.0, 0.311, -0.951), new Vector3(), Matrix3x3.lookAt(new Vector3(4.370481E-8, 0.99984944, -0.017352287), new Vector3(0, 0, 1)));
 
-        new Runner(opt).run();
+        ballData.stepWithCollide(0.008331299f, carData);
+
+        assert ballData.collidesWith(carData) : "Ball should collide with car";
+        assertEquals(ballData.position.x, 0, 0.1f);
+        assertEquals(ballData.position.y, -4594.6997, 0.2f);
+        assertEquals(ballData.position.z, 142.62f, 0.2f);
+
+        assertEquals(ballData.velocity.x, 0, 0.1f);
+        assertEquals(ballData.velocity.y, 32.650997, 0.2f);
+        assertEquals(ballData.velocity.z, 25.210999, 1.2f);
+
+        assertEquals(ballData.angularVelocity.x, 0.27231002, 0.01f);
+        assertEquals(ballData.angularVelocity.y, 0, 0.01f);
+        assertEquals(ballData.angularVelocity.z, 0, 0.01f);
+
+        /*System.out.println("Pos: "+ballData.position);
+        System.out.println("Vel: "+ballData.velocity);
+        System.out.println("Ang: "+ballData.angularVelocity);*/
+
     }
 
-    @Benchmark
-    public void collide(BenchmarkState state, Blackhole bh) {
-        assertNotNull(state.ballState.collide(state.carState));
+    @Test
+    public void predictCollisionTest2() {
+        BallData ballData = new BallData(new Vector3(-0.0, -4595.39, 142.5), new Vector3(-0.0, 25.860998, -12.501), new Vector3(0.25031, 0.0, 0.0));
+        CarData carData = new CarData(new Vector3(-0.0, -4607.73, 16.99), new Vector3(-0.0, -0.071, 0.86099994), new Vector3(-0.00531, 0.0, 0.0), Matrix3x3.lookAt(new Vector3(4.370481E-8, 0.99984944, -0.017352287), new Vector3(7.584926E-10, 0.017352287, 0.99984944)));
+
+        ballData.stepWithCollide(0.008331299f, carData);
+
+        assert ballData.collidesWith(carData) : "Ball should collide with car";
+        /*assertEquals(ballData.position.x, 0, 0.1f);
+        assertEquals(ballData.position.y, -4594.6997, 0.2f);
+        assertEquals(ballData.position.z, 142.62f, 0.2f);
+
+        assertEquals(ballData.velocity.x, 0, 0.1f);
+        assertEquals(ballData.velocity.y, 32.650997, 0.2f);
+        assertEquals(ballData.velocity.z, 25.210999, 0.2f);
+
+        assertEquals(ballData.angularVelocity.x, 0.27231002, 0.01f);
+        assertEquals(ballData.angularVelocity.y, 0, 0.01f);
+        assertEquals(ballData.angularVelocity.z, 0, 0.01f);*/
+
+        /*System.out.println("Pos: "+ballData.position);
+        System.out.println("Vel: "+ballData.velocity);
+        System.out.println("Ang: "+ballData.angularVelocity);
+*/
     }
 
-    @State(Scope.Thread)
-    public static class BenchmarkState {
-        BallData ballState;
-        CarData carState;
+    @Test
+    public void predictCollisionTest3() {
+        BallData ballData = new BallData(new Vector3(-0.0, -4607.4297, 148), new Vector3(-0.0, 1.451, -102.631), new Vector3(0.02321, 0.0, 0.0));
+        CarData carData = new CarData(new Vector3(-0.0, -4607.84, 17.01), new Vector3(-0.0, 0.0, 0.211), new Vector3(5.1E-4, 0.0, 0.0),
+                Matrix3x3.lookAt(new Vector3(4.370938E-8, 0.99995404, -0.009587233), new Vector3(4.1907128E-10, 0.009587233, 0.99995404)));
 
-        @Setup(Level.Trial)
-        public void initialize() {
-            ballState = new BallData(new Vector3(0, 0, BallData.COLLISION_RADIUS), new Vector3(), new Vector3());
-            carState = new CarData(new Vector3(0, 10, 20), new Vector3(20, 10, 0), new Vector3(50, 20, 100), Matrix3x3.identity());
-        }
+        float dt = 0.008333206f;
+
+        //assert ballData.collidesWith(carData) : "Ball should collide with car";
+        ballData.stepWithCollide(dt, carData);
+
+        System.out.println("Java collide:");
+        System.out.println("Pos: " + ballData.position);
+        System.out.println("Vel: " + ballData.velocity);
+        System.out.println("Ang: " + ballData.angularVelocity);
+    }
+
+    @Test
+    public void predictCollisionTest4() {
+        BallData ballData = new BallData(new Vector3(-0.0, -4607.4297, 148), new Vector3(-0.0, 1.451, -102.631), new Vector3(0.02321, 0.0, 0.0));
+        CarData carData = new CarData(new Vector3(-0.0, -4607.84, 17.01), new Vector3(-0.0, 0.0, 0.211), new Vector3(5.1E-4, 0.0, 0.0),
+                Matrix3x3.lookAt(new Vector3(4.370938E-8, 0.99995404, -0.009587233), new Vector3(4.1907128E-10, 0.009587233, 0.99995404)));
+
+        float dt = 0.008333206f;
+
+        //assert ballData.collidesWith(carData) : "Ball should collide with car";
+        ballData.stepWithCollideChip(dt, carData);
+
+        System.out.println("Chip collide:");
+        System.out.println("Pos: " + ballData.position);
+        System.out.println("Vel: " + ballData.velocity);
+        System.out.println("Ang: " + ballData.angularVelocity);
     }
 }

@@ -49,6 +49,8 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         }
 
         awareness /= counter;
+        if (gameData.getAllCars().size() > 2)
+            awareness -= 0.3f; // Temporary change for zombie tournament
 
         if (awareness >= 0.5f) {
             newDecidedStrategy = new OffensiveStrategy();
@@ -58,7 +60,7 @@ public class GenericStrategyPlanner extends StrategyPlanner {
             newDecidedStrategy = new NeutralStrategy();
         }
 
-        System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
+        //System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
 
         this.setDone();
     }

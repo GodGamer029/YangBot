@@ -7,7 +7,10 @@ import rlbot.flat.Physics;
 import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
 import yangbot.input.RLConstants;
+import yangbot.util.AdvancedRenderer;
+import yangbot.vector.Vector3;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,6 +46,10 @@ public class YangBallPrediction {
         this.tickRate = Math.round(1 / tickFrequency);
     }
 
+    public static YangBallPrediction from(List<YangPredictionFrame> frames, float tickFrequency) {
+        return new YangBallPrediction(frames, tickFrequency);
+    }
+
     public static YangBallPrediction empty() {
         return new YangBallPrediction(null, RLConstants.tickFrequency);
     }
@@ -70,6 +77,7 @@ public class YangBallPrediction {
     }
 
     public static YangBallPrediction get() {
+
         switch (ballPredictionType) {
             case RLBOT:
                 try {
@@ -81,6 +89,33 @@ public class YangBallPrediction {
         }
 
         throw new IllegalStateException("Ball Prediction Type '" + ballPredictionType.name() + "' not recognized");
+    }
+
+    public void draw(AdvancedRenderer renderer, Color color, float length) {
+        if (this.frames.size() == 0)
+            return;
+        if (length <= 0)
+            length = this.relativeTimeOfLastFrame();
+
+        float time = 0;
+        Vector3 lastPos = this.frames.get(0).ballData.position;
+        while (time < length) {
+            Optional<YangPredictionFrame> frame = this.getFrameAfterRelativeTime(time);
+            if (!frame.isPresent())
+                break;
+            time = frame.get().relativeTime;
+            BallData ball = frame.get().ballData;
+            if (lastPos.distance(ball.position) < 50)
+                continue;
+            renderer.drawLine3d(color, lastPos, ball.position);
+            lastPos = ball.position;
+        }
+    }
+
+    public float relativeTimeOfLastFrame() {
+        if (this.frames.size() == 0)
+            return -1;
+        return this.frames.get(this.frames.size() - 1).relativeTime;
     }
 
     public YangBallPrediction trim(float relativeStartTime, float relativeEndTime) {
@@ -96,6 +131,13 @@ public class YangBallPrediction {
         return this.frames
                 .stream()
                 .filter((f) -> f.relativeTime >= relativeTime)
+                .findFirst();
+    }
+
+    public Optional<YangPredictionFrame> getFrameAfterRelativeTime(float relativeTime) {
+        return this.frames
+                .stream()
+                .filter((f) -> f.relativeTime > relativeTime)
                 .findFirst();
     }
 

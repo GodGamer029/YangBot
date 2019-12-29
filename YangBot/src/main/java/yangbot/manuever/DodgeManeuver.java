@@ -42,6 +42,18 @@ public class DodgeManeuver extends Maneuver {
         this.turnManeuver = new TurnManeuver();
     }
 
+    public DodgeManeuver(final DodgeManeuver dodge) {
+        this.turnManeuver = new TurnManeuver();
+        this.duration = dodge.duration;
+        this.timer = dodge.timer;
+        this.delay = dodge.delay;
+        this.target = dodge.target;
+        this.direction = dodge.direction;
+        this.controllerInput = dodge.controllerInput;
+        this.enablePreorient = dodge.enablePreorient;
+        this.preorientOrientation = dodge.preorientOrientation;
+    }
+
     @Override
     public boolean isViable() {
         throw new IllegalStateException("Not implemented");

@@ -41,7 +41,7 @@ public class YangCarHitbox extends YangHitbox {
         setOrientation(orientation);
     }
 
-    protected void setOrientation(Matrix3x3 orientation) {
+    public void setOrientation(Matrix3x3 orientation) {
         this.orientation = orientation;
 
         permF = this.orientation.forward().mul(this.hitboxLengths.x / 2);

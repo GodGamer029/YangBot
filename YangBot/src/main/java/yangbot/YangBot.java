@@ -100,11 +100,14 @@ public class YangBot implements Bot {
             }
         }
 
+        car.hitbox.draw(renderer, car.position, 1, Color.GREEN);
+
         if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= CarData.MAX_VELOCITY - 20)
             output.withBoost(false);
 
         // Print Throttle info
         {
+            GameData.current().getBallPrediction().draw(renderer, Color.BLUE, 2);
             renderer.drawString2d("State: " + state.name(), Color.WHITE, new Point(10, 270), 2, 2);
             if (state != State.KICKOFF)
                 renderer.drawString2d("Strategy: " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), Color.WHITE, new Point(10, 310), 2, 2);

@@ -57,12 +57,13 @@ public class CarData {
     public final String name;
     public final String strippedName;
     public final int playerIndex;
+    public ControlsOutput lastControllerInputs = new ControlsOutput();
 
     // Variables used exclusively in step functions
     private Vector3 dodgeTorque;
-    private float jumpTimer = -1.0f;
+    public float jumpTimer = -1.0f;
     private float dodgeTimer = -1.0f;
-    private boolean enableJumpAcceleration = false;
+    public boolean enableJumpAcceleration = false;
 
     public CarData(rlbot.flat.PlayerInfo playerInfo, float elapsedSeconds, int index) {
         this.position = new Vector3(playerInfo.physics().location());
@@ -137,15 +138,15 @@ public class CarData {
     }
 
     public Vector3 up() {
-        return new Vector3(this.orientation.get(0, 2), this.orientation.get(1, 2), this.orientation.get(2, 2));
+        return this.orientation.up();
     }
 
     public Vector3 forward() {
-        return new Vector3(this.orientation.get(0, 0), this.orientation.get(1, 0), this.orientation.get(2, 0));
+        return this.orientation.forward();
     }
 
     public Vector3 left() {
-        return new Vector3(this.orientation.get(0, 1), this.orientation.get(1, 1), this.orientation.get(2, 1));
+        return this.orientation.left();
     }
 
     public static float driveForceForward(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
@@ -252,6 +253,8 @@ public class CarData {
         this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt))
                 .matrixMul(this.orientation);
 
+        this.hitbox.setOrientation(this.orientation);
+
         this.jumpTimer = 0.0f;
         this.jumped = true;
         this.doubleJumped = false;
@@ -284,15 +287,16 @@ public class CarData {
             Vector2 dv = dodgeDir.mul(500.0f);
 
             if (backward_dodge) {
-                dv.x += (16.0f / 15.0f) * (1.0f + 1.5f * s);
+                dv = dv.mul((16.0f / 15.0f) * (1.0f + 1.5f * s), 1);
             }
-            dv.y *= (1.0f + 0.9f * s);
+            dv = dv.mul(1, (1.0f + 0.9f * s));
 
             this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt)).add(new Vector3(getDodgeOrientation().dot(dv)));
             this.position = this.position.add(this.velocity.mul(dt));
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
+            this.hitbox.setOrientation(this.orientation);
 
             this.doubleJumped = true;
             this.dodgeTimer = 0.0f;
@@ -305,6 +309,7 @@ public class CarData {
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
+            this.hitbox.setOrientation(this.orientation);
 
             this.doubleJumped = true;
             this.dodgeTimer = 1.01f * DodgeManeuver.torque_time;
@@ -363,6 +368,7 @@ public class CarData {
         this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt));
         this.position = this.position.add(this.velocity.mul(dt));
         this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
+        this.hitbox.setOrientation(this.orientation);
     }
 
     public void step(ControlsOutput in, float dt) {
@@ -379,7 +385,7 @@ public class CarData {
         } else { // In the Air
             if (
                     in.holdJump() &&
-                            !in.holdJump() &&
+                            !lastControllerInputs.holdJump() &&
                             this.jumpTimer < DodgeManeuver.timeout &&
                             !this.doubleJumped
             ) {
@@ -413,5 +419,7 @@ public class CarData {
         if (!in.holdJump() || this.jumpTimer > DodgeManeuver.max_duration) {
             enableJumpAcceleration = false;
         }
+
+        this.lastControllerInputs = in;
     }
 }

@@ -40,7 +40,7 @@ public class NeutralStrategy extends Strategy {
             List<BoostPad> fullPads = BoostManager.getAllBoosts();
             List<BoostPad> closestPadList = fullPads.stream()
                     .filter((pad) -> pad.isActive() || pad.boostAvailableIn() < 1)
-                    .filter((pad) -> Math.abs(car.forward().flatten().correctionAngle(pad.getLocation().flatten().sub(car.position.add(car.velocity.mul(0.15f)).flatten()).normalized())) < 0.5f)
+                    .filter((pad) -> Math.abs(car.forward().flatten().correctionAngle(pad.getLocation().flatten().sub(car.position.add(car.velocity.mul(0.2f)).flatten()).normalized())) < 0.5f)
                     .sorted((a, b) -> (int) (a.getLocation().distance(car.position) - b.getLocation().distance(car.position)))
                     .limit(5)
                     .collect(Collectors.toList());
@@ -65,6 +65,9 @@ public class NeutralStrategy extends Strategy {
                     controlPoints.add(new Curve.ControlPoint(offToBallLocation, offToBallLocation.add(ball.position.add(ball.velocity.mul(0.8f)).sub(offToBallLocation).withZ(0).normalized().mul(150))));
 
                     Curve path = new Curve(controlPoints);
+                    float pathLength = path.length;
+                    if (pad.isFullBoost())
+                        pathLength -= 800;
                     if (path.length < shortestPathLength && path.length > 0) {
                         shortestPathLength = path.length;
                         shortestPath = path;

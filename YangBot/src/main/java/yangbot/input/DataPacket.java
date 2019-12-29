@@ -34,7 +34,7 @@ public class DataPacket {
 
     public DataPacket(GameTickPacket request, int playerIndex) {
         this.playerIndex = playerIndex;
-        this.ball = new BallData(request.ball());
+        this.ball = new BallData(request.ball(), request.gameInfo().secondsElapsed());
 
         allCars = new ArrayList<>();
         for (int i = 0; i < request.playersLength(); i++) {

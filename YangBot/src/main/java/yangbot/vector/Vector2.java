@@ -8,8 +8,8 @@ package yangbot.vector;
  */
 public class Vector2 {
 
-    public float x;
-    public float y;
+    public final float x;
+    public final float y;
 
     public Vector2(float x, float y) {
         this.x = x;
@@ -66,6 +66,10 @@ public class Vector2 {
 
     public Vector2 mul(double scale) {
         return new Vector2(x * scale, y * scale);
+    }
+
+    public Vector2 mul(double sx, double sy) {
+        return new Vector2(x * sx, y * sy);
     }
 
     @SuppressWarnings("SuspiciousNameCombination")
@@ -153,6 +157,8 @@ public class Vector2 {
     }
 
     public Vector2 rotateBy(double angle) {
+        if (angle == 0)
+            return this;
         double cosAngle = Math.cos(-angle);
         double sinAngle = Math.sin(-angle);
         double newX = x * cosAngle + y * sinAngle;

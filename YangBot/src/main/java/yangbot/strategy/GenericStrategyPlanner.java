@@ -1,19 +1,27 @@
 package yangbot.strategy;
 
+import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.vector.Vector2;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 public class GenericStrategyPlanner extends StrategyPlanner {
     @Override
     protected void planStrategyInternal() {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
+        BallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         int teamSign = car.team * 2 - 1;
+        List<CarData> carsInMyTeam = gameData.getAllCars().parallelStream().filter((c) -> c.team == car.team).collect(Collectors.toList());
 
         float awareness = 0;
         int counter = 0;
@@ -49,8 +57,23 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         }
 
         awareness /= counter;
-        if (gameData.getAllCars().size() > 2)
-            awareness -= 0.3f; // Temporary change for zombie tournament
+
+        if (carsInMyTeam.size() > 1) {
+            awareness -= 0.1f; // Temporary change for zombie tournament
+
+            BallData ballInFuture = ballPrediction.getFrameAtRelativeTime(0.2f).get().ballData;
+            Optional<CarData> closestToBallCar = carsInMyTeam.stream()
+                    .filter((carData -> carData.playerIndex != car.playerIndex))
+                    .min(Comparator.comparingDouble(c -> c.position
+                            .add(c.velocity.mul(0.2))
+                            .flatten()
+                            .distance(ballInFuture.position.flatten())
+                    ));
+            if (closestToBallCar.isPresent())
+                awareness -= 0.3f;
+            else
+                awareness += 0.2f;
+        }
 
         if (awareness >= 0.5f) {
             newDecidedStrategy = new OffensiveStrategy();

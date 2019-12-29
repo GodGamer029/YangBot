@@ -4,6 +4,7 @@ import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
@@ -17,12 +18,13 @@ public class DefaultStrategy extends Strategy {
     public static void smartBallChaser(float dt, ControlsOutput controlsOutput) {
         GameData gameData = GameData.current();
         BallData ball = gameData.getBallData();
+        YangBallPrediction ballPrediction = gameData.getBallPrediction();
         CarData car = gameData.getCarData();
 
         Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.flatten().sub(ball.position.flatten()).magnitude() / car.velocity.flatten().magnitude())));
 
         controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
-        controlsOutput.withThrottle(Math.max(0.1f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
+        controlsOutput.withThrottle(Math.max(0.05f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
         if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.distance(futureBallPos) > 1000 && car.boost > 40)
             controlsOutput.withBoost(true);
 

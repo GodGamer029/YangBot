@@ -26,14 +26,25 @@ public class BallData {
     public Vector3 velocity;
     public Vector3 angularVelocity;
     public final BallTouch latestTouch;
-    public final boolean hasBeenTouched;
+    public boolean hasBeenTouched;
+    public float elapsedSeconds = 0;
 
-    public BallData(final BallInfo ball) {
+    public BallData(final BallInfo ball, float elapsedSeconds) {
         this.position = new Vector3(ball.physics().location());
         this.velocity = new Vector3(ball.physics().velocity());
         this.angularVelocity = new Vector3(ball.physics().angularVelocity());
         this.hasBeenTouched = ball.latestTouch() != null;
         this.latestTouch = this.hasBeenTouched ? new BallTouch(ball.latestTouch()) : null;
+        this.elapsedSeconds = elapsedSeconds;
+    }
+
+    public BallData(final BallData ball) {
+        this.position = ball.position;
+        this.velocity = ball.velocity;
+        this.angularVelocity = ball.angularVelocity;
+        this.hasBeenTouched = ball.hasBeenTouched;
+        this.latestTouch = ball.latestTouch;
+        this.elapsedSeconds = ball.elapsedSeconds;
     }
 
     public BallData(Vector3 position, Vector3 velocity, Vector3 angularVelocity) {
@@ -42,6 +53,7 @@ public class BallData {
         this.angularVelocity = angularVelocity;
         this.latestTouch = null;
         this.hasBeenTouched = false;
+        this.elapsedSeconds = 0;
     }
 
     public BallData(final Physics ballPhysics) {
@@ -110,6 +122,8 @@ public class BallData {
         this.velocity = velocity.mul(
                 Math.min(1, BallData.MAX_VELOCITY / velocity.magnitude())
         );
+
+        this.elapsedSeconds += dt;
     }
 
     public boolean collidesWith(YangHitbox obb, Vector3 position) {
@@ -134,6 +148,8 @@ public class BallData {
         final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
 
         if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS) {
+
+            this.hasBeenTouched = true;
 
             final Matrix3x3 L_ball = Matrix3x3.antiSym(contactPoint.sub(this.position));
             final Matrix3x3 L_car = Matrix3x3.antiSym(contactPoint.sub(car.position));
@@ -198,8 +214,7 @@ public class BallData {
                             .div(INERTIA)
             );
             this.velocity = this.velocity.add(
-                    physImpulse
-                            .add(psyonixImpulse)
+                    physImpulse.add(psyonixImpulse)
                             .div(MASS)
             );
 

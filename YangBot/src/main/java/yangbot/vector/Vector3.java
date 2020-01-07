@@ -83,6 +83,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return new Vector3(x + other.x, y + other.y, z + other.z);
     }
 
+    public Vector3 add(float other) {
+        return new Vector3(x + other, y + other, z + other);
+    }
+
     public Vector3 add(Vector2 other, float z) {
         return new Vector3(x + other.x, y + other.y, this.z + z);
     }
@@ -233,6 +237,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + String.format("(x=%.2f;y=%.2f;z=%.2f)", x, y, z);
+        return this.toString(2);
+    }
+
+    public String toString(int decimalPlaces) {
+        return this.getClass().getSimpleName() + String.format("(x=%." + decimalPlaces + "f;y=%." + decimalPlaces + "f;z=%." + decimalPlaces + "f)", x, y, z);
     }
 }

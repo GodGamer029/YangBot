@@ -46,7 +46,7 @@ public class TrainingBot implements Bot {
         lastBallPos = ball.position;
 
         GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
-
+        GameData.current().getBallPrediction().draw(renderer, Color.RED, 2);
         drawDebugLines(input, car);
 
         ControlsOutput output = new ControlsOutput();

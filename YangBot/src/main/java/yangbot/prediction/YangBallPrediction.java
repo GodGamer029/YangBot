@@ -98,11 +98,16 @@ public class YangBallPrediction {
             length = this.relativeTimeOfLastFrame();
 
         float time = 0;
+        float lastAbsTime = this.frames.get(0).absoluteTime;
         Vector3 lastPos = this.frames.get(0).ballData.position;
         while (time < length) {
             Optional<YangPredictionFrame> frame = this.getFrameAfterRelativeTime(time);
             if (!frame.isPresent())
                 break;
+            if (Math.floor(lastAbsTime) < Math.floor(frame.get().absoluteTime)) {
+                renderer.drawLine3d(color.brighter(), frame.get().ballData.position, frame.get().ballData.position.add(0, 0, 50));
+            }
+            lastAbsTime = frame.get().absoluteTime;
             time = frame.get().relativeTime;
             BallData ball = frame.get().ballData;
             if (lastPos.distance(ball.position) < 50)
@@ -189,7 +194,7 @@ public class YangBallPrediction {
         public YangPredictionFrame(float absoluteTime, float relativeTime, BallData ballData) {
             this.absoluteTime = absoluteTime;
             this.relativeTime = relativeTime;
-            this.ballData = ballData;
+            this.ballData = new BallData(ballData);
         }
 
         public YangPredictionFrame(float relativeTime, PredictionSlice predictionSlice) {

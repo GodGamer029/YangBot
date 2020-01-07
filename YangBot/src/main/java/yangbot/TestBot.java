@@ -4,17 +4,19 @@ import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
-import rlbot.gamestate.BallState;
-import rlbot.gamestate.GameState;
-import rlbot.gamestate.PhysicsState;
+import rlbot.gamestate.*;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
+import yangbot.manuever.DodgeManeuver;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.ControlsOutput;
 import yangbot.util.hitbox.YangCarHitbox;
+import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
+import java.util.Optional;
 
 public class TestBot implements Bot {
 
@@ -28,6 +30,12 @@ public class TestBot implements Bot {
     private Vector3 lastContact = null;
     private YangCarHitbox lastHitbox = null;
     private Vector3 lastPos = null;
+
+    private CarData carSim;
+    private DodgeManeuver simDodge;
+    private BallData simBall;
+    private YangBallPrediction simPrediction;
+    private float closest = 95;
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -54,46 +62,108 @@ public class TestBot implements Bot {
             case RESET: {
                 timer = 0.0f;
 
-                state = State.RUN;
+                state = State.INIT;
 
+                RLBotDll.setGameState(new GameState()
+                        .withGameInfoState(new GameInfoState().withWorldGravityZ(0.00001f).withGameSpeed(1f))
+                        .withBallState(new BallState().withPhysics(new PhysicsState()
+                                        .withLocation(new DesiredVector3(133.2f, 10f, 95f)) // 320
+                                        .withVelocity(new DesiredVector3(20f, 0f, -1f))
+                                        .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
+                                )
+                        )
+                        .withCarState(this.playerIndex, new CarState().withPhysics(new PhysicsState()
+                                .withLocation(new DesiredVector3(0f, 0f, 370f))
+                                .withRotation(new DesiredRotation(0f, (float) Math.PI / 2f, (float) Math.PI / -2f))
+                                .withVelocity(new DesiredVector3(0f, 0f, -1f))
+                                .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
+                        )).buildPacket());
+                RLConstants.gravity = new Vector3(0, 0, 0.00001f);
                 break;
             }
             case INIT: {
-                state = State.RUN;
+
+                if (ball.hasBeenTouched) {
+                    renderer.drawCentered3dCube(Color.GREEN, ball.latestTouch.position, 10);
+                    //System.out.println("ball: "+ball.latestTouch.position.x);
+                }
+                if (lastContact != null) {
+                    renderer.drawCentered3dCube(Color.BLUE, lastContact, 10);
+                    //System.out.println("co: "+lastContact.x);
+                }
+                car.hitbox.draw(renderer, car.position, 1f, Color.MAGENTA);
+
+                //ball.step(dt);
+
+                final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, ball.position);
+                final double dist = contactPoint.sub(ball.position).magnitude();
+                if (dist < closest) {
+                    closest = (float) dist;
+                    System.out.println("Dist: " + dist);
+                }
+
+
+                Vector3 coll = ball.collide(car);
+                if (coll != null) {
+                    lastContact = coll;
+                    System.out.println("Collided with ball");
+                }
+
+                if (controlCar.jumped && false) {
+                    timer = 0.0f;
+                    carSim = new CarData(controlCar);
+                    carSim.position = carSim.position.add(carSim.left().mul(150));
+                    carSim.jumpTimer = RLConstants.tickFrequency * 2;
+                    carSim.jumped = true;
+                    carSim.enableJumpAcceleration = true;
+                    carSim.elapsedSeconds = 0;
+                    carSim.lastControllerInputs.withJump(true);
+
+                    simBall = new BallData(ball);
+
+                    state = State.RUN;
+
+                    simPrediction = GameData.current().getBallPrediction();
+
+                    simDodge = new DodgeManeuver();
+                    simDodge.delay = 0.5f;
+                    simDodge.duration = 0.1f;
+                    simDodge.controllerInput = new Vector2(0, -1);
+                    simDodge.timer = RLConstants.tickFrequency;
+                }
                 break;
             }
             case RUN: {
-                BallData customBall = new BallData(new Vector3(0, 0, BallData.COLLISION_RADIUS), new Vector3(), new Vector3());
-                customBall = ball;
-                renderer.drawCentered3dCube(Color.GREEN, customBall.position, 50);
+                ControlsOutput simOutput = new ControlsOutput();
+
+                Color hitboxColor = Color.GREEN;
+                if (carSim.enableJumpAcceleration)
+                    hitboxColor = Color.YELLOW;
+                if (carSim.doubleJumped)
+                    hitboxColor = Color.RED;
 
 
-                if (lastContact != null) {
-                    renderer.drawCentered3dCube(Color.RED, lastContact, 20);
-                    renderer.drawCentered3dCube(Color.RED, lastContact, 5);
-                    lastHitbox.draw(renderer, lastPos, 1, Color.BLUE);
-                }
+                Optional<YangBallPrediction.YangPredictionFrame> frameOptional = simPrediction.getFrameAtRelativeTime(carSim.elapsedSeconds + dt);
+                if (!frameOptional.isPresent())
+                    break;
+                simBall = frameOptional.get().ballData;
+                simBall.hasBeenTouched = false;
 
-                controlCar.hitbox.draw(renderer, controlCar.position, 1, Color.GREEN);
+                FoolGameData foolGameData = GameData.current().fool();
+                foolGameData.foolCar(carSim);
+                simDodge.fool(foolGameData);
+                simDodge.step(dt, simOutput);
+                carSim.step(simOutput, dt);
 
-                Vector3 c = customBall.collide(controlCar);
-                if (c != null && timer > RLConstants.tickFrequency * 4) {
-                    //customBall.step(dt);
-                    lastContact = c;
-                    lastPos = controlCar.position;
-                    lastHitbox = controlCar.hitbox;
-                    GameState st = new GameState()
-                            .withBallState(new BallState().withPhysics(new PhysicsState()
-                                    .withLocation(customBall.position.toDesiredVector())
-                                    .withAngularVelocity(customBall.angularVelocity.toDesiredVector())
-                                    .withVelocity(customBall.velocity.toDesiredVector())
-                            ));
+                Vector3 collision = simBall.collide(carSim);
+                if (simBall.hasBeenTouched)
+                    renderer.drawCentered3dCube(Color.MAGENTA, collision, 50);
 
-                    RLBotDll.setGameState(st.buildPacket());
-                    timer = 0;
-                }
-
-                renderer.drawCentered3dCube(Color.GREEN, controlCar.position, 30);
+                carSim.hitbox.draw(renderer, carSim.position, 1.1f, simBall.hasBeenTouched ? Color.PINK : hitboxColor);
+                controlCar.hitbox.draw(renderer, controlCar.position, 1f, Color.BLUE);
+                renderer.drawCentered3dCube(Color.GREEN, simBall.position, 190);
+                if (timer > 1.5f)
+                    state = State.RESET;
                 break;
             }
         }
@@ -123,7 +193,7 @@ public class TestBot implements Bot {
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 210), 1, 1);
         renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 230), 1, 1);
         //renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
-        renderer.drawString2d("CarL: " + myCar.velocity.dot(myCar.left()), Color.WHITE, new Point(10, 250), 1, 1);
+        renderer.drawString2d("CarF: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
     }
 
     @Override

@@ -77,7 +77,7 @@ public class YangBotCppInterop {
         List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
         for (int i = 0; i < frames.length / 3; i++) {
             BallData data = new BallData(new Vector3(frames[i * 3], frames[i * 3 + 1], frames[i * 3 + 2]), new Vector3(), new Vector3());
-            ballDataList.add(new YangBallPrediction.YangPredictionFrame(i * tickFreq, i * tickFreq, data));
+            ballDataList.add(new YangBallPrediction.YangPredictionFrame(i * tickFreq + ballData.elapsedSeconds, i * tickFreq, data));
         }
         return YangBallPrediction.from(ballDataList, 1f / tickrate);
     }

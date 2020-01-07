@@ -1,6 +1,5 @@
 package yangbot.manuever;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.util.ControlsOutput;
@@ -62,9 +61,7 @@ public class DodgeManeuver extends Maneuver {
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
-        final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
 
         float timeout = 0.9f;
 
@@ -132,7 +129,10 @@ public class DodgeManeuver extends Maneuver {
         if (car.doubleJumped)
             controlsOutput.withJump(false);
 
-        setIsDone(this.timer > timeout);
+        if (car.doubleJumped && timer - dodge_time > 0.2f)
+            this.setDone();
+        else
+            setIsDone(this.timer > timeout);
         this.timer += dt;
     }
 

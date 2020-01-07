@@ -5,11 +5,15 @@ import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
 import yangbot.cpp.FBSCarData;
 import yangbot.cpp.YangBotJNAInterop;
+import yangbot.prediction.YangBallPrediction;
 import yangbot.util.MathUtils;
 import yangbot.util.hitbox.YangHitbox;
 import yangbot.util.hitbox.YangSphereHitbox;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class BallData {
     public static final float DRAG = -0.0305f;
@@ -142,6 +146,19 @@ public class BallData {
         return BallData.hitbox().collidesWith(this.position, new YangSphereHitbox(radius), spherePosition);
     }
 
+    public YangBallPrediction makeBallPrediction(float tickFrequency, float length) {
+        assert length <= 5;
+        assert tickFrequency >= RLConstants.tickFrequency;
+
+        List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
+        BallData simBall = new BallData(this);
+        for (float t = 0; t <= length; t += tickFrequency) {
+            ballDataList.add(new YangBallPrediction.YangPredictionFrame(t + this.elapsedSeconds, t, simBall));
+            simBall.step(tickFrequency);
+        }
+        return YangBallPrediction.from(ballDataList, tickFrequency);
+    }
+
     public Vector3 collide(CarData car) {
         // https://github.com/samuelpmish/RLUtilities/blob/prerelease/src/simulation/ball.cc#L113
 
@@ -151,8 +168,10 @@ public class BallData {
 
             this.hasBeenTouched = true;
 
+            final Vector3 carPosition = car.position;
+
             final Matrix3x3 L_ball = Matrix3x3.antiSym(contactPoint.sub(this.position));
-            final Matrix3x3 L_car = Matrix3x3.antiSym(contactPoint.sub(car.position));
+            final Matrix3x3 L_car = Matrix3x3.antiSym(contactPoint.sub(carPosition));
             Vector3 physImpulse = new Vector3();
 
             // Physics Engine Impulse
@@ -164,7 +183,7 @@ public class BallData {
                 );
 
                 final Matrix3x3 M = Matrix3x3.identity()
-                        .mul((1.0f / MASS) + (1.0f / CarData.MASS))
+                        .elementwiseMul((1.0f / MASS) + (1.0f / CarData.MASS))
                         .sub(L_ball.matrixMul(L_ball).div(INERTIA))
                         .sub(L_car.matrixMul(invInertiaCar.matrixMul(L_car)))
                         .invert();
@@ -187,6 +206,7 @@ public class BallData {
                     physImpulse = impulsePerpendicular.add(
                             impulseParallel.mul(Math.min(1, MU * ratio))
                     );
+
                 }
             }
 
@@ -195,14 +215,13 @@ public class BallData {
             if (true) {
 
                 final Vector3 carForward = car.forward();
-                Vector3 contactNormal = this.position.sub(car.position); // Car to ball
-                contactNormal = contactNormal.scaleZ(0.35f); // Makes dribbling easier
+                Vector3 contactNormal = this.position.sub(carPosition); // Car to ball
+                contactNormal = contactNormal.scaleZ(0.35f);
                 contactNormal = contactNormal.sub(
                         carForward
                                 .mul(contactNormal.dot(carForward))
                                 .mul(0.35f)
                 ).normalized();
-
                 final float deltaVelocity = (float) MathUtils.clip(this.velocity.sub(car.velocity).magnitude(), 0, 4600f);
                 // https://gyazo.com/a99918c911d15eb51116a5c03872b20d
                 psyonixImpulse = contactNormal.mul(MASS * deltaVelocity * psyonixImpulseScale(deltaVelocity));

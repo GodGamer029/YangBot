@@ -29,12 +29,16 @@ public class CarData {
     public static final Matrix3x3 INV_INERTIA;
 
     static {
-        INERTIA = new Matrix3x3();
+        Matrix3x3 inertia;
+        inertia = new Matrix3x3();
 
-        INERTIA.assign(0, 0, 751f);
-        INERTIA.assign(1, 1, 1334f);
-        INERTIA.assign(2, 2, 1836f);
+        inertia.assign(0, 0, 751f);
+        inertia.assign(1, 1, 1334f);
+        inertia.assign(2, 2, 1836f);
 
+        inertia = inertia.elementwiseMul(MASS);
+
+        INERTIA = inertia;
         INV_INERTIA = INERTIA.invert();
     }
 
@@ -75,7 +79,7 @@ public class CarData {
         this.hasWheelContact = playerInfo.hasWheelContact();
         this.elapsedSeconds = elapsedSeconds;
         this.angularVelocity = new Vector3(playerInfo.physics().angularVelocity());
-        this.hitbox = new YangCarHitbox(playerInfo.hitbox(), this.orientation);
+        this.hitbox = new YangCarHitbox(playerInfo.hitbox(), new Vector3(playerInfo.hitboxOffset()), this.orientation);
         this.isBot = playerInfo.isBot();
         this.name = playerInfo.name();
         this.playerIndex = index;
@@ -365,7 +369,7 @@ public class CarData {
                             .mul(dt / J)
             );
         }
-        this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt));
+        this.velocity = this.velocity.add(RLConstants.gravity.mul(dt));
         this.position = this.position.add(this.velocity.mul(dt));
         this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
         this.hitbox.setOrientation(this.orientation);
@@ -395,8 +399,8 @@ public class CarData {
             }
         }
         // if the velocities exceed their maximum values, scale them back
-        this.velocity.div(Math.max(1.0f, this.velocity.magnitude() / CarData.MAX_VELOCITY));
-        this.angularVelocity.div(Math.max(1.0f, this.angularVelocity.magnitude() / CarData.MAX_ANGULAR_VELOCITY));
+        this.velocity = this.velocity.div(Math.max(1.0f, this.velocity.magnitude() / CarData.MAX_VELOCITY));
+        this.angularVelocity = this.angularVelocity.div(Math.max(1.0f, this.angularVelocity.magnitude() / CarData.MAX_ANGULAR_VELOCITY));
 
         this.elapsedSeconds += dt;
 

@@ -19,6 +19,8 @@ public class YangPythonInterface extends SocketServer {
                 return new TestBot(index);
             case TRAINING:
                 return new TrainingBot(index);
+            case TRAINING_TEST:
+                return new TrainingTestBot(index);
         }
         throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
     }

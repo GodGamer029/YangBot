@@ -9,6 +9,7 @@ import java.awt.*;
 
 public class YangCarHitbox extends YangHitbox {
 
+    public static Vector3 octaneHitboxExtents = new Vector3(118.01f, 84.2f, 36.16f);
     public static Vector3 octaneHitboxOffset = new Vector3(13.88f, 0f, 20.75f);
 
     public final Vector3 hitboxOffset;
@@ -20,22 +21,23 @@ public class YangCarHitbox extends YangHitbox {
     private Vector3 permL;
     private Vector3 permU;
 
-    public YangCarHitbox(BoxShape hitbox, Matrix3x3 orientation) {
-        this.hitboxLengths = new Vector3(hitbox.length(), hitbox.width(), hitbox.height());
-        this.hitboxOffset = octaneHitboxOffset;
+    public YangCarHitbox(BoxShape hitbox, Vector3 offsets, Matrix3x3 orientation) {
+        this.hitboxLengths = new Vector3(hitbox.length(), hitbox.width(), hitbox.height()).mul(1, 1, 1);
+        ;
+        this.hitboxOffset = offsets;
 
         setOrientation(orientation);
     }
 
-    public YangCarHitbox(Vector3 hitbox, Matrix3x3 orientation) {
+    public YangCarHitbox(Vector3 hitbox, Vector3 offsets, Matrix3x3 orientation) {
         this.hitboxLengths = new Vector3(hitbox);
-        this.hitboxOffset = octaneHitboxOffset;
+        this.hitboxOffset = offsets;
 
         setOrientation(orientation);
     }
 
     public YangCarHitbox(Matrix3x3 orientation) {
-        this.hitboxLengths = new Vector3(118.01f, 84.2f, 36.16f);
+        this.hitboxLengths = octaneHitboxExtents;
         this.hitboxOffset = octaneHitboxOffset;
 
         setOrientation(orientation);
@@ -50,7 +52,7 @@ public class YangCarHitbox extends YangHitbox {
     }
 
     public YangCarHitbox withOrientation(Matrix3x3 orientation) {
-        return new YangCarHitbox(this.hitboxLengths, orientation);
+        return new YangCarHitbox(this.hitboxLengths, this.hitboxOffset, orientation);
     }
 
     public YangSphereHitbox asSphere(float scale) {
@@ -82,8 +84,8 @@ public class YangCarHitbox extends YangHitbox {
 
     @Override
     public Vector3 getClosestPointOnHitbox(Vector3 hitboxPos, Vector3 point) {
-        Vector3 center = this.orientation.dot(hitboxOffset).add(hitboxPos);
-        Vector3 halfLengths = this.hitboxLengths.mul(0.5f);
+        final Vector3 center = this.orientation.dot(hitboxOffset).add(hitboxPos);
+        final Vector3 halfLengths = this.hitboxLengths.mul(0.5f);
 
         Vector3 vLocal = point.sub(center).dot(this.orientation);
         vLocal = vLocal.clip(0, -halfLengths.x, halfLengths.x);
@@ -107,5 +109,9 @@ public class YangCarHitbox extends YangHitbox {
         renderer.drawLine3d(c, permutatePoint(p, -1, 1, 1, scale), permutatePoint(p, -1, -1, 1, scale));
         renderer.drawLine3d(c, permutatePoint(p, 1, 1, -1, scale), permutatePoint(p, 1, -1, -1, scale));
         renderer.drawLine3d(c, permutatePoint(p, -1, 1, -1, scale), permutatePoint(p, -1, -1, -1, scale));
+
+        renderer.drawLine3d(c, permutatePoint(p, 1, 0, -1, scale), permutatePoint(p, 1, 0, 1, scale));
+        //renderer.drawLine3d(c, permutatePoint(p, 1, -1, 0, scale), permutatePoint(p, 1, 1, 0, scale));
+
     }
 }

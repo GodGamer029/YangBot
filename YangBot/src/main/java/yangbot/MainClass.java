@@ -29,10 +29,82 @@ public class MainClass {
     private static final Integer DEFAULT_PORT = 19265;
     public static BotType BOT_TYPE = BotType.PRODUCTION;
 
-    enum BotType {
-        PRODUCTION,
-        TEST,
-        TRAINING
+    public static void main(String[] args) {
+        if (args.length > 0) {
+            System.out.println(Arrays.toString(args));
+            if (args[0].equalsIgnoreCase("training"))
+                BOT_TYPE = BotType.TRAINING;
+            else if (args[0].equalsIgnoreCase("test"))
+                BOT_TYPE = BotType.TEST;
+            else if (args[0].equalsIgnoreCase("trainingtest"))
+                BOT_TYPE = BotType.TRAINING_TEST;
+        }
+        System.out.println("Using Bot type: " + BOT_TYPE);
+        //lazyLoadNavigator();
+        lazyLoadRLU();
+        BotManager botManager = new BotManager();
+        botManager.setRefreshRate(120);
+        Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
+            System.out.println("Could not read port from args, using default!");
+            return DEFAULT_PORT;
+        });
+
+        YangPythonInterface pythonInterface = new YangPythonInterface(port, botManager);
+        new Thread(pythonInterface::start).start();
+
+        JFrame frame = new JFrame("Java Bot");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel panel = new JPanel();
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        BorderLayout borderLayout = new BorderLayout();
+        panel.setLayout(borderLayout);
+        JPanel dataPanel = new JPanel();
+        dataPanel.setLayout(new BoxLayout(dataPanel, BoxLayout.Y_AXIS));
+        dataPanel.setBorder(new EmptyBorder(0, 10, 0, 0));
+        dataPanel.add(new JLabel("Listening on port " + port), BorderLayout.CENTER);
+        dataPanel.add(new JLabel("I'm the thing controlling the Java bot, keep me open :)"), BorderLayout.CENTER);
+        JLabel botsRunning = new JLabel("Bots running: ");
+        dataPanel.add(botsRunning, BorderLayout.CENTER);
+        panel.add(dataPanel, BorderLayout.CENTER);
+        frame.add(panel);
+
+        URL url = MainClass.class.getClassLoader().getResource("icon.png");
+        Image image = Toolkit.getDefaultToolkit().createImage(url);
+        panel.add(new JLabel(new ImageIcon(image)), BorderLayout.WEST);
+        frame.setIconImage(image);
+
+        frame.pack();
+        frame.setVisible(true);
+
+        ActionListener botIndexListener = e -> {
+            Set<Integer> runningBotIndices = botManager.getRunningBotIndices();
+
+            String botsStr;
+            if (runningBotIndices.isEmpty()) {
+                botsStr = "None";
+            } else {
+                botsStr = runningBotIndices.stream()
+                        .sorted()
+                        .map(i -> "#" + i)
+                        .collect(Collectors.joining(", "));
+            }
+            botsRunning.setText("Bots indices running: " + botsStr);
+        };
+
+        ActionListener mapSettingsListener = f -> {
+            try {
+                if (botManager.getRunningBotIndices().size() <= 0)
+                    return;
+                MatchSettings matchSettings = RLBotDll.getMatchSettings();
+                YangBotCppInterop.init(matchSettings.gameMode(), matchSettings.gameMap());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        };
+
+        new Timer(1000, botIndexListener).start();
+        new Timer(1000, mapSettingsListener).start();
     }
 
     private static void lazyLoadNavigator() {
@@ -119,79 +191,10 @@ public class MainClass {
         new Thread(() -> YangBotCppInterop.init((byte) 0, (byte) 0)).start();
     }
 
-    public static void main(String[] args) {
-        if (args.length > 0) {
-            System.out.println(Arrays.toString(args));
-            if (args[0].equalsIgnoreCase("training"))
-                BOT_TYPE = BotType.TRAINING;
-            else if (args[0].equalsIgnoreCase("test"))
-                BOT_TYPE = BotType.TEST;
-        }
-        System.out.println("Using Bot type: " + BOT_TYPE);
-        //lazyLoadNavigator();
-        lazyLoadRLU();
-        BotManager botManager = new BotManager();
-        botManager.setRefreshRate(120);
-        Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
-            System.out.println("Could not read port from args, using default!");
-            return DEFAULT_PORT;
-        });
-
-        YangPythonInterface pythonInterface = new YangPythonInterface(port, botManager);
-        new Thread(pythonInterface::start).start();
-
-        JFrame frame = new JFrame("Java Bot");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        JPanel panel = new JPanel();
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        BorderLayout borderLayout = new BorderLayout();
-        panel.setLayout(borderLayout);
-        JPanel dataPanel = new JPanel();
-        dataPanel.setLayout(new BoxLayout(dataPanel, BoxLayout.Y_AXIS));
-        dataPanel.setBorder(new EmptyBorder(0, 10, 0, 0));
-        dataPanel.add(new JLabel("Listening on port " + port), BorderLayout.CENTER);
-        dataPanel.add(new JLabel("I'm the thing controlling the Java bot, keep me open :)"), BorderLayout.CENTER);
-        JLabel botsRunning = new JLabel("Bots running: ");
-        dataPanel.add(botsRunning, BorderLayout.CENTER);
-        panel.add(dataPanel, BorderLayout.CENTER);
-        frame.add(panel);
-
-        URL url = MainClass.class.getClassLoader().getResource("icon.png");
-        Image image = Toolkit.getDefaultToolkit().createImage(url);
-        panel.add(new JLabel(new ImageIcon(image)), BorderLayout.WEST);
-        frame.setIconImage(image);
-
-        frame.pack();
-        frame.setVisible(true);
-
-        ActionListener botIndexListener = e -> {
-            Set<Integer> runningBotIndices = botManager.getRunningBotIndices();
-
-            String botsStr;
-            if (runningBotIndices.isEmpty()) {
-                botsStr = "None";
-            } else {
-                botsStr = runningBotIndices.stream()
-                        .sorted()
-                        .map(i -> "#" + i)
-                        .collect(Collectors.joining(", "));
-            }
-            botsRunning.setText("Bots indices running: " + botsStr);
-        };
-
-        ActionListener mapSettingsListener = f -> {
-            try {
-                if (botManager.getRunningBotIndices().size() <= 0)
-                    return;
-                MatchSettings matchSettings = RLBotDll.getMatchSettings();
-                YangBotCppInterop.init(matchSettings.gameMode(), matchSettings.gameMap());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        };
-
-        new Timer(1000, botIndexListener).start();
-        new Timer(1000, mapSettingsListener).start();
+    enum BotType {
+        PRODUCTION,
+        TEST,
+        TRAINING,
+        TRAINING_TEST
     }
 }

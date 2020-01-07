@@ -20,7 +20,7 @@ applicationDefaultJvmArgs = ["-Djna.library.path=" + dllDirectory, "-Xms256m", "
 dependencies {
     // Fetch the framework jar file
     compile('org.jetbrains:annotations:17.0.0')
-    compile('org.rlbot.commons:framework:1.10.1') { changing = true }
+    compile('org.rlbot.commons:framework:1.11.0')
     testCompile('org.junit.jupiter:junit-jupiter:5.4.2')
     testCompile('org.openjdk.jmh:jmh-core:1.22')
     testAnnotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.22')
@@ -82,6 +82,8 @@ run {
         args "training";
     }else if ( project.hasProperty("testbot") ){
         args "test";
+    }else if ( project.hasProperty("trainingtest") ){
+        args "trainingtest";
     }
     enableAssertions(true)
 }

@@ -82,10 +82,10 @@ public class OffensiveStrategy extends Strategy {
 
                 final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
                 final Vector3 targetPos = interceptFrame.ballData.position;
-                final Vector3 groundedTargetPos = targetPos.withZ(car.position.z).add(car.left().mul(5));
+                final Vector3 groundedTargetPos = targetPos.withZ(car.position.z);
                 final Vector3 carToTarget = groundedTargetPos.sub(car.position).flatten().normalized().withZ(0);
-                //if (Math.signum(carToTarget.y) == teamSign) // Dont hit the ball back to our side
-                //    continue;
+                if (Math.signum(carToTarget.y) == teamSign) // Dont hit the ball back to our side
+                    continue;
 
                 Curve currentPath;
                 List<Curve.ControlPoint> controlPoints = new ArrayList<>();
@@ -203,7 +203,7 @@ public class OffensiveStrategy extends Strategy {
                                         BallData simBall = new BallData(ball);
                                         simBall.hasBeenTouched = false;
                                         DodgeManeuver simDodge = new DodgeManeuver(dodgeManeuver);
-                                        simDodge.delay = delay + 999;
+                                        simDodge.delay = delay;
                                         simDodge.duration = duration;
                                         simDodge.direction = direction.rotateBy(angleDiff);
                                         simDodge.timer = this.dodgeManeuver.timer + RLConstants.tickFrequency;
@@ -235,8 +235,8 @@ public class OffensiveStrategy extends Strategy {
                                         }
 
                                         if (simBall.hasBeenTouched) {
-                                            //if(!simCar.doubleJumped)
-                                            //    simDodge.delay = 1000;
+                                            if (!simCar.doubleJumped)
+                                                simDodge.delay = 1000;
                                             YangBallPrediction simBallPred = YangBotCppInterop.getBallPrediction(simBall, 120);
                                             boolean applyDodgeSettings = false;
                                             // CHANGE ASAP, just for testing

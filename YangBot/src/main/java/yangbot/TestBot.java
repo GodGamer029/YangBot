@@ -48,7 +48,7 @@ public class TestBot implements Bot {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
         BallData ball = input.ball;
-        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
+        GameData.current().update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
 
         GameData.current().getBallPrediction().draw(renderer, Color.RED, 3);
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != car.team).findFirst().orElse(car);
@@ -145,7 +145,7 @@ public class TestBot implements Bot {
                 Optional<YangBallPrediction.YangPredictionFrame> frameOptional = simPrediction.getFrameAtRelativeTime(carSim.elapsedSeconds + dt);
                 if (!frameOptional.isPresent())
                     break;
-                simBall = frameOptional.get().ballData;
+                simBall = frameOptional.get().ballData.makeMutable();
                 simBall.hasBeenTouched = false;
 
                 FoolGameData foolGameData = GameData.current().fool();

@@ -31,7 +31,7 @@ public class DribbleManeuver extends Maneuver {
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
         final float ballRadius = RLConstants.ballRadius;
         for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
-            BallData frameBall = frame.ballData;
+            ImmutableBallData frameBall = frame.ballData;
             Vector3 loc = frameBall.position;
             Vector3 vel = frameBall.velocity;
 
@@ -59,14 +59,14 @@ public class DribbleManeuver extends Maneuver {
         final GameData gameData = this.getGameData();
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
 
         float vf = (float) car.velocity.dot(car.forward());
         if (state == BallState.FIND_BALL) {
 
             YangBallPrediction ballPrediction = gameData.getBallPrediction();
             for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
-                BallData frameBall = frame.ballData;
+                ImmutableBallData frameBall = frame.ballData;
                 Vector3 loc = frameBall.position;
                 Vector3 vel = frameBall.velocity;
 
@@ -114,7 +114,7 @@ public class DribbleManeuver extends Maneuver {
             YangBallPrediction ballPrediction = gameData.getBallPrediction();
             boolean weFoundTheBall = false;
             for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
-                BallData frameBall = frame.ballData;
+                ImmutableBallData frameBall = frame.ballData;
                 Vector3 loc = frameBall.position;
                 Vector3 vel = frameBall.velocity;
                 if (vel.z < 0 && loc.z - RLConstants.ballRadius > car.position.z + 17f && loc.z - RLConstants.ballRadius < car.position.z + 40f && Math.abs(ballArrival - frame.absoluteTime) < 0.2f) {

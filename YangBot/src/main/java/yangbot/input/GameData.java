@@ -14,7 +14,7 @@ public class GameData {
     public static float timeOfMatchStart = -1f;
 
     protected CarData carData = null;
-    protected BallData ballData = null;
+    protected ImmutableBallData ballData = null;
     protected List<CarData> allCars = null;
     protected float gravityZ = -650;
     protected float dt = 1 / 60f;
@@ -35,7 +35,7 @@ public class GameData {
         return foo;
     }
 
-    public void update(CarData carData, BallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt, AdvancedRenderer advancedRenderer) {
+    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt, AdvancedRenderer advancedRenderer) {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
@@ -44,7 +44,7 @@ public class GameData {
         this.advancedRenderer = advancedRenderer;
     }
 
-    public void update(CarData carData, BallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
+    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
@@ -57,8 +57,6 @@ public class GameData {
         return YangBallPrediction.get();
     }
 
-    ;
-
     public Vector3 getGravity() {
         return new Vector3(0f, 0f, gravityZ);
     }
@@ -67,7 +65,7 @@ public class GameData {
         return carData;
     }
 
-    public BallData getBallData() {
+    public ImmutableBallData getBallData() {
         return ballData;
     }
 

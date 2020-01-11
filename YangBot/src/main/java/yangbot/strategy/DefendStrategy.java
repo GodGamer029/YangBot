@@ -28,7 +28,7 @@ public class DefendStrategy extends Strategy {
         // How critical is the situation?
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
-        BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         if (this.checkReset(0.5f))
@@ -52,9 +52,9 @@ public class DefendStrategy extends Strategy {
         }
 
         if (car.position.y * teamSign > RLConstants.goalDistance * 0.7f || car.position.distance(ball.position) < 400)
-            state = State.BALLCHASE;
+            state = State.BALLCHASE; // We are in a defensive position
         else
-            state = State.ROTATE;
+            state = State.ROTATE; // We are in a bad position, lets go to our goal
     }
 
     @Override
@@ -64,7 +64,6 @@ public class DefendStrategy extends Strategy {
 
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
-        BallData ball = gameData.getBallData();
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
@@ -116,27 +115,13 @@ public class DefendStrategy extends Strategy {
 
                     // Check if path is valid
                     {
-                        currentPath.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
-                        Curve.PathCheckStatus pathStatus = currentPath.doPathChecking(car, interceptFrame.absoluteTime, ballPrediction);
-                        if (pathStatus.isValid() || validPath == null) {
-                            if (pathStatus.isValid() && pathStatus.collidedWithBall) {
-                                for (int tries = 0; tries < 3; tries++) { // Move the path away from the ball
-                                    pathStatus = currentPath.doPathChecking(car, -1, ballPrediction);
-                                    if (pathStatus.collidedWithBall) { // Colliding with ball
-                                        AvoidObstacleInPathUtil.applyBallCollisionFix(pathStatus, controlPoints, currentPath, tries);
-                                        currentPath = new Curve(controlPoints);
-                                    } else
-                                        break;
-                                }
-                            }
-                            if (pathStatus.isValid() && !pathStatus.collidedWithBall) {
-                                validPath = currentPath;
-                                arrivalTime = interceptFrame.absoluteTime;
-                            }
-
+                        currentPath = AvoidObstacleInPathUtil.doSth(currentPath, car, interceptFrame.absoluteTime, ballPrediction, 7);
+                        if (currentPath != null) {
+                            validPath = currentPath;
+                            arrivalTime = interceptFrame.absoluteTime;
                         }
                     }
-                    t -= RLConstants.simulationTickFrequency * 4;
+                    t -= RLConstants.simulationTickFrequency * 4; // 15 ticks / s
                 } while (t > 0);
 
                 if (validPath == null) {
@@ -167,13 +152,10 @@ public class DefendStrategy extends Strategy {
                         nextPath = new Curve(controlPoints);
                     }
 
-                    for (int tries = 0; tries < 5; tries++) { // Move the path away from the ball
-                        status = nextPath.doPathChecking(car, -1, ballPrediction);
-                        if (status.collidedWithBall) { // Colliding with ball
-                            AvoidObstacleInPathUtil.applyBallCollisionFix(status, controlPoints, nextPath, tries);
-                            nextPath = new Curve(controlPoints);
-                        } else
-                            break;
+                    {
+                        Curve avoidedPath = AvoidObstacleInPathUtil.doSth(nextPath, car, -1, ballPrediction, 7);
+                        if (avoidedPath != null)
+                            nextPath = avoidedPath;
                     }
                 }
 

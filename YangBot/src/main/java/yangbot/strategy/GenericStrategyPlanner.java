@@ -1,8 +1,8 @@
 package yangbot.strategy;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.vector.Vector2;
@@ -13,11 +13,24 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class GenericStrategyPlanner extends StrategyPlanner {
+
+    public static boolean isOutOfPosition(GameData gameData) {
+        final CarData car = gameData.getCarData();
+        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        final ImmutableBallData ballData = gameData.getBallData();
+
+        int teamSign = car.team * 2 - 1;
+        Vector2 myGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
+
+        
+        return false;
+    }
+
     @Override
     protected void planStrategyInternal() {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
-        BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         int teamSign = car.team * 2 - 1;
@@ -61,7 +74,7 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         if (carsInMyTeam.size() > 1) {
             awareness -= 0.1f; // Temporary change for zombie tournament
 
-            BallData ballInFuture = ballPrediction.getFrameAtRelativeTime(0.2f).get().ballData;
+            ImmutableBallData ballInFuture = ballPrediction.getFrameAtRelativeTime(0.2f).get().ballData;
             Optional<CarData> closestToBallCar = carsInMyTeam.stream()
                     .filter((carData -> carData.playerIndex != car.playerIndex))
                     .min(Comparator.comparingDouble(c -> c.position

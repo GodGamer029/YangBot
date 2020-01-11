@@ -52,7 +52,7 @@ public class YangBot implements Bot {
             ball.step(det);
         }
 
-        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
+        GameData.current().update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
 
         drawDebugLines(input, car);
 

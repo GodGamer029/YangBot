@@ -39,7 +39,7 @@ public class RecoverStrategy extends Strategy {
         GameData gameData = GameData.current();
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         CarData car = gameData.getCarData();
-        BallData ballData = gameData.getBallData();
+        final ImmutableBallData ballData = gameData.getBallData();
 
         if (car.hasWheelContact) {
             this.setDone();

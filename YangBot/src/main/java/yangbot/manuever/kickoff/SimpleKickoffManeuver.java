@@ -1,9 +1,9 @@
 package yangbot.manuever.kickoff;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.FollowPathManeuver;
 import yangbot.manuever.Maneuver;
@@ -31,7 +31,7 @@ public class SimpleKickoffManeuver extends Maneuver {
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
 
         timer += dt;
 

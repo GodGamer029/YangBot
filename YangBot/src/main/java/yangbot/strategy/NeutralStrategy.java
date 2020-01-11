@@ -1,9 +1,9 @@
 package yangbot.strategy;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
 import yangbot.manuever.FollowPathManeuver;
@@ -27,7 +27,7 @@ public class NeutralStrategy extends Strategy {
 
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
-        BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
 
         if (!car.hasWheelContact) {
             this.setDone();

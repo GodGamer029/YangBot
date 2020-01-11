@@ -1,8 +1,8 @@
 package yangbot.strategy;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.vector.Vector3;
 
@@ -12,9 +12,9 @@ public class AfterKickoffStrategy extends StrategyPlanner {
 
     @Override
     public void planStrategyInternal() {
-        GameData gameData = GameData.current();
-        CarData car = gameData.getCarData();
-        BallData ball = gameData.getBallData();
+        final GameData gameData = GameData.current();
+        final CarData car = gameData.getCarData();
+        final ImmutableBallData ball = gameData.getBallData();
 
         Vector3 predictedPos = ball.position;
 

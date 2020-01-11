@@ -1,14 +1,14 @@
 package yangbot.manuever.kickoff;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 
 public class KickoffTester {
 
     public static boolean isKickoff() {
         GameData g = GameData.current();
-        BallData ball = g.getBallData();
+        final ImmutableBallData ball = g.getBallData();
         if (g.getCarData().elapsedSeconds - GameData.timeOfMatchStart >= 3)
             return false;
         return (ball.velocity.flatten().isZero() && ball.position.flatten().isZero());

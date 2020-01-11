@@ -1,9 +1,9 @@
 package yangbot.manuever;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
@@ -27,7 +27,7 @@ public class RecoverToGroundManeuver extends Maneuver {
         final GameData gameData = this.getGameData();
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
 
         if (orientationTarget.isZero()) {
             orientationTarget = car.forward().flatten();

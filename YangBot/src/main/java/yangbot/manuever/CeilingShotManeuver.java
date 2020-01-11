@@ -1,6 +1,5 @@
 package yangbot.manuever;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
@@ -20,7 +19,6 @@ public class CeilingShotManeuver extends Maneuver {
         final GameData gameData = this.getGameData();
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
-        final BallData ball = gameData.getBallData();
 
         throw new IllegalStateException("Not implemented");
         /*switch (state) {

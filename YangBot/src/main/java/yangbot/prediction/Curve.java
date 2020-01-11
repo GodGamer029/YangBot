@@ -32,25 +32,30 @@ public class Curve {
 
     private static int ndiv = 20;
 
+    private List<ControlPoint> controlPoints;
+    private PathCheckStatus pathCheckStatus = new PathCheckStatus(PathStatus.UNKNOWN);
+
     public Curve() {
-        length = -1f;
-        points = new ArrayList<>();
-        tangents = new ArrayList<>();
-        curvatures = new float[0];
-        distances = new float[0];
-        maxSpeeds = new float[0];
+        this.length = -1f;
+        this.points = new ArrayList<>();
+        this.tangents = new ArrayList<>();
+        this.curvatures = new float[0];
+        this.distances = new float[0];
+        this.maxSpeeds = new float[0];
+        this.controlPoints = new ArrayList<>();
     }
 
     public Curve(List<ControlPoint> info) {
-        points = new ArrayList<>();
-        tangents = new ArrayList<>();
-        curvatures = new float[0];
-        maxSpeeds = new float[0];
+        this.controlPoints = info;
+        this.points = new ArrayList<>();
+        this.tangents = new ArrayList<>();
+        this.curvatures = new float[0];
+        this.maxSpeeds = new float[0];
 
         int num_segments = info.size() - 1;
 
-        points.ensureCapacity(ndiv * num_segments + 2);
-        tangents.ensureCapacity(ndiv * num_segments + 2);
+        this.points.ensureCapacity(ndiv * num_segments + 2);
+        this.tangents.ensureCapacity(ndiv * num_segments + 2);
         ArrayList<Float> tempCurvature = new ArrayList<>(ndiv * num_segments + 2);
 
         for (int i = 1; i < num_segments - 1; i++) {
@@ -109,29 +114,30 @@ public class Curve {
                         .dot(normalAtT)
                         / (dgMag * dgMag * dgMag);
 
-                points.add(g);
-                tangents.add(dg.normalized());
+                this.points.add(g);
+                this.tangents.add(dg.normalized());
                 tempCurvature.add((float) kappa);
             }
         }
 
-        curvatures = new float[tempCurvature.size()];
-        for (int i = 0; i < curvatures.length; i++) {
-            curvatures[i] = tempCurvature.get(i);
-        }
+        this.curvatures = new float[tempCurvature.size()];
+        for (int i = 0; i < curvatures.length; i++)
+            this.curvatures[i] = tempCurvature.get(i);
+
         calculateDistances();
     }
 
     public Curve(List<ControlPoint> info, Vector3 dx0, Vector3 dt0, Vector3 dx1, Vector3 dt1, Vector3 start, Vector3 end) {
+        this.controlPoints = info;
         int num_segments = info.size() - 1;
 
-        points = new ArrayList<>();
-        tangents = new ArrayList<>();
-        curvatures = new float[0];
-        maxSpeeds = new float[0];
+        this.points = new ArrayList<>();
+        this.tangents = new ArrayList<>();
+        this.curvatures = new float[0];
+        this.maxSpeeds = new float[0];
 
-        points.ensureCapacity(ndiv * num_segments + 2);
-        tangents.ensureCapacity(ndiv * num_segments + 2);
+        this.points.ensureCapacity(ndiv * num_segments + 2);
+        this.tangents.ensureCapacity(ndiv * num_segments + 2);
 
         ArrayList<Vector3> normals = new ArrayList<>();
         ArrayList<Integer> segment_ids = new ArrayList<>();
@@ -170,7 +176,7 @@ public class Curve {
                     p = p.sub(N1.mul(p.sub(P1).dot(N1)));
                 }
 
-                points.add(p);
+                this.points.add(p);
                 normals.add(n);
                 segment_ids.add(i);
             }
@@ -180,28 +186,28 @@ public class Curve {
 
         CubicHermite correction = new CubicHermite(dx0, dt0, dx1, dt1, length);
 
-        for (int i = 0; i < points.size(); i++) {
+        for (int i = 0; i < this.points.size(); i++) {
             Vector3 n = normals.get(i);
             Vector3 dx = correction.e(length - distances[i]);
-            points.set(i, points.get(i).add(dx.sub(n.mul(dx.dot(n)))));
+            this.points.set(i, this.points.get(i).add(dx.sub(n.mul(dx.dot(n)))));
         }
 
-        if (start.sub(points.get(0)).magnitude() > 1f) {
-            points.add(0, start);
+        if (start.sub(this.points.get(0)).magnitude() > 1f) {
+            this.points.add(0, start);
             normals.add(0, normals.get(0));
         }
 
-        if (end.sub(points.get(points.size() - 1)).magnitude() > 1f) {
-            points.add(end);
+        if (end.sub(this.points.get(this.points.size() - 1)).magnitude() > 1f) {
+            this.points.add(end);
             normals.add(normals.get(normals.size() - 1));
         }
 
         calculateDistances();
         calculateTangents();
 
-        curvatures = new float[points.size()];
+        this.curvatures = new float[this.points.size()];
 
-        int last = curvatures.length - 1;
+        int last = this.curvatures.length - 1;
 
         Vector3 m, n;
 
@@ -210,28 +216,28 @@ public class Curve {
         float kappa1, kappa2, ds;
 
         for (int i = 1; i < last; i++) {
-            m = tangents.get(i + 1).crossProduct(tangents.get(i - 1));
+            m = this.tangents.get(i + 1).crossProduct(this.tangents.get(i - 1));
             n = normals.get(i);
 
-            ds = distances[i - 1] - distances[i + 1];
+            ds = this.distances[i - 1] - this.distances[i + 1];
             kappa1 = (float) MathUtils.clip(Math.asin(m.magnitude()) / ds, 0f, kappa_max);
             kappa2 = (float) Math.asin(Math.abs(m.dot(n))) / ds;
-            curvatures[i] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
+            this.curvatures[i] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
         }
 
-        m = tangents.get(1).crossProduct(tangents.get(0));
+        m = this.tangents.get(1).crossProduct(this.tangents.get(0));
         n = normals.get(0);
-        ds = distances[0] - distances[1];
+        ds = this.distances[0] - this.distances[1];
         kappa1 = (float) MathUtils.clip(Math.asin(m.magnitude()) / ds, 0f, kappa_max);
         kappa2 = (float) Math.asin(Math.abs(m.dot(n))) / ds;
-        curvatures[0] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
+        this.curvatures[0] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
 
-        m = tangents.get(last).crossProduct(tangents.get(last - 1));
+        m = this.tangents.get(last).crossProduct(this.tangents.get(last - 1));
         n = normals.get(last);
-        ds = distances[last - 1] - distances[last];
+        ds = this.distances[last - 1] - this.distances[last];
         kappa1 = (float) MathUtils.clip(Math.asin(m.magnitude()) / ds, 0f, kappa_max);
         kappa2 = (float) Math.asin(Math.abs(m.dot(n))) / ds;
-        curvatures[last] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
+        this.curvatures[last] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
     }
 
     public static Curve from(FlatCurve flatCurve) {
@@ -261,12 +267,15 @@ public class Curve {
             ballPrediction = YangBallPrediction.empty();
         if (absoluteArrivalTime < 0)
             absoluteArrivalTime = car.elapsedSeconds + (this.length / (DriveManeuver.max_throttle_speed));
+
         final float dt = RLConstants.simulationTickFrequency;
         final float relativeArrivalTime = absoluteArrivalTime - car.elapsedSeconds;
         final float averageSpeed = this.length / Math.max(relativeArrivalTime, RLConstants.simulationTickFrequency);
 
-        if (averageSpeed > CarData.MAX_VELOCITY + 25)
-            return new PathCheckStatus(0);
+        if (averageSpeed > CarData.MAX_VELOCITY + 25) {
+            this.pathCheckStatus = new PathCheckStatus(0);
+            return this.pathCheckStatus;
+        }
 
         if (this.maxSpeeds.length == 0)
             this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
@@ -293,7 +302,7 @@ public class Curve {
 
             // Check for ball collisions
             if (!collidedWithBall && ballAtFrameOptional.isPresent() && distToTarget > Math.max(currentSpeed, 500f) * 0.2f + 50) {
-                BallData ballAtFrame = ballAtFrameOptional.get().ballData;
+                BallData ballAtFrame = ballAtFrameOptional.get().ballData.makeMutable();
 
                 Vector3 carPos = this.pointAt(distToTarget);
                 if (ballAtFrame.collidesWith(carBox, carPos)) { // Collide with ball
@@ -323,7 +332,8 @@ public class Curve {
             }
         }
 
-        return new PathCheckStatus(distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition, currentSpeed);
+        this.pathCheckStatus = new PathCheckStatus(distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition, currentSpeed);
+        return this.pathCheckStatus;
     }
 
 
@@ -537,6 +547,14 @@ public class Curve {
         return currentVelocity;
     }
 
+    public PathCheckStatus getPathCheckStatus() {
+        return pathCheckStatus;
+    }
+
+    public List<ControlPoint> getControlPoints() {
+        return controlPoints;
+    }
+
     public static class ControlPoint {
         public final Vector3 point;
         public final Vector3 normal;
@@ -557,7 +575,8 @@ public class Curve {
 
     public enum PathStatus {
         VALID,
-        SPEED_EXCEEDED
+        SPEED_EXCEEDED,
+        UNKNOWN
     }
 
     public static class PathCheckStatus {

@@ -42,6 +42,15 @@ public class BallData {
         this.elapsedSeconds = elapsedSeconds;
     }
 
+    public BallData(final ImmutableBallData ball) {
+        this.position = ball.position;
+        this.velocity = ball.velocity;
+        this.angularVelocity = ball.angularVelocity;
+        this.hasBeenTouched = ball.hasBeenTouched;
+        this.latestTouch = ball.latestTouch;
+        this.elapsedSeconds = ball.elapsedSeconds;
+    }
+
     public BallData(final BallData ball) {
         this.position = ball.position;
         this.velocity = ball.velocity;
@@ -116,8 +125,12 @@ public class BallData {
         return FlatPhysics.endFlatPhysics(builder);
     }
 
-    public boolean isInGoal() {
+    public boolean isInAnyGoal() {
         return Math.abs(this.position.y) > BallData.RADIUS + RLConstants.goalDistance;
+    }
+
+    public boolean isInGoal(int teamSign) {
+        return this.position.y > (BallData.RADIUS + RLConstants.goalDistance) * teamSign;
     }
 
     public void step(float dt) {

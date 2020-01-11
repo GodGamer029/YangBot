@@ -1,8 +1,5 @@
 package yangbot.strategy;
 
-import rlbot.cppinterop.RLBotDll;
-import rlbot.gamestate.GameInfoState;
-import rlbot.gamestate.GameState;
 import yangbot.cpp.YangBotCppInterop;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
@@ -41,9 +38,9 @@ public class OffensiveStrategy extends Strategy {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
-        RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
+        //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
 
-        if (this.state == State.FOLLOW_PATH_STRIKE && this.followPathManeuver.arrivalTime > car.elapsedSeconds && this.followPathManeuver.arrivalTime - car.elapsedSeconds < 0.6f)
+        if (this.state == State.FOLLOW_PATH_STRIKE && this.followPathManeuver.arrivalTime > car.elapsedSeconds && this.followPathManeuver.arrivalTime - car.elapsedSeconds < 0.5f)
             return; // Don't replan when we are close to hitting the ball
 
         if (this.checkReset(1.5f))
@@ -56,6 +53,13 @@ public class OffensiveStrategy extends Strategy {
 
         if (!car.hasWheelContact) {
             this.setDone();
+            return;
+        }
+
+        boolean isOutOfPosition = false;
+
+        if (isOutOfPosition) {
+
             return;
         }
 
@@ -87,6 +91,7 @@ public class OffensiveStrategy extends Strategy {
                 final Vector3 targetPos = interceptFrame.ballData.position;
                 final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 1000));
                 Vector3 targetToGoal = enemyGoal.sub(targetPos.flatten()).withZ(0).normalized();
+
                 targetToGoal = targetToGoal.add(targetPos.sub(car.position).normalized().mul(3)).div(4);
                 final Vector3 groundedTargetPos = targetPos.sub(targetToGoal.mul(BallData.COLLISION_RADIUS));
                 final Vector3 startPosition = car.position.add(car.velocity.mul(RLConstants.tickFrequency * 2)).sub(car.forward().mul(80));
@@ -141,7 +146,7 @@ public class OffensiveStrategy extends Strategy {
             return;
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
-        BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
         AdvancedRenderer renderer = gameData.getAdvancedRenderer();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
@@ -205,7 +210,8 @@ public class OffensiveStrategy extends Strategy {
 
                             long ns = System.nanoTime();
                             long ms = System.currentTimeMillis();
-
+                            Vector3 ballVelBeforeColl = new Vector3();
+                            Vector3 ballAngBeforeColl = new Vector3();
                             int tim = 0;
                             for (float duration = Math.max(0.05f, this.dodgeManeuver.timer); duration <= 0.2f; duration += 0.05f) { // 0.1f, 0.15f, 0.2f
                                 for (float delay = duration + 0.05f; delay <= 0.6f; delay += 0.1f) {
@@ -228,6 +234,9 @@ public class OffensiveStrategy extends Strategy {
                                         FoolGameData foolGameData = GameData.current().fool();
                                         Vector3 simContact = null;
 
+                                        Vector3 ang = null;
+                                        Vector3 vel = null;
+
                                         for (float time = 0; time < T + 0.1f; time += simDt) {
                                             ControlsOutput simControls = new ControlsOutput();
 
@@ -239,7 +248,9 @@ public class OffensiveStrategy extends Strategy {
                                             simCar.step(simControls, simDt);
 
                                             if (simBall.collidesWith(simCar)) {
-                                                simBall.stepWithCollideChip(0, simCar);
+                                                vel = simBall.velocity;
+                                                ang = simBall.angularVelocity;
+                                                simBall.collide(simCar);
                                                 simBall.hasBeenTouched = true;
                                             }
 
@@ -248,10 +259,15 @@ public class OffensiveStrategy extends Strategy {
                                             if (simBall.hasBeenTouched)
                                                 break;
 
+                                            // + = hit earlier
+                                            // - = hit later
+                                            // The right parameter is different depending on how fast this algorithm performs, currently it takes about 17-21ms, a little more than 2 physics ticks
                                             Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFrameAtRelativeTime(time + 1f * RLConstants.tickFrequency);
                                             if (!frameOptional.isPresent())
                                                 break;
-                                            simBall = frameOptional.get().ballData;
+                                            simBall = frameOptional.get().ballData.makeMutable();
+                                            if (simBall.velocity.magnitude() > BallData.MAX_VELOCITY * 1.5f)
+                                                System.out.println("Got faulty ball: " + simBall.toString());
                                             simBall.hasBeenTouched = false;
                                         }
 
@@ -266,9 +282,9 @@ public class OffensiveStrategy extends Strategy {
                                                 Optional<YangBallPrediction.YangPredictionFrame> dataAtFrame = simBallPred.getFrameAtRelativeTime(time);
                                                 if (!dataAtFrame.isPresent())
                                                     break;
-                                                BallData ballAtFrame = dataAtFrame.get().ballData;
+                                                ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
                                                 float dist = (float) ballAtFrame.position.flatten().distance(enemyGoal);
-                                                boolean landsInGoal = ballAtFrame.isInGoal();
+                                                boolean landsInGoal = ballAtFrame.makeMutable().isInGoal(teamSign);
 
                                                 if (landsInGoal) {
                                                     if (!didLandInGoal) {
@@ -300,15 +316,16 @@ public class OffensiveStrategy extends Strategy {
                                                 this.hitBall = simBall;
                                                 this.contactPoint = simContact;
                                                 this.contactNormal = simBall.position.sub(simContact).normalized();
+
+                                                ballAngBeforeColl = ang;
+                                                ballVelBeforeColl = vel;
                                             }
                                         }
                                     }
                                 }
                             }
                             if (this.hitPrediction != null) {
-                                RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
-                                System.out.println(this.hitBall.toString());
-                                System.out.println(this.hitCar.toString());
+                                //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
                             }
 
                             System.out.println("Offensive shot planning took: " + (System.currentTimeMillis() - ms) + "ms with " + tim + " simulations");

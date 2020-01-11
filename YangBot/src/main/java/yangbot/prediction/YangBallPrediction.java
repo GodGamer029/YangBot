@@ -6,6 +6,7 @@ import rlbot.flat.BallPrediction;
 import rlbot.flat.Physics;
 import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
+import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
 import yangbot.util.AdvancedRenderer;
 import yangbot.vector.Vector3;
@@ -80,7 +81,6 @@ public class YangBallPrediction {
     }
 
     public static YangBallPrediction get(BallPredictionType ballPredictionType) {
-
         switch (ballPredictionType) {
             case RLBOT:
                 try {
@@ -112,13 +112,13 @@ public class YangBallPrediction {
             }
             lastAbsTime = frame.get().absoluteTime;
             time = frame.get().relativeTime;
-            BallData ball = frame.get().ballData;
+            ImmutableBallData ball = frame.get().ballData;
             if (lastPos.distance(ball.position) < 50)
                 continue;
             renderer.drawLine3d(color, lastPos, ball.position);
             lastPos = ball.position;
 
-            if (ball.isInGoal()) {
+            if (ball.makeMutable().isInAnyGoal()) {
                 renderer.drawCentered3dCube(color.brighter().brighter(), ball.position, 50);
                 renderer.drawString3d("Goal!", Color.WHITE, ball.position.add(0, 0, 150), 1, 1);
                 break;
@@ -197,20 +197,20 @@ public class YangBallPrediction {
 
     public static class YangPredictionFrame {
         public final float absoluteTime;
-        public final BallData ballData;
+        public final ImmutableBallData ballData;
         public float relativeTime;
 
         public YangPredictionFrame(float absoluteTime, float relativeTime, BallData ballData) {
             this.absoluteTime = absoluteTime;
             this.relativeTime = relativeTime;
-            this.ballData = new BallData(ballData);
+            this.ballData = new ImmutableBallData(ballData);
         }
 
         public YangPredictionFrame(float relativeTime, PredictionSlice predictionSlice) {
             this.relativeTime = relativeTime;
             this.absoluteTime = predictionSlice.gameSeconds();
             Physics physics = predictionSlice.physics();
-            this.ballData = new BallData(physics);
+            this.ballData = new ImmutableBallData(physics, this.absoluteTime);
         }
 
         public void adjustForLatencyCompensation(float offset) {

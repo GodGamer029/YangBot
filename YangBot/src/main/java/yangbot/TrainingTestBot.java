@@ -55,7 +55,7 @@ public class TrainingTestBot implements Bot {
         }
         lastBallPos = ball.position;
 
-        GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
+        GameData.current().update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
         RLConstants.gravity = new Vector3(0, 0, -0.000001f);
         YangBallPrediction ballPrediction = ball.makeBallPrediction(RLConstants.tickFrequency, 3);
         ballPrediction.draw(renderer, Color.RED, 2f);
@@ -93,11 +93,10 @@ public class TrainingTestBot implements Bot {
                         break;
                     }
 
-
-                    Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFrameAtRelativeTime(time + 0f * RLConstants.tickFrequency);
+                    Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFrameAtRelativeTime(time - 10f * RLConstants.tickFrequency);
                     if (!frameOptional.isPresent())
                         break;
-                    simBall = frameOptional.get().ballData;
+                    simBall = frameOptional.get().ballData.makeMutable();
                     simBall.hasBeenTouched = false;
                 }
 

@@ -12,8 +12,8 @@ public class DefaultStrategy extends Strategy {
     private int jumpFromWallTick = 0;
 
     public static void smartBallChaser(float dt, ControlsOutput controlsOutput) {
-        GameData gameData = GameData.current();
-        BallData ball = gameData.getBallData();
+        final GameData gameData = GameData.current();
+        final ImmutableBallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
         CarData car = gameData.getCarData();
 
@@ -31,7 +31,7 @@ public class DefaultStrategy extends Strategy {
     @Override
     public void planStrategyInternal() {
         GameData gameData = GameData.current();
-        BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
         CarData car = gameData.getCarData();
 
         if (!car.hasWheelContact) {
@@ -48,8 +48,8 @@ public class DefaultStrategy extends Strategy {
         // Chase the ball like a pro
 
         GameData gameData = GameData.current();
-        BallData ball = gameData.getBallData();
-        CarData car = gameData.getCarData();
+        final ImmutableBallData ball = gameData.getBallData();
+        final CarData car = gameData.getCarData();
 
         if (!car.hasWheelContact) {
             if (jumpFromWallTick > 0) {

@@ -1,9 +1,9 @@
 package yangbot.manuever.kickoff;
 
-import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.input.ImmutableBallData;
 import yangbot.manuever.AerialManeuver;
 import yangbot.manuever.Maneuver;
 import yangbot.vector.Matrix3x3;
@@ -25,7 +25,7 @@ public class LowGravityKickoffManeuver extends Maneuver {
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
-        final BallData ball = gameData.getBallData();
+        final ImmutableBallData ball = gameData.getBallData();
         final CarData car = gameData.getCarData();
 
         if (!ball.velocity.isZero()) {

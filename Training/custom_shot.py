@@ -28,7 +28,7 @@ class CustomHookShot(StrikerExercise):
                     physics=Physics(
                         location=Vector3(-2000, 1500, 25),
                         rotation=Rotator(0, pi / (0 + rng.uniform(-0.9, 0.9)), 0),
-                        velocity=Vector3(0, 1000, 0),
+                        velocity=Vector3(0, 700, 0),
                         angular_velocity=Vector3(0, 0, 0)),
                     boost_amount=87),
                 1: CarState(physics=Physics(location=Vector3(10000, 10000, 10000)))

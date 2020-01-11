@@ -1,16 +1,13 @@
 package yangbot.strategy;
 
-import yangbot.input.BallData;
-import yangbot.input.CarData;
-import yangbot.input.GameData;
-import yangbot.input.RLConstants;
+import yangbot.input.*;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.DriveManeuver;
 import yangbot.manuever.FollowPathManeuver;
+import yangbot.optimizers.path.AvoidObstacleInPathUtil;
 import yangbot.prediction.Curve;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
 
@@ -58,31 +55,6 @@ public class DefendStrategy extends Strategy {
             state = State.BALLCHASE;
         else
             state = State.ROTATE;
-    }
-
-    private List<Curve.ControlPoint> applyBallCollisionFix(Curve.PathCheckStatus pathCheckStatus, List<Curve.ControlPoint> controlPoints, Curve currentPath, int tries) {
-        if (!pathCheckStatus.collidedWithBall)
-            return controlPoints;
-
-        // Take the contact point and place a control point in the opposite direction
-        Vector3 contactPoint = pathCheckStatus.ballCollisionContactPoint.withZ(controlPoints.get(0).point.z);
-        final float distanceAtCollision = currentPath.findNearest(contactPoint);
-        Vector3 pathPointAtCollision = currentPath.pointAt(distanceAtCollision);
-        Vector3 tangentAtCollision = currentPath.tangentAt(distanceAtCollision);
-
-        Vector3 collisionNormal = contactPoint.sub(pathPointAtCollision);
-        Vector3 collisionNormalParallel = tangentAtCollision.mul(collisionNormal.dot(tangentAtCollision));
-        Vector3 collisionNormalPerpendicular = collisionNormal.sub(collisionNormalParallel).normalized();
-
-        Vector3 newControlPoint = pathPointAtCollision.add(collisionNormalPerpendicular.mul(BallData.RADIUS * -1.2f * (tries / 2f + 1)).withZ(0)).withZ(controlPoints.get(0).point.z);
-        if (tries == 0)
-            controlPoints.add(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(controlPoints.get(0).point).normalized()));
-        else
-            controlPoints.set(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(controlPoints.get(0).point).normalized()));
-        controlPoints.get(2).tangent = controlPoints.get(2).point.sub(controlPoints.get(1).point);
-        this.collision = pathCheckStatus.ballCollisionContactPoint;
-
-        return controlPoints;
     }
 
     @Override
@@ -151,7 +123,7 @@ public class DefendStrategy extends Strategy {
                                 for (int tries = 0; tries < 3; tries++) { // Move the path away from the ball
                                     pathStatus = currentPath.doPathChecking(car, -1, ballPrediction);
                                     if (pathStatus.collidedWithBall) { // Colliding with ball
-                                        controlPoints = this.applyBallCollisionFix(pathStatus, controlPoints, currentPath, tries);
+                                        AvoidObstacleInPathUtil.applyBallCollisionFix(pathStatus, controlPoints, currentPath, tries);
                                         currentPath = new Curve(controlPoints);
                                     } else
                                         break;
@@ -198,7 +170,7 @@ public class DefendStrategy extends Strategy {
                     for (int tries = 0; tries < 5; tries++) { // Move the path away from the ball
                         status = nextPath.doPathChecking(car, -1, ballPrediction);
                         if (status.collidedWithBall) { // Colliding with ball
-                            this.applyBallCollisionFix(status, controlPoints, nextPath, tries);
+                            AvoidObstacleInPathUtil.applyBallCollisionFix(status, controlPoints, nextPath, tries);
                             nextPath = new Curve(controlPoints);
                         } else
                             break;
@@ -245,19 +217,13 @@ public class DefendStrategy extends Strategy {
                     followPathManeuver.arrivalSpeed = DriveManeuver.max_throttle_speed - 10;
                 }
 
-
+                followPathManeuver.draw(renderer, car);
             }
 
             if ((state == State.FOLLOW_PATH_STRIKE && (!car.hasWheelContact || followPathManeuver.isDone() || followPathManeuver.arrivalTime - car.elapsedSeconds <= dodgeManeuver.delay + RLConstants.tickFrequency))) {
                 dodgeManeuver.target = ballPrediction.getFrameAtRelativeTime(dodgeManeuver.delay - dodgeManeuver.timer + 0.1f).get().ballData.position;
                 dodgeManeuver.step(dt, controlsOutput);
             }
-
-            if (followPathManeuver.arrivalTime > 0)
-                renderer.drawString2d(String.format("Arriving in %.1fs", followPathManeuver.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 450), 2, 2);
-            renderer.drawString2d(String.format("Max speed: %.0fuu/s", followPathManeuver.path.maxSpeedAt(followPathManeuver.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
-            renderer.drawString2d(String.format("Max drive: %.0fuu/s", followPathManeuver.driveManeuver.speed), Color.WHITE, new Point(500, 530), 2, 2);
-            renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, 570), 2, 2);
         }
     }
 

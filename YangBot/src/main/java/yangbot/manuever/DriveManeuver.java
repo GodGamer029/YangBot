@@ -1,10 +1,10 @@
 package yangbot.manuever;
 
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
-import yangbot.util.ControlsOutput;
-import yangbot.util.MathUtils;
+import yangbot.util.math.MathUtils;
 import yangbot.vector.Vector3;
 
 public class DriveManeuver extends Maneuver {

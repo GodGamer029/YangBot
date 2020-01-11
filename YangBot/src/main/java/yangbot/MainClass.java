@@ -6,8 +6,8 @@ import rlbot.manager.BotManager;
 import yangbot.cpp.YangBotCppInterop;
 import yangbot.prediction.Navigator;
 import yangbot.util.Graph;
-import yangbot.util.LEDataInputStream;
-import yangbot.util.PortReader;
+import yangbot.util.io.LEDataInputStream;
+import yangbot.util.io.PortReader;
 import yangbot.vector.Vector3;
 
 import javax.swing.*;

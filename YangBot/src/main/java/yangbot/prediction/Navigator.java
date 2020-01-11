@@ -2,7 +2,7 @@ package yangbot.prediction;
 
 import yangbot.input.CarData;
 import yangbot.util.Graph;
-import yangbot.util.MathUtils;
+import yangbot.util.math.MathUtils;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 

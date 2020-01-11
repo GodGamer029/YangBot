@@ -1,12 +1,12 @@
 #pragma once
 
-#include "simulation/car.h"
-#include "simulation/input.h"
-#include "simulation/curve.h"
+#include "../simulation/car.h"
+#include "../simulation/input.h"
+#include "../simulation/curve.h"
 
-#include "linear_algebra/math.h"
+#include "../linear_algebra/math.h"
 
-#include "misc/graph.h"
+#include "../misc/graph.h"
 
 #include <array>
 #include <tuple>

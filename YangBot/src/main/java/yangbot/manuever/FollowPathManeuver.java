@@ -1,11 +1,14 @@
 package yangbot.manuever;
 
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.prediction.Curve;
-import yangbot.util.ControlsOutput;
-import yangbot.util.MathUtils;
+import yangbot.util.AdvancedRenderer;
+import yangbot.util.math.MathUtils;
+
+import java.awt.*;
 
 public class FollowPathManeuver extends Maneuver {
 
@@ -82,6 +85,19 @@ public class FollowPathManeuver extends Maneuver {
             controlsOutput.withSlide();
             controlsOutput.withSteer(Math.signum(controlsOutput.getSteer()));
         }
+    }
+
+    public void draw(AdvancedRenderer renderer, CarData car) {
+        float currentPos = this.path.findNearest(car.position);
+        float distanceOffPath = (float) car.position.flatten().distance(this.path.pointAt(currentPos).flatten());
+
+        renderer.drawString2d(String.format("Current %.1f", 100 - (100 * currentPos / this.path.length)), Color.WHITE, new Point(500, 410), 1, 1);
+        renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, 430), 1, 1);
+        if (this.arrivalTime > 0)
+            renderer.drawString2d(String.format("Arriving in %.1fs", this.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 450), 2, 2);
+        renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
+        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.speed), Color.WHITE, new Point(500, 530), 2, 2);
+        renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, 570), 2, 2);
     }
 
     float distanceError(float s0, float T, float dt, float v0, float vT, float aT) {

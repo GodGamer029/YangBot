@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#include "linear_algebra/math.h"
+#include "../linear_algebra/math.h"
 
 struct ControlPoint {
   vec3 p, t, n;

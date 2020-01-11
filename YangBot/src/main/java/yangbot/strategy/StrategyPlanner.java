@@ -1,6 +1,6 @@
 package yangbot.strategy;
 
-import yangbot.util.ControlsOutput;
+import yangbot.input.ControlsOutput;
 
 import java.util.Optional;
 

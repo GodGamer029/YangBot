@@ -79,7 +79,7 @@ public class YangBotCppInterop {
             BallData data = new BallData(new Vector3(frames[i * 3], frames[i * 3 + 1], frames[i * 3 + 2]), new Vector3(), new Vector3());
             ballDataList.add(new YangBallPrediction.YangPredictionFrame(i * tickFreq + ballData.elapsedSeconds, i * tickFreq, data));
         }
-        return YangBallPrediction.from(ballDataList, 1f / tickrate);
+        return YangBallPrediction.from(ballDataList, tickFreq);
     }
 
     public static native float[] ballstep(Vector3 pos, Vector3 vel, Vector3 ang, int tickRate);

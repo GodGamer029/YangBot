@@ -9,18 +9,18 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
-public final class FBSCarData extends Table {
-    public static FBSCarData getRootAsFBSCarData(ByteBuffer _bb) {
-        return getRootAsFBSCarData(_bb, new FBSCarData());
+public final class FlatPhysics extends Table {
+    public static FlatPhysics getRootAsFlatPhysics(ByteBuffer _bb) {
+        return getRootAsFlatPhysics(_bb, new FlatPhysics());
     }
 
-    public static FBSCarData getRootAsFBSCarData(ByteBuffer _bb, FBSCarData obj) {
+    public static FlatPhysics getRootAsFlatPhysics(ByteBuffer _bb, FlatPhysics obj) {
         _bb.order(ByteOrder.LITTLE_ENDIAN);
         return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
     }
 
-    public static void startFBSCarData(FlatBufferBuilder builder) {
-        builder.startObject(6);
+    public static void startFlatPhysics(FlatBufferBuilder builder) {
+        builder.startObject(5);
     }
 
     public static void addPosition(FlatBufferBuilder builder, int positionOffset) {
@@ -39,15 +39,11 @@ public final class FBSCarData extends Table {
         builder.addStruct(3, eulerRotationOffset, 0);
     }
 
-    public static void addOnGround(FlatBufferBuilder builder, boolean onGround) {
-        builder.addBoolean(4, onGround, false);
-    }
-
     public static void addElapsedSeconds(FlatBufferBuilder builder, float elapsedSeconds) {
-        builder.addFloat(5, elapsedSeconds, 0.0f);
+        builder.addFloat(4, elapsedSeconds, 0.0f);
     }
 
-    public static int endFBSCarData(FlatBufferBuilder builder) {
+    public static int endFlatPhysics(FlatBufferBuilder builder) {
         int o = builder.endObject();
         return o;
     }
@@ -57,7 +53,7 @@ public final class FBSCarData extends Table {
         bb = _bb;
     }
 
-    public FBSCarData __assign(int _i, ByteBuffer _bb) {
+    public FlatPhysics __assign(int _i, ByteBuffer _bb) {
         __init(_i, _bb);
         return this;
     }
@@ -98,13 +94,8 @@ public final class FBSCarData extends Table {
         return o != 0 ? obj.__assign(o + bb_pos, bb) : null;
     }
 
-    public boolean onGround() {
-        int o = __offset(12);
-        return o != 0 && 0 != bb.get(o + bb_pos);
-    }
-
     public float elapsedSeconds() {
-        int o = __offset(14);
+        int o = __offset(12);
         return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f;
     }
 }

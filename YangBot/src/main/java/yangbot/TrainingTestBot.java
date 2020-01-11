@@ -7,7 +7,6 @@ import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.ControlsOutput;
 import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.vector.Vector3;
 

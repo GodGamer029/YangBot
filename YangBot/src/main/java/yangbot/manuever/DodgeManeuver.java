@@ -1,8 +1,8 @@
 package yangbot.manuever;
 
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;

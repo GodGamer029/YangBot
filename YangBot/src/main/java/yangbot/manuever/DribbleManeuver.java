@@ -1,11 +1,7 @@
 package yangbot.manuever;
 
-import yangbot.input.BallData;
-import yangbot.input.CarData;
-import yangbot.input.GameData;
-import yangbot.input.RLConstants;
+import yangbot.input.*;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
 
@@ -45,7 +41,7 @@ public class DribbleManeuver extends Maneuver {
             if (frame.absoluteTime - car.elapsedSeconds > 3.5f)
                 continue;
 
-            if (RLConstants.isPosNearWall(loc.flatten()))
+            if (RLConstants.isPosNearWall(loc.flatten(), 10))
                 continue;
 
             if (loc.z <= ballRadius + 2f && Math.abs(vel.z) <= 1f)
@@ -84,7 +80,7 @@ public class DribbleManeuver extends Maneuver {
                 if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)
                     break;
 
-                if (RLConstants.isPosNearWall(loc.flatten()))
+                if (RLConstants.isPosNearWall(loc.flatten(), 10))
                     continue;
 
                 if (vel.z < 0 &&

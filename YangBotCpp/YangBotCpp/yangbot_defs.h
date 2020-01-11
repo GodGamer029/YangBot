@@ -22,11 +22,13 @@ extern "C" {
 
 	JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv*, jclass, jbyte, jbyte);
 	
-	JNIEXPORT ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize);
+	JNIEXPORT ByteBuffer __cdecl simulateCarCollision(void* inputCar);
 
-	JNIEXPORT ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize);
+	JNIEXPORT ByteBuffer __cdecl simulateSimpleCar(void* inputCar, float time);
 
-	JNIEXPORT ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall);
+	JNIEXPORT ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall, float dt);
+
+	JNIEXPORT ByteBuffer __cdecl findPath(void* pathRequest);
 	
 	JNIEXPORT void JNICALL Free( void*);
 

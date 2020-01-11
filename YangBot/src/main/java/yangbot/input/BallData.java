@@ -3,12 +3,12 @@ package yangbot.input;
 import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
-import yangbot.cpp.FBSCarData;
+import yangbot.cpp.FlatPhysics;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.util.MathUtils;
 import yangbot.util.hitbox.YangHitbox;
 import yangbot.util.hitbox.YangSphereHitbox;
+import yangbot.util.math.MathUtils;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
@@ -99,16 +99,25 @@ public class BallData {
     }
 
     public void stepWithCollideChip(float dt, CarData car) {
-        FBSCarData fbsCarData = YangBotJNAInterop.simulateCarBallCollision(dt, car, this).get();
+        FlatPhysics fbsCarData = YangBotJNAInterop.simulateCarBallCollision(car, this, dt).get();
         this.position = new Vector3(fbsCarData.position());
         this.velocity = new Vector3(fbsCarData.velocity());
         this.angularVelocity = new Vector3(fbsCarData.angularVelocity());
     }
 
-    public void apply(FlatBufferBuilder builder) {
-        FBSCarData.addAngularVelocity(builder, this.angularVelocity.toYangbuffer(builder));
-        FBSCarData.addVelocity(builder, this.velocity.toYangbuffer(builder));
-        FBSCarData.addPosition(builder, this.position.toYangbuffer(builder));
+    public int makeFlatPhysics(FlatBufferBuilder builder) {
+        FlatPhysics.startFlatPhysics(builder);
+
+        FlatPhysics.addAngularVelocity(builder, this.angularVelocity.toYangbuffer(builder));
+        FlatPhysics.addVelocity(builder, this.velocity.toYangbuffer(builder));
+        FlatPhysics.addPosition(builder, this.position.toYangbuffer(builder));
+        FlatPhysics.addElapsedSeconds(builder, this.elapsedSeconds);
+
+        return FlatPhysics.endFlatPhysics(builder);
+    }
+
+    public boolean isInGoal() {
+        return Math.abs(this.position.y) > BallData.RADIUS + RLConstants.goalDistance;
     }
 
     public void step(float dt) {
@@ -241,5 +250,18 @@ public class BallData {
         }
 
         return null;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(this.getClass().getSimpleName());
+
+        sb.append("(\n");
+        sb.append("\tposition=" + position.toString() + "\n");
+        sb.append("\tvelocity=" + velocity.toString() + "\n");
+        sb.append("\tangular=" + angularVelocity.toString() + "\n");
+        sb.append(")");
+
+        return sb.toString();
     }
 }

@@ -3,11 +3,11 @@ package yangbot.input;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.Rotator;
-import yangbot.cpp.FBSCarData;
+import yangbot.cpp.FlatCarData;
+import yangbot.cpp.FlatPhysics;
 import yangbot.manuever.AerialManeuver;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.DriveManeuver;
-import yangbot.util.ControlsOutput;
 import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.vector.Matrix2x2;
 import yangbot.vector.Matrix3x3;
@@ -66,7 +66,7 @@ public class CarData {
     // Variables used exclusively in step functions
     private Vector3 dodgeTorque;
     public float jumpTimer = -1.0f;
-    private float dodgeTimer = -1.0f;
+    public float dodgeTimer = -1.0f;
     public boolean enableJumpAcceleration = false;
 
     public CarData(rlbot.flat.PlayerInfo playerInfo, float elapsedSeconds, int index) {
@@ -104,7 +104,7 @@ public class CarData {
         this.hasWheelContact = o.hasWheelContact;
         this.elapsedSeconds = o.elapsedSeconds;
 
-        this.hitbox = o.hitbox;
+        this.hitbox = o.hitbox.withOrientation(this.orientation); // Clone Hitbox
         this.doubleJumped = o.doubleJumped;
         this.jumped = o.jumped;
 
@@ -132,13 +132,27 @@ public class CarData {
         return Matrix2x2.fromRotation(this.orientation.toEuler().y);
     }
 
-    public void apply(FlatBufferBuilder builder) {
-        FBSCarData.addAngularVelocity(builder, this.angularVelocity.toYangbuffer(builder));
-        FBSCarData.addElapsedSeconds(builder, this.elapsedSeconds);
-        FBSCarData.addEulerRotation(builder, this.orientation.toEuler().toYangbuffer(builder));
-        FBSCarData.addOnGround(builder, this.hasWheelContact);
-        FBSCarData.addVelocity(builder, this.velocity.toYangbuffer(builder));
-        FBSCarData.addPosition(builder, this.position.toYangbuffer(builder));
+    public int makeFlatPhysics(FlatBufferBuilder builder) {
+        FlatPhysics.startFlatPhysics(builder);
+
+        FlatPhysics.addAngularVelocity(builder, this.angularVelocity.toYangbuffer(builder));
+        FlatPhysics.addEulerRotation(builder, this.orientation.toEuler().toYangbuffer(builder));
+        FlatPhysics.addVelocity(builder, this.velocity.toYangbuffer(builder));
+        FlatPhysics.addPosition(builder, this.position.toYangbuffer(builder));
+        FlatPhysics.addElapsedSeconds(builder, this.elapsedSeconds);
+
+        return FlatPhysics.endFlatPhysics(builder);
+    }
+
+    public int makeFlat(FlatBufferBuilder builder) {
+        int physOffset = this.makeFlatPhysics(builder);
+
+        FlatCarData.startFlatCarData(builder);
+
+        FlatCarData.addOnGround(builder, this.hasWheelContact);
+        FlatCarData.addPhysics(builder, physOffset);
+
+        return FlatCarData.endFlatCarData(builder);
     }
 
     public Vector3 up() {
@@ -257,8 +271,6 @@ public class CarData {
         this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt))
                 .matrixMul(this.orientation);
 
-        this.hitbox.setOrientation(this.orientation);
-
         this.jumpTimer = 0.0f;
         this.jumped = true;
         this.doubleJumped = false;
@@ -300,7 +312,6 @@ public class CarData {
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
-            this.hitbox.setOrientation(this.orientation);
 
             this.doubleJumped = true;
             this.dodgeTimer = 0.0f;
@@ -313,7 +324,6 @@ public class CarData {
 
             this.angularVelocity = this.angularVelocity.add(dodgeTorque.mul(dt));
             this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
-            this.hitbox.setOrientation(this.orientation);
 
             this.doubleJumped = true;
             this.dodgeTimer = 1.01f * DodgeManeuver.torque_time;
@@ -353,7 +363,7 @@ public class CarData {
         }
 
         if (0.0f <= dodgeTimer && dodgeTimer <= 0.3f) {
-            rpy = new Vector3(rpy.x, 0, rpy.z);
+            rpy = rpy.withY(0);
         }
 
         if (0.0f <= dodgeTimer && dodgeTimer <= DodgeManeuver.torque_time) {
@@ -372,7 +382,6 @@ public class CarData {
         this.velocity = this.velocity.add(RLConstants.gravity.mul(dt));
         this.position = this.position.add(this.velocity.mul(dt));
         this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
-        this.hitbox.setOrientation(this.orientation);
     }
 
     public void step(ControlsOutput in, float dt) {
@@ -424,6 +433,22 @@ public class CarData {
             enableJumpAcceleration = false;
         }
 
+        this.hitbox.setOrientation(this.orientation);
         this.lastControllerInputs = in;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(this.getClass().getSimpleName());
+
+        sb.append("(\n");
+        sb.append("\tposition=" + position.toString() + "\n");
+        sb.append("\tvelocity=" + velocity.toString() + "\n");
+        sb.append("\tangular=" + angularVelocity.toString() + "\n");
+        sb.append("\tforward=" + forward().toString() + "\n");
+        sb.append("\tup=" + up().toString() + "\n");
+        sb.append(")");
+
+        return sb.toString();
     }
 }

@@ -1,10 +1,6 @@
 package yangbot.manuever;
 
-import yangbot.input.CarData;
-import yangbot.input.FoolGameData;
-import yangbot.input.GameData;
-import yangbot.input.RLConstants;
-import yangbot.util.ControlsOutput;
+import yangbot.input.*;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 

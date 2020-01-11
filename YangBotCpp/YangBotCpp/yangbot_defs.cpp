@@ -8,13 +8,20 @@
 #include "rlu_headers/simulation/field.h"
 #include "rlu_headers/mechanics/reorient_ML.h"
 #include "rlu_headers/mechanics/reorient.h"
+#include "rlu_headers/experimental/navigator.h"
 
 bool init = false;
 jbyte currentMode = -1;
 jbyte currentMap = -1;
+std::unique_ptr<Navigator> yangNavigator;
 std::mutex initLock;
+std::mutex navLock;
 
 using namespace yangbot::cpp;
+
+extern FlatVec3 Pack(const vec3& v) {
+	return FlatVec3(v[0], v[1], v[2]);
+}
 
 JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceCollision(JNIEnv* env, jclass thisObj, jobject pos, jfloat sphereSize) {
 	if (!init)
@@ -36,6 +43,15 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceColli
 
 JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv* env, jclass thisObj, jbyte mode, jbyte map) {
 	initLock.lock();
+	if (!init) {
+		navLock.lock();
+
+		Car* sampleCar = new Car();
+
+		yangNavigator = std::make_unique<Navigator>(*sampleCar);
+
+		navLock.unlock();
+	}
 	if (currentMode != mode || currentMap != map) {
 		std::string modeS;
 		switch (mode) {
@@ -64,24 +80,27 @@ JNIEXPORT void JNICALL Java_yangbot_cpp_YangBotCppInterop_init(JNIEnv* env, jcla
 	
 	init = true;
 	initLock.unlock();
+
+
 }
 
 
-ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize) {
-	const FBSCarData* inputCarData = flatbuffers::GetRoot<FBSCarData>(inputCar);
+ByteBuffer __cdecl simulateSimpleCar(void* inputCar, float time) {
+	const FlatCarData* inputCarData = flatbuffers::GetRoot<FlatCarData>(inputCar);
+	const FlatPhysics* inputCarPhysics = inputCarData->physics();
 
 	constexpr float simulationRate = 1.f / 60.f;
-	const float secondsSimulated = inputCarData->elapsedSeconds();
+	const float secondsSimulated = time;
 	const int simulationSteps = (int)(secondsSimulated / simulationRate);
 
 	ByteBuffer result = ByteBuffer();
 	if (!init)
 		return result;
 
-	const vec3 position = *reinterpret_cast<const vec3*>(inputCarData->position());
-	const vec3 velocity = *reinterpret_cast<const vec3*>(inputCarData->velocity());
-	const vec3 angular = *reinterpret_cast<const vec3*>(inputCarData->angularVelocity());
-	const vec3 rotate = *reinterpret_cast<const vec3*>(inputCarData->eulerRotation());
+	const vec3 position = *reinterpret_cast<const vec3*>(inputCarPhysics->position());
+	const vec3 velocity = *reinterpret_cast<const vec3*>(inputCarPhysics->velocity());
+	const vec3 angular = *reinterpret_cast<const vec3*>(inputCarPhysics->angularVelocity());
+	const vec3 rotate = *reinterpret_cast<const vec3*>(inputCarPhysics->eulerRotation());
 
 	const vec3 g = { 0, 0, -650 };
 
@@ -99,7 +118,7 @@ ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize) {
 	}
 
 	flatbuffers::FlatBufferBuilder builder(256);
-	FBSCarDataBuilder carData(builder);
+	FlatPhysicsBuilder physData(builder);
 
 	auto newPos = FlatVec3(car.position[0], car.position[1], car.position[2]);
 	auto newVel = FlatVec3(car.velocity[0], car.velocity[1], car.velocity[2]);
@@ -107,14 +126,19 @@ ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize) {
 	vec3 eul = rotation_to_euler(car.orientation);
 	auto newEuler = FlatVec3(eul[0], eul[1], eul[2]);
 
-	carData.add_position(&newPos);
-	carData.add_angularVelocity(&newAng);
-	carData.add_eulerRotation(&newEuler);
-	carData.add_velocity(&newVel);
-	carData.add_onGround(car.on_ground);
-	carData.add_elapsedSeconds(simulationTime);
+	physData.add_position(&newPos);
+	physData.add_angularVelocity(&newAng);
+	physData.add_eulerRotation(&newEuler);
+	physData.add_velocity(&newVel);
+	physData.add_elapsedSeconds(simulationTime);
 
-	builder.Finish(carData.Finish());
+	auto phys = physData.Finish();
+
+	FlatCarDataBuilder carBuild(builder);
+	carBuild.add_physics(phys);
+	carBuild.add_onGround(car.on_ground);
+
+	builder.Finish(carBuild.Finish());
 	result.ptr = new unsigned char[builder.GetSize()];
 	result.size = builder.GetSize();
 
@@ -123,19 +147,20 @@ ByteBuffer __cdecl simulateSimpleCar(void* inputCar, int protoSize) {
 	return result;
 }
 
-ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall) {
+ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall, float dt) {
 
-	const FBSCarData* inputCarData = flatbuffers::GetRoot<FBSCarData>(inputCar);
-	const FBSCarData* inputBallData = flatbuffers::GetRoot<FBSCarData>(inputBall);
+	const FlatCarData* inputCarData = flatbuffers::GetRoot<FlatCarData>(inputCar);
+	const FlatPhysics* carPhysics = inputCarData->physics();
+	const FlatPhysics* inputBallData = flatbuffers::GetRoot<FlatPhysics>(inputBall);
 
 	ByteBuffer result = ByteBuffer();
 	if (!init)
 		return result;
 
-	const vec3 positionCar = *reinterpret_cast<const vec3*>(inputCarData->position());
-	const vec3 velocityCar = *reinterpret_cast<const vec3*>(inputCarData->velocity());
-	const vec3 angularCar = *reinterpret_cast<const vec3*>(inputCarData->angularVelocity());
-	const vec3 rotateCar = *reinterpret_cast<const vec3*>(inputCarData->eulerRotation());
+	const vec3 positionCar = *reinterpret_cast<const vec3*>(carPhysics->position());
+	const vec3 velocityCar = *reinterpret_cast<const vec3*>(carPhysics->velocity());
+	const vec3 angularCar = *reinterpret_cast<const vec3*>(carPhysics->angularVelocity());
+	const vec3 rotateCar = *reinterpret_cast<const vec3*>(carPhysics->eulerRotation());
 
 	const vec3 positionBall = *reinterpret_cast<const vec3*>(inputBallData->position());
 	const vec3 velocityBall = *reinterpret_cast<const vec3*>(inputBallData->velocity());
@@ -154,10 +179,10 @@ ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall) {
 	ball.velocity = velocityBall;
 	ball.angular_velocity = angularBall;
 
-	ball.step(inputBallData->elapsedSeconds(), car);
+	ball.step(dt, car);
 
 	flatbuffers::FlatBufferBuilder builder(256);
-	FBSCarDataBuilder outputBallData(builder);
+	FlatPhysicsBuilder outputBallData(builder);
 
 	auto newPos = FlatVec3(ball.position[0], ball.position[1], ball.position[2]);
 	auto newAng = FlatVec3(ball.angular_velocity[0], ball.angular_velocity[1], ball.angular_velocity[2]);
@@ -176,21 +201,22 @@ ByteBuffer __cdecl simulateCarBallCollision(void* inputCar, void* inputBall) {
 	return result;
 }
 
-ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
+ByteBuffer __cdecl simulateCarCollision(void* inputCar){
 	constexpr float simulationRate = 1.f / 60.f;
 	constexpr float secondsSimulated = 3.5f;
 	constexpr int simulationSteps = (int)(secondsSimulated / simulationRate);
 
-	const FBSCarData* inputCarData = flatbuffers::GetRoot<FBSCarData>(inputCar);
+	const FlatCarData* inputCarData = flatbuffers::GetRoot<FlatCarData>(inputCar);
+	const FlatPhysics* carPhysics = inputCarData->physics();
 
 	ByteBuffer result = ByteBuffer();
 	if (!init)
 		return result;
 
-	const vec3 position = *reinterpret_cast<const vec3*>(inputCarData->position());
-	const vec3 velocity = *reinterpret_cast<const vec3*>(inputCarData->velocity());
-	const vec3 angular = *reinterpret_cast<const vec3*>(inputCarData->angularVelocity());
-	const vec3 rotate = *reinterpret_cast<const vec3*>(inputCarData->eulerRotation());
+	const vec3 position = *reinterpret_cast<const vec3*>(carPhysics->position());
+	const vec3 velocity = *reinterpret_cast<const vec3*>(carPhysics->velocity());
+	const vec3 angular = *reinterpret_cast<const vec3*>(carPhysics->angularVelocity());
+	const vec3 rotate = *reinterpret_cast<const vec3*>(carPhysics->eulerRotation());
 
 	const vec3 g = { 0, 0, -650 };
 
@@ -212,7 +238,7 @@ ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 	}
 
 	flatbuffers::FlatBufferBuilder builder(256);
-	FBSCarDataBuilder carData(builder);
+	FlatPhysicsBuilder carPhysicsBuilder(builder);
 
 	auto newPos = FlatVec3(car.position[0], car.position[1], car.position[2]);
 	auto newVel = FlatVec3(car.velocity[0], car.velocity[1], car.velocity[2]);
@@ -220,15 +246,22 @@ ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 	vec3 eul = rotation_to_euler(car.orientation);
 	auto newEuler = FlatVec3(eul[0], eul[1], eul[2]);
 
-	carData.add_position(&newPos);
-	carData.add_angularVelocity(&newAng);
-	carData.add_eulerRotation(&newEuler);
-	carData.add_velocity(&newVel);
-	carData.add_onGround(car.on_ground);
-	carData.add_elapsedSeconds(simulationTime);
-	auto flatCar = carData.Finish();
+	carPhysicsBuilder.add_position(&newPos);
+	carPhysicsBuilder.add_angularVelocity(&newAng);
+	carPhysicsBuilder.add_eulerRotation(&newEuler);
+	carPhysicsBuilder.add_velocity(&newVel);
+	carPhysicsBuilder.add_elapsedSeconds(simulationTime);
 
-	CarCollisionInfoBuilder carCollision(builder);
+	auto physics = carPhysicsBuilder.Finish();
+
+	FlatCarDataBuilder carBuilder(builder);
+
+	carBuilder.add_onGround(car.on_ground);
+	carBuilder.add_physics(physics);
+	
+	auto flatCar = carBuilder.Finish();
+
+	FlatCarCollisionInfoBuilder carCollision(builder);
 	carCollision.add_carData(flatCar);
 
 	if (norm(contact.direction) <= 0.f) 
@@ -250,7 +283,7 @@ ByteBuffer __cdecl simulateCarCollision(void* inputCar, int protoSize){
 
 JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv* env, jclass thisObj, jobject pos, jobject vel, jobject ang, jint tickrate) {
 	const float simulationRate = 1.f / tickrate;
-	constexpr float secondsSimulated = 5.f;
+	constexpr float secondsSimulated = 3.f;
 	const int simulationSteps = (int) (secondsSimulated / simulationRate);
 	if (!init) 
 		return env->NewFloatArray(0);
@@ -319,6 +352,63 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_aerialML(JNIEnv
 		return NULL;
 	env->SetFloatArrayRegion(output, 0, 3, reinterpret_cast<float*>(&cOutput));
 	return output;
+}
+
+JNIEXPORT ByteBuffer __cdecl findPath(void* pathRequest) {
+	const FlatNavigatorRequest* navRequest = flatbuffers::GetRoot<FlatNavigatorRequest>(pathRequest);
+	ByteBuffer result = ByteBuffer();
+	if (!init)
+		return result;
+
+	const vec3 startPosition = *reinterpret_cast<const vec3*>(navRequest->startPosition());
+	const vec3 startTangent = *reinterpret_cast<const vec3*>(navRequest->startTangent());
+
+	flatbuffers::FlatBufferBuilder builder(256);
+	
+	{
+		std::scoped_lock<std::mutex> lock(navLock);
+		auto nav = yangNavigator.get();
+		// Only analyze surroundings if positions are different
+		if (norm(nav->car.position - startPosition) > 0.1 || norm(nav->car.forward() - startTangent) > 0.005f) {
+			//std::cout << norm(nav->car.position - startPosition) << ":" << norm(nav->car.forward() - startTangent) << std::endl;
+			nav->car.position = startPosition;
+			nav->car.orientation(0, 0) = startTangent[0];
+			nav->car.orientation(1, 0) = startTangent[1];
+			nav->car.orientation(2, 0) = startTangent[2];
+			nav->analyze_surroundings(1337.f);
+		}
+
+		
+		const vec3 endPosition = *reinterpret_cast<const vec3*>(navRequest->endPosition());
+		const vec3 endTangent = *reinterpret_cast<const vec3*>(navRequest->endTangent());
+		const float endTangentMultiplier = navRequest->endTangentMultiplier();
+
+		Curve c;
+		{
+			c = nav->path_to(endPosition, endTangent, endTangentMultiplier);
+
+			auto curvatures = builder.CreateVector(c.curvatures);
+			auto distances = builder.CreateVector(c.distances);
+			auto points = builder.CreateVectorOfNativeStructs<FlatVec3, vec3>(c.points);
+			auto tangents = builder.CreateVectorOfNativeStructs<FlatVec3, vec3>(c.tangents);
+
+			FlatCurveBuilder curveBuilder(builder);
+			curveBuilder.add_length(c.length);
+			curveBuilder.add_curvatures(curvatures);
+			curveBuilder.add_distances(distances);
+			curveBuilder.add_points(points);
+			curveBuilder.add_tangents(tangents);
+			
+			builder.Finish(curveBuilder.Finish());
+			result.ptr = new unsigned char[builder.GetSize()];
+			result.size = builder.GetSize();
+
+			memcpy(result.ptr, builder.GetBufferPointer(), result.size);
+
+			return result;
+		}
+	}
+
 }
 
 JNIEXPORT void JNICALL Free(void* ptr) {

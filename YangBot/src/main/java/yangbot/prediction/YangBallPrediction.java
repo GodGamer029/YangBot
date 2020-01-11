@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 
 public class YangBallPrediction {
 
-    private static final BallPredictionType ballPredictionType = BallPredictionType.RLBOT;
     public final int tickRate; // close to 60 or 120
     public final float tickFrequency; // close to 1/60 or 1/120
     public final List<YangPredictionFrame> frames;
@@ -77,6 +76,10 @@ public class YangBallPrediction {
     }
 
     public static YangBallPrediction get() {
+        return get(BallPredictionType.RLBOT);
+    }
+
+    public static YangBallPrediction get(BallPredictionType ballPredictionType) {
 
         switch (ballPredictionType) {
             case RLBOT:
@@ -114,6 +117,12 @@ public class YangBallPrediction {
                 continue;
             renderer.drawLine3d(color, lastPos, ball.position);
             lastPos = ball.position;
+
+            if (ball.isInGoal()) {
+                renderer.drawCentered3dCube(color.brighter().brighter(), ball.position, 50);
+                renderer.drawString3d("Goal!", Color.WHITE, ball.position.add(0, 0, 150), 1, 1);
+                break;
+            }
         }
     }
 

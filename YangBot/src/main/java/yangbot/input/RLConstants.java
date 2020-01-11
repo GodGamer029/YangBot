@@ -21,17 +21,17 @@ public class RLConstants {
     public static int simulationTickRate = 60;
     public static float simulationTickFrequency = 1f / simulationTickRate;
 
-    public static boolean isPosNearWall(Vector2 pos) {
-        float x = Math.abs(pos.x);
+    public static boolean isPosNearWall(Vector2 pos, float tolerance) {
+        float x = Math.abs(pos.x) + tolerance;
         float y = Math.abs(pos.y);
 
-        if (x >= 2700 && x <= 3850) {
+        if (x >= 2700 - tolerance && x <= 3850 + tolerance) {
             // https://www.wolframalpha.com/input/?i=Line+between+%283850%2C+3850%29+%282700%2C+4950%29
             float val = 173250f / 23f - (22f * x) / 23f;
-            if (val <= y)
+            if (val <= y + tolerance)
                 return true;
         }
 
-        return x >= 3820 || y >= 4920;
+        return x >= 3820 || y + tolerance >= 4920;
     }
 }

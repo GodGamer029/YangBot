@@ -1,10 +1,10 @@
 package yangbot.strategy;
 
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.manuever.AerialManeuver;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
 import java.util.Optional;

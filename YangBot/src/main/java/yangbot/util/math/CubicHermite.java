@@ -1,4 +1,4 @@
-package yangbot.util;
+package yangbot.util.math;
 
 import yangbot.vector.Vector3;
 
@@ -17,7 +17,6 @@ public class CubicHermite {
         this.t1 = t1;
         L = l;
     }
-
 
     public Vector3 e(float s) {
         float u = s / L;

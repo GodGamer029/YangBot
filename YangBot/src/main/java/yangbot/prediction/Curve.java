@@ -1,15 +1,21 @@
 package yangbot.prediction;
 
+import yangbot.cpp.FlatCurve;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.RLConstants;
 import yangbot.manuever.DriveManeuver;
-import yangbot.util.*;
+import yangbot.util.AdvancedRenderer;
 import yangbot.util.hitbox.YangSphereHitbox;
+import yangbot.util.math.CubicHermite;
+import yangbot.util.math.MathUtils;
+import yangbot.util.math.OGH;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,7 +24,7 @@ import java.util.Optional;
 public class Curve {
 
     public float length;
-    public final ArrayList<Vector3> points;
+    public ArrayList<Vector3> points;
     public float[] maxSpeeds;
     private ArrayList<Vector3> tangents;
     private float[] curvatures;
@@ -180,27 +186,6 @@ public class Curve {
             points.set(i, points.get(i).add(dx.sub(n.mul(dx.dot(n)))));
         }
 
-        /*for(int i = 1; i < points.size() - 1; i++){
-            float s0 = distances[i];
-            Vector3 p0 = points.get(i);
-            Vector3 n0 = normals.get(i);
-            Vector3 t0 = points.get(i+1).sub(points.get(i-1)).normalized();
-
-            for(int j = points.size() - 2; j > i + 1; j--){
-                if(segment_ids.get(i).equals(segment_ids.get(j)))
-                    break;
-
-                float s1 = distances[j];
-                Vector3 p1 = points.get(j);
-                Vector3 n1 = normals.get(j);
-                Vector3 t1 = points.get(j + 1).sub(points.get(j-1)).normalized();
-
-                float inplane = (float) n0.dot(n1);
-                float collinearity = (float) (p1.sub(p0).dot(t0) / p1.sub(p0).magnitude());
-                float avg_curvature = (float) (t0.crossProduct(t1).dot(n1) / (s1 - s0));
-            }
-        }*/
-
         if (start.sub(points.get(0)).magnitude() > 1f) {
             points.add(0, start);
             normals.add(0, normals.get(0));
@@ -221,9 +206,7 @@ public class Curve {
         Vector3 m, n;
 
         float inPlaneWeight = 0.5f;
-
         float kappa_max = 0.004f;
-
         float kappa1, kappa2, ds;
 
         for (int i = 1; i < last; i++) {
@@ -251,6 +234,28 @@ public class Curve {
         curvatures[last] = MathUtils.lerp(kappa1, kappa2, inPlaneWeight);
     }
 
+    public static Curve from(FlatCurve flatCurve) {
+        Curve c = new Curve();
+
+        c.length = flatCurve.length();
+
+        FloatBuffer curvaturesBuffer = flatCurve.curvaturesAsByteBuffer().asFloatBuffer();
+        c.curvatures = new float[curvaturesBuffer.limit()];
+        curvaturesBuffer.get(c.curvatures);
+
+        FloatBuffer distancesBuffer = flatCurve.distancesAsByteBuffer().asFloatBuffer();
+        c.distances = new float[distancesBuffer.limit()];
+        distancesBuffer.get(c.distances);
+
+        c.points = new ArrayList<>(flatCurve.pointsLength());
+        for (int i = 0; i < flatCurve.pointsLength(); i++)
+            c.points.add(new Vector3(flatCurve.points(i)));
+        for (int i = 0; i < flatCurve.tangentsLength(); i++)
+            c.tangents.add(new Vector3(flatCurve.tangents(i)));
+
+        return c;
+    }
+
     public PathCheckStatus doPathChecking(CarData car, float absoluteArrivalTime, YangBallPrediction ballPrediction) {
         if (ballPrediction == null)
             ballPrediction = YangBallPrediction.empty();
@@ -261,7 +266,7 @@ public class Curve {
         final float averageSpeed = this.length / Math.max(relativeArrivalTime, RLConstants.simulationTickFrequency);
 
         if (averageSpeed > CarData.MAX_VELOCITY + 25)
-            return new PathCheckStatus(PathStatus.SPEED_EXCEEDED);
+            return new PathCheckStatus(0);
 
         if (this.maxSpeeds.length == 0)
             this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
@@ -318,7 +323,7 @@ public class Curve {
             }
         }
 
-        return new PathCheckStatus(distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition);
+        return new PathCheckStatus(distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition, currentSpeed);
     }
 
 
@@ -561,13 +566,15 @@ public class Curve {
         public final float distanceAtBallCollision;
         public final Vector3 ballCollisionContactPoint;
         public final Vector3 ballCollisionBallPosition;
+        public final float speedNeeded;
 
-        public PathCheckStatus(PathStatus pathStatus, boolean collidedWithBall, float distanceAtBallCollision, Vector3 ballCollisionContactPoint, Vector3 ballCollisionBallPosition) {
+        public PathCheckStatus(PathStatus pathStatus, boolean collidedWithBall, float distanceAtBallCollision, Vector3 ballCollisionContactPoint, Vector3 ballCollisionBallPosition, float speedNeeded) {
             this.pathStatus = pathStatus;
             this.collidedWithBall = collidedWithBall;
             this.distanceAtBallCollision = distanceAtBallCollision;
             this.ballCollisionContactPoint = ballCollisionContactPoint;
             this.ballCollisionBallPosition = ballCollisionBallPosition;
+            this.speedNeeded = speedNeeded;
         }
 
         public PathCheckStatus(PathStatus pathStatus) {
@@ -576,6 +583,16 @@ public class Curve {
             this.distanceAtBallCollision = 0;
             this.ballCollisionContactPoint = new Vector3();
             this.ballCollisionBallPosition = new Vector3();
+            this.speedNeeded = 0;
+        }
+
+        public PathCheckStatus(float speedNeeded) {
+            this.pathStatus = PathStatus.SPEED_EXCEEDED;
+            this.collidedWithBall = false;
+            this.distanceAtBallCollision = 0;
+            this.ballCollisionContactPoint = new Vector3();
+            this.ballCollisionBallPosition = new Vector3();
+            this.speedNeeded = speedNeeded;
         }
 
         public boolean isValid() {

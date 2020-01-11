@@ -6,25 +6,56 @@ struct FlatVec3 {
     z: float;
 }
 
-table FBSCarData {
+table FlatPhysics {
     position: FlatVec3;
     velocity: FlatVec3;
     angularVelocity: FlatVec3;
     eulerRotation: FlatVec3;
-    onGround: bool;
-    elapsedSeconds: float = 0;
+    elapsedSeconds: float;
 }
 
-root_type FBSCarData;
+root_type FlatPhysics;
+
+table FlatCarData {
+    physics: FlatPhysics;
+    onGround: bool;
+}
+
+root_type FlatCarData;
 
 struct FlatRay {
     start: FlatVec3;
     direction: FlatVec3;
 }
 
-table CarCollisionInfo {
-    carData: FBSCarData;
+table FlatCarCollisionInfo {
+    carData: FlatCarData;
     impact: FlatRay;
 }
 
-root_type CarCollisionInfo;
+root_type FlatCarCollisionInfo;
+
+struct FlatControlPoint {
+    position: FlatVec3;
+    normal: FlatVec3;
+    tangent: FlatVec3;
+}
+
+table FlatNavigatorRequest {
+    startPosition: FlatVec3;
+    startTangent: FlatVec3;
+    endPosition: FlatVec3;
+    endTangent: FlatVec3;
+    endTangentMultiplier: float;
+}
+
+table FlatCurve {
+    length: float;
+    points: [FlatVec3];
+    tangents: [FlatVec3];
+    distances: [float];
+    curvatures: [float];
+}
+
+root_type FlatNavigatorRequest;
+root_type FlatCurve;

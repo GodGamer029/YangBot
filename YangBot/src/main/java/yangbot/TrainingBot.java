@@ -3,15 +3,11 @@ package yangbot;
 import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
-import yangbot.input.BallData;
-import yangbot.input.CarData;
-import yangbot.input.DataPacket;
-import yangbot.input.GameData;
+import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
 import java.awt.*;
@@ -85,7 +81,7 @@ public class TrainingBot implements Bot {
 
             renderer.drawString2d(String.format("State: %s", state.name()), Color.WHITE, new Point(10, 510), 2, 2);
             if (state == State.RUN)
-                renderer.drawString2d(String.format("Strategy: %s", currentPlan.getClass().getSimpleName()), Color.WHITE, new Point(10, 570), 2, 2);
+                renderer.drawString2d(String.format("Strategy: %s", currentPlan.getClass().getSimpleName()), Color.WHITE, new Point(10, 630), 2, 2);
         }
 
         return output;

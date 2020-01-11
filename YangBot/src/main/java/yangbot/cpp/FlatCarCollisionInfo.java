@@ -9,17 +9,17 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
-public final class CarCollisionInfo extends Table {
-    public static CarCollisionInfo getRootAsCarCollisionInfo(ByteBuffer _bb) {
-        return getRootAsCarCollisionInfo(_bb, new CarCollisionInfo());
+public final class FlatCarCollisionInfo extends Table {
+    public static FlatCarCollisionInfo getRootAsFlatCarCollisionInfo(ByteBuffer _bb) {
+        return getRootAsFlatCarCollisionInfo(_bb, new FlatCarCollisionInfo());
     }
 
-    public static CarCollisionInfo getRootAsCarCollisionInfo(ByteBuffer _bb, CarCollisionInfo obj) {
+    public static FlatCarCollisionInfo getRootAsFlatCarCollisionInfo(ByteBuffer _bb, FlatCarCollisionInfo obj) {
         _bb.order(ByteOrder.LITTLE_ENDIAN);
         return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
     }
 
-    public static void startCarCollisionInfo(FlatBufferBuilder builder) {
+    public static void startFlatCarCollisionInfo(FlatBufferBuilder builder) {
         builder.startObject(2);
     }
 
@@ -31,17 +31,9 @@ public final class CarCollisionInfo extends Table {
         builder.addStruct(1, impactOffset, 0);
     }
 
-    public static int endCarCollisionInfo(FlatBufferBuilder builder) {
+    public static int endFlatCarCollisionInfo(FlatBufferBuilder builder) {
         int o = builder.endObject();
         return o;
-    }
-
-    public static void finishCarCollisionInfoBuffer(FlatBufferBuilder builder, int offset) {
-        builder.finish(offset);
-    }
-
-    public static void finishSizePrefixedCarCollisionInfoBuffer(FlatBufferBuilder builder, int offset) {
-        builder.finishSizePrefixed(offset);
     }
 
     public void __init(int _i, ByteBuffer _bb) {
@@ -49,16 +41,16 @@ public final class CarCollisionInfo extends Table {
         bb = _bb;
     }
 
-    public CarCollisionInfo __assign(int _i, ByteBuffer _bb) {
+    public FlatCarCollisionInfo __assign(int _i, ByteBuffer _bb) {
         __init(_i, _bb);
         return this;
     }
 
-    public FBSCarData carData() {
-        return carData(new FBSCarData());
+    public FlatCarData carData() {
+        return carData(new FlatCarData());
     }
 
-    public FBSCarData carData(FBSCarData obj) {
+    public FlatCarData carData(FlatCarData obj) {
         int o = __offset(4);
         return o != 0 ? obj.__assign(__indirect(o + bb_pos), bb) : null;
     }

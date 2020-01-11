@@ -1,8 +1,8 @@
 package yangbot.manuever;
 
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.util.ControlsOutput;
 
 import java.util.ArrayList;
 import java.util.List;

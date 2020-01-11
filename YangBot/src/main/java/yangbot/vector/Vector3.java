@@ -3,7 +3,7 @@ package yangbot.vector;
 import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.gamestate.DesiredVector3;
 import yangbot.cpp.FlatVec3;
-import yangbot.util.MathUtils;
+import yangbot.util.math.MathUtils;
 
 /**
  * A simple 3d vector class with the most essential operations.

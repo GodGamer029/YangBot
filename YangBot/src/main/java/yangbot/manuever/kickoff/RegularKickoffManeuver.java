@@ -2,11 +2,11 @@ package yangbot.manuever.kickoff;
 
 import yangbot.input.BallData;
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.Maneuver;
 import yangbot.manuever.TurnManeuver;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;

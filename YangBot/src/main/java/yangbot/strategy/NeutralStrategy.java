@@ -2,12 +2,12 @@ package yangbot.strategy;
 
 import yangbot.input.BallData;
 import yangbot.input.CarData;
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
 import yangbot.manuever.FollowPathManeuver;
 import yangbot.prediction.Curve;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Vector3;
 
 import java.util.ArrayList;

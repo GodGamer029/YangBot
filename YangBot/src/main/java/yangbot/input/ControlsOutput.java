@@ -1,4 +1,4 @@
-package yangbot.util;
+package yangbot.input;
 
 import rlbot.ControllerState;
 

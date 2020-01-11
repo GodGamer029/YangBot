@@ -2,15 +2,12 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
-import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
-import rlbot.gamestate.*;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.ControlsOutput;
 import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.vector.Vector2;
 import yangbot.vector.Vector3;
@@ -36,6 +33,7 @@ public class TestBot implements Bot {
     private BallData simBall;
     private YangBallPrediction simPrediction;
     private float closest = 95;
+    private float lastSpeed = 0;
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -52,6 +50,7 @@ public class TestBot implements Bot {
         BallData ball = input.ball;
         GameData.current().update(input.car, input.ball, input.allCars, input.gameInfo, dt, renderer);
 
+        GameData.current().getBallPrediction().draw(renderer, Color.RED, 3);
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != car.team).findFirst().orElse(car);
 
         drawDebugLines(input, controlCar);
@@ -62,9 +61,9 @@ public class TestBot implements Bot {
             case RESET: {
                 timer = 0.0f;
 
-                state = State.INIT;
+                // state = State.INIT;
 
-                RLBotDll.setGameState(new GameState()
+               /* RLBotDll.setGameState(new GameState()
                         .withGameInfoState(new GameInfoState().withWorldGravityZ(0.00001f).withGameSpeed(1f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
                                         .withLocation(new DesiredVector3(133.2f, 10f, 95f)) // 320
@@ -78,7 +77,7 @@ public class TestBot implements Bot {
                                 .withVelocity(new DesiredVector3(0f, 0f, -1f))
                                 .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                         )).buildPacket());
-                RLConstants.gravity = new Vector3(0, 0, 0.00001f);
+                RLConstants.gravity = new Vector3(0, 0, 0.00001f);*/
                 break;
             }
             case INIT: {
@@ -193,7 +192,12 @@ public class TestBot implements Bot {
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 210), 1, 1);
         renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 230), 1, 1);
         //renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
-        renderer.drawString2d("CarF: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
+        //renderer.drawString2d("CarF: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
+        float accel = (float) (myCar.velocity.dot(myCar.forward()) - lastSpeed);
+        lastSpeed = (float) myCar.velocity.dot(myCar.forward());
+        accel -= CarData.driveForceForward(new ControlsOutput().withThrottle(1), (float) myCar.velocity.dot(myCar.forward()), 0, 0);
+        renderer.drawString2d(String.format("Accel: %.1f", accel), Color.WHITE, new Point(10, 250), 1, 1);
+
     }
 
     @Override

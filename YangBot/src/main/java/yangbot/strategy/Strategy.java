@@ -1,7 +1,8 @@
 package yangbot.strategy;
 
+import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.util.ControlsOutput;
+import yangbot.input.RLConstants;
 
 import java.util.Optional;
 
@@ -44,7 +45,13 @@ public abstract class Strategy {
         if (plannedStrategy && !force)
             return;
         lastStrategyPlan = currentGameTime;
+
+        long ms = System.currentTimeMillis();
         planStrategyInternal();
+        long duration = System.currentTimeMillis() - ms;
+        if (duration > RLConstants.tickFrequency * 1000 * 1.5)
+            System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to plan its strategy");
+
         plannedStrategy = true;
     }
 
@@ -79,7 +86,12 @@ public abstract class Strategy {
     public final void step(float dt, ControlsOutput controlsOutput) {
         if (!plannedStrategy)
             planStrategy();
+
+        long ms = System.currentTimeMillis();
         stepInternal(dt, controlsOutput);
+        long duration = System.currentTimeMillis() - ms;
+        if (duration > RLConstants.tickFrequency * 1000 * 1.5)
+            System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to execute its strategy");
     }
 
     public abstract Optional<Strategy> suggestStrategy();

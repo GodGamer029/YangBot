@@ -23,7 +23,6 @@ public class YangCarHitbox extends YangHitbox {
 
     public YangCarHitbox(BoxShape hitbox, Vector3 offsets, Matrix3x3 orientation) {
         this.hitboxLengths = new Vector3(hitbox.length(), hitbox.width(), hitbox.height()).mul(1, 1, 1);
-        ;
         this.hitboxOffset = offsets;
 
         setOrientation(orientation);
@@ -43,16 +42,20 @@ public class YangCarHitbox extends YangHitbox {
         setOrientation(orientation);
     }
 
-    public void setOrientation(Matrix3x3 orientation) {
-        this.orientation = orientation;
-
-        permF = this.orientation.forward().mul(this.hitboxLengths.x / 2);
-        permL = this.orientation.left().mul(this.hitboxLengths.y / 2);
-        permU = this.orientation.up().mul(this.hitboxLengths.z / 2);
+    public Matrix3x3 getOrientation() {
+        return this.orientation;
     }
 
     public YangCarHitbox withOrientation(Matrix3x3 orientation) {
         return new YangCarHitbox(this.hitboxLengths, this.hitboxOffset, orientation);
+    }
+
+    public void setOrientation(Matrix3x3 orientation) {
+        this.orientation = orientation;
+
+        this.permF = this.orientation.forward().mul(this.hitboxLengths.x / 2);
+        this.permL = this.orientation.left().mul(this.hitboxLengths.y / 2);
+        this.permU = this.orientation.up().mul(this.hitboxLengths.z / 2);
     }
 
     public YangSphereHitbox asSphere(float scale) {

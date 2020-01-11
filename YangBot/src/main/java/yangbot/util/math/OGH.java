@@ -1,4 +1,4 @@
-package yangbot.util;
+package yangbot.util.math;
 
 import yangbot.vector.Vector3;
 

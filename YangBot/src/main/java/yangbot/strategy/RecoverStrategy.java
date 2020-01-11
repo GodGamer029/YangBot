@@ -1,16 +1,12 @@
 package yangbot.strategy;
 
-import yangbot.cpp.CarCollisionInfo;
+import yangbot.cpp.FlatCarCollisionInfo;
 import yangbot.cpp.YangBotJNAInterop;
-import yangbot.input.BallData;
-import yangbot.input.CarData;
-import yangbot.input.GameData;
-import yangbot.input.RLConstants;
+import yangbot.input.*;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.TurnManeuver;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.ControlsOutput;
 import yangbot.vector.Matrix3x3;
 import yangbot.vector.Vector3;
 
@@ -52,21 +48,21 @@ public class RecoverStrategy extends Strategy {
 
         controlsOutput.withThrottle(1);
 
-        Optional<CarCollisionInfo> carCollisionInfoOptional = YangBotJNAInterop.simulateCarWallCollision(car);
+        Optional<FlatCarCollisionInfo> carCollisionInfoOptional = YangBotJNAInterop.simulateCarWallCollision(car);
         if (!carCollisionInfoOptional.isPresent()) {
             this.setDone();
             return;
         }
 
-        CarCollisionInfo carCollisionInfo = carCollisionInfoOptional.get();
+        FlatCarCollisionInfo carCollisionInfo = carCollisionInfoOptional.get();
 
         Vector3 impactNormal = new Vector3(carCollisionInfo.impact().direction());
-        Vector3 carPositionAtImpact = new Vector3(carCollisionInfo.carData().position());
-        float simulationTime = carCollisionInfo.carData().elapsedSeconds();
+        Vector3 carPositionAtImpact = new Vector3(carCollisionInfo.carData().physics().position());
+        float simulationTime = carCollisionInfo.carData().physics().elapsedSeconds();
 
         recoverEndTime = car.elapsedSeconds + simulationTime;
 
-        final boolean isCarNearWall = RLConstants.isPosNearWall(car.position.flatten());
+        final boolean isCarNearWall = RLConstants.isPosNearWall(car.position.flatten(), 30);
         final boolean speedflipPossible = recoverEndTime - recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
@@ -115,6 +111,8 @@ public class RecoverStrategy extends Strategy {
             if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight - 15 > backWheelsHeight && !car.doubleJumped) {
                 controlsOutput.withJump(true);
                 controlsOutput.withPitch(-1);
+                controlsOutput.withYaw(0);
+                controlsOutput.withRoll(0);
             }
         }
 

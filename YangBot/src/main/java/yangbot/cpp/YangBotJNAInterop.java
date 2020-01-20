@@ -8,10 +8,14 @@ import com.sun.jna.Pointer;
 import rlbot.cppinterop.ByteBufferStruct;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
+import yangbot.input.ImmutableBallData;
 import yangbot.prediction.Curve;
-import yangbot.vector.Vector3;
+import yangbot.prediction.YangBallPrediction;
+import yangbot.util.math.vector.Vector3;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class YangBotJNAInterop {
@@ -25,11 +29,8 @@ public class YangBotJNAInterop {
     }
 
     private static Memory getMemory(byte[] protoBytes) {
-        if (protoBytes.length == 0) {
-            // The empty controller state is actually 0 bytes, so this can happen.
-            // You're not allowed to pass 0 bytes to the Memory constructor, so do this.
+        if (protoBytes.length == 0)
             return new Memory(1);
-        }
 
         final Memory mem = new Memory(protoBytes.length);
         mem.write(0, protoBytes, 0, protoBytes.length);
@@ -84,6 +85,38 @@ public class YangBotJNAInterop {
         return Optional.empty();
     }
 
+    public static YangBallPrediction getBallPrediction(BallData ballData, int tickrate) {
+        Memory ballMemory;
+        {
+            FlatBufferBuilder builder = new FlatBufferBuilder(128);
+
+            builder.finish(ballData.makeFlatPhysics(builder));
+
+            final byte[] proto = builder.sizedByteArray();
+            ballMemory = getMemory(proto);
+        }
+
+        final ByteBufferStruct struct = simulateBall(ballMemory, tickrate);
+        if (struct.size < 4) {
+            if (struct.size > 0)
+                Free(struct.ptr);
+            return YangBallPrediction.empty();
+        }
+        final byte[] protoBytes = struct.ptr.getByteArray(0, struct.size);
+        Free(struct.ptr);
+        FlatPhysicsPrediction flatPrediction = FlatPhysicsPrediction.getRootAsFlatPhysicsPrediction(ByteBuffer.wrap(protoBytes));
+
+        float tickFreq = 1f / tickrate;
+
+        List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
+        for (int i = 0; i < flatPrediction.framesLength() / 3; i++) {
+            FlatPhysics frame = flatPrediction.frames(i);
+            ImmutableBallData data = new ImmutableBallData(frame);
+            ballDataList.add(new YangBallPrediction.YangPredictionFrame(i * tickFreq + ballData.elapsedSeconds, i * tickFreq, data));
+        }
+        return YangBallPrediction.from(ballDataList, tickFreq);
+    }
+
     public static Optional<Curve> findPath(Vector3 startPos, Vector3 startTangent, Vector3 endPos, Vector3 endTangent, float endTangentScalar) {
         try {
             FlatBufferBuilder builder = new FlatBufferBuilder(128);
@@ -113,7 +146,7 @@ public class YangBotJNAInterop {
             if (flatCurve == null || flatCurve.length() == 0)
                 return Optional.empty();
 
-            return Optional.of(Curve.from(flatCurve));
+            return Optional.ofNullable(Curve.from(flatCurve));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -165,6 +198,8 @@ public class YangBotJNAInterop {
     private static native ByteBufferStruct simulateCarBallCollision(Pointer car, Pointer ball, float dt);
 
     private static native ByteBufferStruct findPath(Pointer pathRequest);
+
+    private static native ByteBufferStruct simulateBall(Pointer ball, int tickrate);
 
     private static native void Free(Pointer ptr);
 }

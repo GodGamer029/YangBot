@@ -3,8 +3,8 @@ package yangbot.prediction;
 import yangbot.input.CarData;
 import yangbot.util.Graph;
 import yangbot.util.math.MathUtils;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
 import java.util.Collections;

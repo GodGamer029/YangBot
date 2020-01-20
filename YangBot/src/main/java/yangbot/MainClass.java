@@ -8,7 +8,7 @@ import yangbot.prediction.Navigator;
 import yangbot.util.Graph;
 import yangbot.util.io.LEDataInputStream;
 import yangbot.util.io.PortReader;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;

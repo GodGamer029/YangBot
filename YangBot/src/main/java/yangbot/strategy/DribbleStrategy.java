@@ -4,7 +4,7 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.manuever.DribbleManeuver;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
 

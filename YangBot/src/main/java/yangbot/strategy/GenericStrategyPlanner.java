@@ -5,7 +5,7 @@ import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.vector.Vector2;
+import yangbot.util.math.vector.Vector2;
 
 import java.util.Comparator;
 import java.util.List;
@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 public class GenericStrategyPlanner extends StrategyPlanner {
 
     public static boolean isOutOfPosition(GameData gameData) {
+        // TODO
         final CarData car = gameData.getCarData();
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         final ImmutableBallData ballData = gameData.getBallData();
@@ -22,7 +23,7 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         int teamSign = car.team * 2 - 1;
         Vector2 myGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
 
-        
+
         return false;
     }
 

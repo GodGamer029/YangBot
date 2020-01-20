@@ -5,7 +5,7 @@ import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.manuever.AerialManeuver;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
 

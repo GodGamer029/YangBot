@@ -15,6 +15,8 @@ namespace yangbot {
 
         struct FlatCarData;
 
+        struct FlatPhysicsPrediction;
+
         struct FlatRay;
 
         struct FlatCarCollisionInfo;
@@ -230,6 +232,68 @@ namespace yangbot {
             builder_.add_physics(physics);
             builder_.add_onGround(onGround);
             return builder_.Finish();
+        }
+
+        struct FlatPhysicsPrediction FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+            enum {
+                VT_FRAMES = 4,
+                VT_TICKRATE = 6
+            };
+            const flatbuffers::Vector<flatbuffers::Offset<FlatPhysics>>* frames() const {
+                return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<FlatPhysics>>*>(VT_FRAMES);
+            }
+            int32_t tickrate() const {
+                return GetField<int32_t>(VT_TICKRATE, 0);
+            }
+            bool Verify(flatbuffers::Verifier& verifier) const {
+                return VerifyTableStart(verifier) &&
+                    VerifyOffset(verifier, VT_FRAMES) &&
+                    verifier.Verify(frames()) &&
+                    verifier.VerifyVectorOfTables(frames()) &&
+                    VerifyField<int32_t>(verifier, VT_TICKRATE) &&
+                    verifier.EndTable();
+            }
+        };
+
+        struct FlatPhysicsPredictionBuilder {
+            flatbuffers::FlatBufferBuilder& fbb_;
+            flatbuffers::uoffset_t start_;
+            void add_frames(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<FlatPhysics>>> frames) {
+                fbb_.AddOffset(FlatPhysicsPrediction::VT_FRAMES, frames);
+            }
+            void add_tickrate(int32_t tickrate) {
+                fbb_.AddElement<int32_t>(FlatPhysicsPrediction::VT_TICKRATE, tickrate, 0);
+            }
+            explicit FlatPhysicsPredictionBuilder(flatbuffers::FlatBufferBuilder& _fbb)
+                : fbb_(_fbb) {
+                start_ = fbb_.StartTable();
+            }
+            FlatPhysicsPredictionBuilder& operator=(const FlatPhysicsPredictionBuilder&);
+            flatbuffers::Offset<FlatPhysicsPrediction> Finish() {
+                const auto end = fbb_.EndTable(start_);
+                auto o = flatbuffers::Offset<FlatPhysicsPrediction>(end);
+                return o;
+            }
+        };
+
+        inline flatbuffers::Offset<FlatPhysicsPrediction> CreateFlatPhysicsPrediction(
+            flatbuffers::FlatBufferBuilder& _fbb,
+            flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<FlatPhysics>>> frames = 0,
+            int32_t tickrate = 0) {
+            FlatPhysicsPredictionBuilder builder_(_fbb);
+            builder_.add_tickrate(tickrate);
+            builder_.add_frames(frames);
+            return builder_.Finish();
+        }
+
+        inline flatbuffers::Offset<FlatPhysicsPrediction> CreateFlatPhysicsPredictionDirect(
+            flatbuffers::FlatBufferBuilder& _fbb,
+            const std::vector<flatbuffers::Offset<FlatPhysics>>* frames = nullptr,
+            int32_t tickrate = 0) {
+            return yangbot::cpp::CreateFlatPhysicsPrediction(
+                _fbb,
+                frames ? _fbb.CreateVector<flatbuffers::Offset<FlatPhysics>>(*frames) : 0,
+                tickrate);
         }
 
         struct FlatCarCollisionInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

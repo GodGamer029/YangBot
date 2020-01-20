@@ -3,7 +3,7 @@ package yangbot.optimizers.path;
 import yangbot.input.CarData;
 import yangbot.prediction.Curve;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.List;
 

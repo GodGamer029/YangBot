@@ -4,8 +4,8 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.FoolGameData;
 import yangbot.input.GameData;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 public class AerialManeuver extends Maneuver {
 

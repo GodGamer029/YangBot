@@ -6,8 +6,8 @@ import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
 import yangbot.manuever.AerialManeuver;
 import yangbot.manuever.Maneuver;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 public class LowGravityKickoffManeuver extends Maneuver {
 

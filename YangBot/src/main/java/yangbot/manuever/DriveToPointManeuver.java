@@ -5,7 +5,7 @@ import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
 import yangbot.util.math.MathUtils;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 public class DriveToPointManeuver extends Maneuver {
 

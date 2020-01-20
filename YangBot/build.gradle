@@ -21,9 +21,8 @@ dependencies {
     // Fetch the framework jar file
     compile('org.jetbrains:annotations:17.0.0')
     compile('org.rlbot.commons:framework:1.11.0')
+    compile('org.knowm.xchart:xchart:3.6.1')
     testCompile('org.junit.jupiter:junit-jupiter:5.4.2')
-    testCompile('org.openjdk.jmh:jmh-core:1.22')
-    testAnnotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.22')
     // This is makes it easy to find the dll when running in intellij, where JVM args don't get passed from gradle.
     runtime files(dllDirectory)
 }

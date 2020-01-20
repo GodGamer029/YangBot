@@ -9,10 +9,10 @@ import yangbot.manuever.AerialManeuver;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.DriveManeuver;
 import yangbot.util.hitbox.YangCarHitbox;
-import yangbot.vector.Matrix2x2;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix2x2;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 /**
  * Basic information about the car.

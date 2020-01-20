@@ -1,4 +1,4 @@
-package yangbot.vector;
+package yangbot.util.math.vector;
 
 import org.jetbrains.annotations.NotNull;
 

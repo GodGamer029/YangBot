@@ -7,8 +7,8 @@ import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.TurnManeuver;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.util.Optional;

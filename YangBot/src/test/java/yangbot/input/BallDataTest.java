@@ -3,8 +3,8 @@ package yangbot.input;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import yangbot.cpp.YangBotCppInterop;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

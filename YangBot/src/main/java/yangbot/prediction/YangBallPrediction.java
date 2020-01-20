@@ -9,7 +9,7 @@ import yangbot.input.BallData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
 import yangbot.util.AdvancedRenderer;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -204,6 +204,12 @@ public class YangBallPrediction {
             this.absoluteTime = absoluteTime;
             this.relativeTime = relativeTime;
             this.ballData = new ImmutableBallData(ballData);
+        }
+
+        public YangPredictionFrame(float absoluteTime, float relativeTime, ImmutableBallData ballData) {
+            this.absoluteTime = absoluteTime;
+            this.relativeTime = relativeTime;
+            this.ballData = ballData;
         }
 
         public YangPredictionFrame(float relativeTime, PredictionSlice predictionSlice) {

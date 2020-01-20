@@ -3,7 +3,7 @@ package yangbot.manuever;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 public class CeilingShotManeuver extends Maneuver {
 

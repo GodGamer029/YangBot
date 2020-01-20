@@ -4,7 +4,7 @@ import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.BoostPadState;
 import rlbot.flat.FieldInfo;
 import rlbot.flat.GameTickPacket;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.io.IOException;
 import java.util.ArrayList;

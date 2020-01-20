@@ -3,9 +3,9 @@ package yangbot.manuever;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 public class DodgeManeuver extends Maneuver {
 
@@ -117,6 +117,8 @@ public class DodgeManeuver extends Maneuver {
                 controlsOutput.withRoll(0);
                 controlsOutput.withPitch(controllerInput.y);
                 controlsOutput.withYaw(controllerInput.x);
+            } else {
+                System.err.println("Dodge maneuver has no direction nor target");
             }
             controlsOutput.withJump(true);
         } else if (!car.hasWheelContact) {
@@ -131,8 +133,8 @@ public class DodgeManeuver extends Maneuver {
 
         if (car.doubleJumped && timer - dodge_time > 0.2f)
             this.setDone();
-        else
-            setIsDone(this.timer > timeout);
+        else if (this.timer > timeout)
+            this.setDone();
         this.timer += dt;
     }
 

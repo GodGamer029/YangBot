@@ -23,6 +23,11 @@ table FlatCarData {
 
 root_type FlatCarData;
 
+table FlatPhysicsPrediction {
+    frames: [FlatPhysics];
+    tickrate: int;
+}
+
 struct FlatRay {
     start: FlatVec3;
     direction: FlatVec3;

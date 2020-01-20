@@ -9,8 +9,8 @@ import yangbot.prediction.YangBallPrediction;
 import yangbot.util.hitbox.YangHitbox;
 import yangbot.util.hitbox.YangSphereHitbox;
 import yangbot.util.math.MathUtils;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -103,7 +103,7 @@ public class BallData {
     }
 
     public void stepWithCollide(float dt, CarData car) {
-        collide(car);
+        collide(car, 0);
         step(dt);
     }
 
@@ -181,12 +181,12 @@ public class BallData {
         return YangBallPrediction.from(ballDataList, tickFrequency);
     }
 
-    public Vector3 collide(CarData car) {
+    public Vector3 collide(CarData car, float tolerance) {
         // https://github.com/samuelpmish/RLUtilities/blob/prerelease/src/simulation/ball.cc#L113
 
         final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
 
-        if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS) {
+        if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS + tolerance) {
 
             this.hasBeenTouched = true;
 

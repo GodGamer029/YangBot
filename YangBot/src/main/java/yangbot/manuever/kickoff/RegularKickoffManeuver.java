@@ -7,9 +7,9 @@ import yangbot.input.ImmutableBallData;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.Maneuver;
 import yangbot.manuever.TurnManeuver;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 public class RegularKickoffManeuver extends Maneuver {
 

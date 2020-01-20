@@ -5,7 +5,7 @@ import rlbot.Bot;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.render.RenderPacket;
 import rlbot.render.Renderer;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.util.Map;

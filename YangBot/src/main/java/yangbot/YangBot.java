@@ -37,7 +37,7 @@ public class YangBot implements Bot {
     }
 
     private ControlsOutput processInput(DataPacket input) {
-        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 1 / 60f);
+        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
 
         if (lastTick > 0)
             timer += Math.min(dt, 0.5f);

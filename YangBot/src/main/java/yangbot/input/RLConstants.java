@@ -1,7 +1,7 @@
 package yangbot.input;
 
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 public class RLConstants {
 

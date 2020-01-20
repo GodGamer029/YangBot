@@ -8,8 +8,8 @@ import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.FollowPathManeuver;
 import yangbot.manuever.Maneuver;
 import yangbot.prediction.Curve;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -2,7 +2,7 @@ package yangbot.input;
 
 
 import rlbot.flat.Touch;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 /**
  * Basic information about the ball's latest touch.

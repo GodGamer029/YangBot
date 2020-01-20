@@ -16,7 +16,7 @@ extern "C" {
 #endif
 	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceCollision(JNIEnv*, jclass, jobject, jfloat);
 
-	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_ballstep(JNIEnv*, jclass, jobject, jobject, jobject, jint);
+	JNIEXPORT ByteBuffer __cdecl simulateBall(void* inputBall, int tickrate);
 
 	JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_aerialML(JNIEnv*, jclass, jobject, jobject, jobject, jfloat);
 

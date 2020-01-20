@@ -7,11 +7,9 @@ import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.hitbox.YangCarHitbox;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
-import java.util.Optional;
 
 public class TrainingTestBot implements Bot {
 
@@ -19,20 +17,6 @@ public class TrainingTestBot implements Bot {
     private float lastTick = -1;
     private State state = State.RESET;
     private Vector3 lastBallPos = new Vector3();
-
-    private YangBallPrediction hitPrediction = null;
-    private CarData predictedHitCar = null;
-    private Vector3 predictedContactPoint = null;
-    private Vector3 predictedContactNormal = null;
-    private Vector3 predictedHitBall = null;
-    private YangCarHitbox hitboxAtActualBallHit;
-    private Vector3 positionAtActualBallHit;
-    private float lastActualBallHit = 0;
-
-    private Vector3 lastBallPos2 = null;
-    private Vector3 lastCarPos = null;
-    private Vector3 lastCarAng = null;
-    private Vector3 lastCarNose = null;
 
     public TrainingTestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -44,7 +28,7 @@ public class TrainingTestBot implements Bot {
     }
 
     private ControlsOutput processInput(DataPacket input) {
-        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 0f);
+        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
 
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
@@ -69,89 +53,10 @@ public class TrainingTestBot implements Bot {
                 state = State.RUN;
 
 
-                CarData simCar = new CarData(car);
-                simCar.elapsedSeconds = 0;
-
-                BallData simBall = new BallData(ball);
-                simBall.hasBeenTouched = false;
-
-                FoolGameData foolGameData = GameData.current().fool();
-                Vector3 simContact = null;
-
-                for (float time = 0; time < 3; time += dt) {
-                    ControlsOutput simControls = new ControlsOutput();
-
-                    foolGameData.foolCar(simCar);
-
-                    simCar.step(simControls, dt);
-
-                    simContact = simBall.collide(simCar);
-
-                    if (simBall.hasBeenTouched) {
-
-
-                        break;
-                    }
-
-                    Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFrameAtRelativeTime(time - 10f * RLConstants.tickFrequency);
-                    if (!frameOptional.isPresent())
-                        break;
-                    simBall = frameOptional.get().ballData.makeMutable();
-                    simBall.hasBeenTouched = false;
-                }
-
-                if (simBall.hasBeenTouched) {
-                    YangBallPrediction simBallPred = simBall.makeBallPrediction(RLConstants.tickFrequency, 2);
-
-                    this.hitPrediction = simBallPred;
-                    this.predictedHitCar = simCar;
-                    this.predictedHitBall = simBall.position;
-                    this.predictedContactPoint = simContact;
-                    this.predictedContactNormal = simBall.position.sub(simContact).normalized();
-                }
                 break;
             }
             case RUN:
-                if (this.hitPrediction != null) {
-                    this.hitPrediction.draw(renderer, Color.MAGENTA, 2f);
-                    this.predictedHitCar.hitbox.draw(renderer, this.predictedHitCar.position, 1, Color.GREEN);
-                    //renderer.drawCentered3dCube(Color.GREEN, this.predictedContactPoint, 5);
-                    //renderer.drawLine3d(Color.MAGENTA, this.predictedContactPoint, this.predictedContactPoint.add(this.predictedContactNormal.mul(100)));
-                    //renderer.drawCentered3dCube(Color.BLUE, this.predictedHitBall, 200);
 
-                    if (ball.hasBeenTouched && this.lastBallPos2 != null) {
-                        if (ball.latestTouch.gameSeconds > this.lastActualBallHit) {
-                            this.lastActualBallHit = ball.latestTouch.gameSeconds;
-                            this.hitboxAtActualBallHit = car.hitbox;
-                            this.positionAtActualBallHit = car.position;
-                            /*System.out.println("Ball Velocity after touch: "+ball.velocity);
-                            System.out.println("Contact Position: "+ball.latestTouch.position.toString());
-                            System.out.println("Contact Normal: "+ball.latestTouch.normal.toString(30));
-                            System.out.println("Ball position before touch: "+this.lastBallPos2.toString(30));
-                            System.out.println("Car position before touch: "+this.lastCarPos.toString(30));
-                            System.out.println("Car angular before touch: "+this.lastCarAng.toString(30));
-                            System.out.println("Car nose before touch: "+this.lastCarNose.toString(30));
-                            System.out.println("Car position after: "+car.position);
-                            System.out.println("Car velocity after: "+car.velocity);
-                            System.out.println("Car angular after: "+car.angularVelocity);
-                            System.out.println("Ball position after: "+ball.position);
-                            System.out.println("Ball velocity after: "+ball.velocity);
-                            System.out.println("Ball angular after: "+ball.angularVelocity);*/
-                        }
-                        if (this.lastActualBallHit > 0) {
-                            this.hitboxAtActualBallHit.draw(renderer, this.positionAtActualBallHit, 1, Color.BLUE);
-                        }
-                        //renderer.drawCentered3dCube(Color.BLUE, ball.latestTouch.position, 5);
-                        //renderer.drawLine3d(Color.RED, ball.latestTouch.position, ball.latestTouch.position.add(ball.latestTouch.normal.mul(100)));
-                    }
-
-                    lastBallPos2 = ball.position;
-                    lastCarPos = car.position;
-                    lastCarNose = car.forward();
-                    lastCarAng = car.angularVelocity;
-                    //renderer.drawCentered3dCube(Color.CYAN, ball.position, 200);
-                    //car.hitbox.draw(renderer, car.position, 1, Color.BLUE);
-                }
                 break;
         }
 

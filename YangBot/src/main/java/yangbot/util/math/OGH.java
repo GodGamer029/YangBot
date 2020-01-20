@@ -1,6 +1,6 @@
 package yangbot.util.math;
 
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 public class OGH { // oink
 

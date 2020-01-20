@@ -4,9 +4,9 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 public class RecoverToGroundManeuver extends Maneuver {
 

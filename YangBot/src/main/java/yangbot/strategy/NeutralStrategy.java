@@ -8,7 +8,7 @@ import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
 import yangbot.manuever.FollowPathManeuver;
 import yangbot.prediction.Curve;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package yangbot.vector;
+package yangbot.util.math.vector;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.gamestate.DesiredVector3;

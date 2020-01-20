@@ -1,7 +1,8 @@
 package yangbot.input;
 
 import rlbot.flat.Physics;
-import yangbot.vector.Vector3;
+import yangbot.cpp.FlatPhysics;
+import yangbot.util.math.vector.Vector3;
 
 public class ImmutableBallData {
 
@@ -28,6 +29,15 @@ public class ImmutableBallData {
         this.hasBeenTouched = ball.hasBeenTouched;
         this.latestTouch = ball.latestTouch;
         this.elapsedSeconds = ball.elapsedSeconds;
+    }
+
+    public ImmutableBallData(final FlatPhysics ballPhysics) {
+        this.position = new Vector3(ballPhysics.position());
+        this.velocity = new Vector3(ballPhysics.velocity());
+        this.angularVelocity = new Vector3(ballPhysics.angularVelocity());
+        this.hasBeenTouched = false;
+        this.latestTouch = null;
+        this.elapsedSeconds = ballPhysics.elapsedSeconds();
     }
 
     public BallData makeMutable() {

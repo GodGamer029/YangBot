@@ -2,7 +2,7 @@ package yangbot.strategy;
 
 import yangbot.input.*;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
 

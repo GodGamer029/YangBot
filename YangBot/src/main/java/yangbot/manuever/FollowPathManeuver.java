@@ -56,27 +56,27 @@ public class FollowPathManeuver extends Maneuver {
             final float timeUntilArrival = Math.max(arrivalTime - car.elapsedSeconds, T_min);
 
             if (arrivalSpeed != -1)
-                driveManeuver.speed = determineSpeedPlan(pathDistanceFromTarget, timeUntilArrival, dt, car);
+                driveManeuver.minimumSpeed = determineSpeedPlan(pathDistanceFromTarget, timeUntilArrival, dt, car);
             else
-                driveManeuver.speed = pathDistanceFromTarget / timeUntilArrival;
+                driveManeuver.minimumSpeed = pathDistanceFromTarget / timeUntilArrival;
 
             this.setIsDone(timeUntilArrival <= T_min);
         } else {
             if (arrivalSpeed != -1)
-                driveManeuver.speed = arrivalSpeed;
+                driveManeuver.minimumSpeed = arrivalSpeed;
             else
-                driveManeuver.speed = DriveManeuver.max_throttle_speed;
+                driveManeuver.minimumSpeed = DriveManeuver.max_throttle_speed;
 
             this.setIsDone(pathDistanceFromTarget <= 50f);
         }
 
         final float maxSpeedAtPathSection = path.maxSpeedAt(pathDistanceFromTarget - currentSpeed * (4f * dt));
 
-        driveManeuver.speed = Math.min(driveManeuver.speed, maxSpeedAtPathSection);
+        driveManeuver.minimumSpeed = Math.min(driveManeuver.minimumSpeed, maxSpeedAtPathSection);
         boolean enableSlide = false;
 
         if (Math.abs(maxSpeedAtPathSection) < 50) { // Very likely to be stuck in a turn that is impossible
-            driveManeuver.speed = 200;
+            driveManeuver.minimumSpeed = 200;
             enableSlide = true;
         }
 
@@ -96,7 +96,7 @@ public class FollowPathManeuver extends Maneuver {
         if (this.arrivalTime > 0)
             renderer.drawString2d(String.format("Arriving in %.1fs", this.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 450), 2, 2);
         renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
-        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.speed), Color.WHITE, new Point(500, 530), 2, 2);
+        renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, 530), 2, 2);
         renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, 570), 2, 2);
     }
 

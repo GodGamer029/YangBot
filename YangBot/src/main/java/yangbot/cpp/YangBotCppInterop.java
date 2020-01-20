@@ -1,17 +1,13 @@
 package yangbot.cpp;
 
-import yangbot.input.BallData;
-import yangbot.prediction.YangBallPrediction;
 import yangbot.util.Ray;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 public class YangBotCppInterop {
@@ -67,22 +63,6 @@ public class YangBotCppInterop {
         }
         return Optional.empty();
     }
-
-    public static YangBallPrediction getBallPrediction(BallData ballData, int tickrate) {
-        float[] frames = YangBotCppInterop.ballstep(ballData.position, ballData.velocity, ballData.angularVelocity, tickrate);
-        if (frames == null || frames.length == 0)
-            return YangBallPrediction.empty();
-        float tickFreq = 1f / tickrate;
-
-        List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
-        for (int i = 0; i < frames.length / 3; i++) {
-            BallData data = new BallData(new Vector3(frames[i * 3], frames[i * 3 + 1], frames[i * 3 + 2]), new Vector3(), new Vector3());
-            ballDataList.add(new YangBallPrediction.YangPredictionFrame(i * tickFreq + ballData.elapsedSeconds, i * tickFreq, data));
-        }
-        return YangBallPrediction.from(ballDataList, tickFreq);
-    }
-
-    public static native float[] ballstep(Vector3 pos, Vector3 vel, Vector3 ang, int tickRate);
 
     public static native float[] aerialML(Vector3 orientEuler, Vector3 angularVel, Vector3 targetEuler, float dt);
 

@@ -2,8 +2,8 @@ package yangbot.manuever;
 
 import yangbot.input.*;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 public class DribbleManeuver extends Maneuver {
 

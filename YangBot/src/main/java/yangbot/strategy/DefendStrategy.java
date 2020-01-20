@@ -8,8 +8,8 @@ import yangbot.optimizers.path.AvoidObstacleInPathUtil;
 import yangbot.prediction.Curve;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.vector.Vector2;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.util.ArrayList;

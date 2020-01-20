@@ -4,7 +4,7 @@ import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
 import yangbot.prediction.YangBallPrediction;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 public class AfterKickoffStrategy extends StrategyPlanner {
 

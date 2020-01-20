@@ -3,7 +3,7 @@ package yangbot.input;
 import rlbot.flat.GameInfo;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.List;
 import java.util.Map;

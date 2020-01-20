@@ -2,7 +2,7 @@ package yangbot.input;
 
 
 import rlbot.flat.PlayerInfo;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 /**
  * The car's orientation in space, a.k.a. what direction it's pointing.

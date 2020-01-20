@@ -11,8 +11,8 @@ import yangbot.util.hitbox.YangSphereHitbox;
 import yangbot.util.math.CubicHermite;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.OGH;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.nio.FloatBuffer;
@@ -244,6 +244,8 @@ public class Curve {
         Curve c = new Curve();
 
         c.length = flatCurve.length();
+        if (Float.isNaN(c.length))
+            return null;
 
         FloatBuffer curvaturesBuffer = flatCurve.curvaturesAsByteBuffer().asFloatBuffer();
         c.curvatures = new float[curvaturesBuffer.limit()];
@@ -281,7 +283,9 @@ public class Curve {
             this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
 
         float currentSpeed = (float) car.velocity.dot(car.forward());
+
         float distToTarget = this.findNearest(car.position);
+
         double boost = car.boost;
         boolean collidedWithBall = false;
         float distanceOfBallCollision = 0;
@@ -293,10 +297,15 @@ public class Curve {
         for (float t = 0; t < relativeArrivalTime; t += dt) {
             if (distToTarget <= 0) // Made it there before time ran out, shouldn't usually happen
                 break;
+
             final float timeUntilArrival = relativeArrivalTime - t;
             final float maxSpeed = Math.max(10, this.maxSpeedAt(distToTarget));
-
             final float avgSpeedAhead = distToTarget / Math.max(timeUntilArrival, dt);
+
+            if (avgSpeedAhead > CarData.MAX_VELOCITY + 50) {
+                this.pathCheckStatus = new PathCheckStatus(PathStatus.SPEED_EXCEEDED);
+                return this.pathCheckStatus;
+            }
 
             final Optional<YangBallPrediction.YangPredictionFrame> ballAtFrameOptional = ballPrediction.getFrameAtRelativeTime(t);
 
@@ -317,7 +326,7 @@ public class Curve {
             // Simulate the car
             {
                 ControlsOutput sampleOutput = new ControlsOutput();
-                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead));
+                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead), CarData.MAX_VELOCITY);
 
                 if (boost <= 0)
                     sampleOutput.withBoost(false);
@@ -328,6 +337,7 @@ public class Curve {
                 final float forceLeft = CarData.driveForceLeft(sampleOutput, currentSpeed, 0, 0);
 
                 currentSpeed += forceForward * dt + Math.abs(forceLeft * dt);
+                currentSpeed = Math.min(Math.abs(currentSpeed), CarData.MAX_VELOCITY);
                 distToTarget -= currentSpeed * dt;
             }
         }
@@ -335,8 +345,6 @@ public class Curve {
         this.pathCheckStatus = new PathCheckStatus(distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition, currentSpeed);
         return this.pathCheckStatus;
     }
-
-
 
     public void draw(AdvancedRenderer renderer) {
         Vector3 lastPoint = null;
@@ -429,7 +437,7 @@ public class Curve {
             Vector3 b = points.get(i + 1);
 
             float alpha = (float) MathUtils.clip(b.sub(a).dot(c.sub(a)) / b.sub(a).dot(b.sub(a)), 0f, 1f);
-
+            assert !Float.isNaN(alpha);
             float distance = (float) c.sub(a.add(b.sub(a).mul(alpha))).magnitude();
 
             if (distance < minDistance) {

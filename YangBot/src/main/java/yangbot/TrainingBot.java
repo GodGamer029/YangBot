@@ -8,7 +8,7 @@ import yangbot.input.fieldinfo.BoostManager;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.util.AdvancedRenderer;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 
@@ -30,7 +30,7 @@ public class TrainingBot implements Bot {
     }
 
     private ControlsOutput processInput(DataPacket input) {
-        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, 0f);
+        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
 
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
@@ -89,6 +89,7 @@ public class TrainingBot implements Bot {
 
     private void drawDebugLines(DataPacket input, CarData myCar) {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
+        renderer.drawString2d("hasWheelContact: " + input.car.hasWheelContact, input.car.hasWheelContact ? Color.GREEN : Color.RED, new Point(450, 230), 2, 2);
 
         renderer.drawString2d("Team: " + input.car.team, Color.WHITE, new Point(10, 230), 1, 1);
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 250), 1, 1);
@@ -96,7 +97,7 @@ public class TrainingBot implements Bot {
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 290), 1, 1);
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 310), 1, 1);
         renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 330), 1, 1);
-        renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 350), 1, 1);
+        renderer.drawString2d("dt: " + GameData.current().getDt(), Color.WHITE, new Point(10, 350), 1, 1);
     }
 
     @Override

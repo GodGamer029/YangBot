@@ -2,8 +2,8 @@ package yangbot.util.hitbox;
 
 import rlbot.flat.BoxShape;
 import rlbot.render.Renderer;
-import yangbot.vector.Matrix3x3;
-import yangbot.vector.Vector3;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 

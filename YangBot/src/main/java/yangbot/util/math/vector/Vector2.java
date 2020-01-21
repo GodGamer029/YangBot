@@ -64,6 +64,10 @@ public class Vector2 {
         return new Vector2(x - other.x, y - other.y);
     }
 
+    public Vector2 sub(float x1, float y1) {
+        return new Vector2(x - x1, y - y1);
+    }
+
     public Vector2 mul(double scale) {
         return new Vector2(x * scale, y * scale);
     }
@@ -159,10 +163,10 @@ public class Vector2 {
     public Vector2 rotateBy(double angle) {
         if (angle == 0)
             return this;
-        double cosAngle = Math.cos(-angle);
-        double sinAngle = Math.sin(-angle);
-        double newX = x * cosAngle + y * sinAngle;
-        double newY = -x * sinAngle + y * cosAngle;
+        double cosAngle = Math.cos(angle);
+        double sinAngle = Math.sin(angle);
+        double newX = x * cosAngle - y * sinAngle;
+        double newY = x * sinAngle + y * cosAngle;
         return new Vector2(newX, newY);
     }
 

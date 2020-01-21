@@ -99,6 +99,11 @@ public class YangCarHitbox extends YangHitbox {
     }
 
     @Override
+    public float getAverageHitboxExtent() {
+        return this.hitboxLengths.mul(0.5f).mean();
+    }
+
+    @Override
     public void draw(Renderer renderer, Vector3 p, float scale, Color c) {
         renderer.drawLine3d(c, permutatePoint(p, 1, 1, 1, scale), permutatePoint(p, 1, 1, -1, scale));
         renderer.drawLine3d(c, permutatePoint(p, 1, -1, 1, scale), permutatePoint(p, 1, -1, -1, scale));

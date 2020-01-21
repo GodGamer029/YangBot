@@ -27,6 +27,11 @@ public class YangSphereHitbox extends YangHitbox {
                 .add(hitboxPos);
     }
 
+    @Override
+    public float getAverageHitboxExtent() {
+        return radius;
+    }
+
     public boolean collidesWith(Vector3 myPosition, YangSphereHitbox sphereHitbox, Vector3 theirPosition) {
         return myPosition.sub(theirPosition).magnitudeSquared() < ((this.radius + sphereHitbox.radius) * (this.radius + sphereHitbox.radius));
     }

@@ -30,6 +30,7 @@ public class MainClass {
     public static BotType BOT_TYPE = BotType.PRODUCTION;
 
     public static void main(String[] args) {
+        System.out.println("I am running Java v" + System.getProperty("java.version"));
         if (args.length > 0) {
             System.out.println(Arrays.toString(args));
             if (args[0].equalsIgnoreCase("training"))

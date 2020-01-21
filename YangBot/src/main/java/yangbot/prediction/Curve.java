@@ -275,7 +275,7 @@ public class Curve {
         final float averageSpeed = this.length / Math.max(relativeArrivalTime, RLConstants.simulationTickFrequency);
 
         if (averageSpeed > CarData.MAX_VELOCITY + 25) {
-            this.pathCheckStatus = new PathCheckStatus(0);
+            this.pathCheckStatus = new PathCheckStatus(averageSpeed);
             return this.pathCheckStatus;
         }
 
@@ -303,7 +303,7 @@ public class Curve {
             final float avgSpeedAhead = distToTarget / Math.max(timeUntilArrival, dt);
 
             if (avgSpeedAhead > CarData.MAX_VELOCITY + 50) {
-                this.pathCheckStatus = new PathCheckStatus(PathStatus.SPEED_EXCEEDED);
+                this.pathCheckStatus = new PathCheckStatus(avgSpeedAhead);
                 return this.pathCheckStatus;
             }
 

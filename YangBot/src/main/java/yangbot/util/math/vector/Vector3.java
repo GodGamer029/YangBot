@@ -155,9 +155,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         throw new IllegalArgumentException("Invalid index: " + index);
     }
 
-    /**
-     * If magnitude is negative, we will return a vector facing the opposite direction.
-     */
+    public float mean() {
+        return (x + y + z) / 3;
+    }
+
     public Vector3 scaledToMagnitude(double magnitude) {
         if (isZero()) {
             throw new IllegalStateException("Cannot scale up a vector with length zero!");

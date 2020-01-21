@@ -93,7 +93,7 @@ public class TrainingBot implements Bot {
 
         renderer.drawString2d("Team: " + input.car.team, Color.WHITE, new Point(10, 230), 1, 1);
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 250), 1, 1);
-        renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 270), 1, 1);
+        renderer.drawString2d("BallV: " + input.ball.velocity + " mag=" + input.ball.velocity.magnitude(), Color.WHITE, new Point(10, 270), 1, 1);
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 290), 1, 1);
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 310), 1, 1);
         renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 330), 1, 1);

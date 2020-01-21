@@ -1,6 +1,7 @@
 package yangbot.strategy;
 
 import rlbot.cppinterop.RLBotDll;
+import rlbot.flat.QuickChatSelection;
 import rlbot.gamestate.GameInfoState;
 import rlbot.gamestate.GameState;
 import yangbot.cpp.YangBotJNAInterop;
@@ -65,7 +66,7 @@ public class OffensiveStrategy extends Strategy {
             return;
         }
 
-        List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.1f, 1.75f)
+        List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.025f, 1.75f)
                 .stream()
                 .filter((frame) -> frame.ballData.position.z <= BallData.COLLISION_RADIUS / 2 + 200 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))
                 .collect(Collectors.toList());
@@ -122,7 +123,6 @@ public class OffensiveStrategy extends Strategy {
 
                 // Check if path is valid
                 {
-
                     currentPath.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
 
                     Curve.PathCheckStatus pathStatus = currentPath.doPathChecking(car, interceptFrame.absoluteTime, ballPrediction);
@@ -220,7 +220,7 @@ public class OffensiveStrategy extends Strategy {
 
                             for (float duration = Math.max(0.05f, this.dodgeManeuver.timer); duration <= 0.2f; duration += 0.05f) { // 0.1f, 0.15f, 0.2f
                                 for (float delay = duration + 0.25f; delay <= 0.6f; delay += 0.1f) {
-                                    for (float angleDiff = (float) (Math.PI / -2f); angleDiff < (float) (Math.PI / 2f); angleDiff += 0.25f) {
+                                    for (float angleDiff = (float) (Math.PI * -0.7f); angleDiff < (float) (Math.PI * 0.7f); angleDiff += 0.3f) {
                                         tim++;
                                         CarData simCar = new CarData(car);
                                         simCar.hasWheelContact = false;
@@ -258,7 +258,7 @@ public class OffensiveStrategy extends Strategy {
                                             // + = hit earlier
                                             // - = hit later
                                             // The right parameter is different depending on how fast this algorithm performs, currently it takes about 17-21ms, a little more than 2 physics ticks
-                                            Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFrameAtRelativeTime(time + 1.5f * RLConstants.tickFrequency);
+                                            Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFrameAtRelativeTime(time + 1.2f * RLConstants.tickFrequency);
                                             if (!frameOptional.isPresent())
                                                 break;
                                             simBall = frameOptional.get().ballData.makeMutable();
@@ -282,20 +282,25 @@ public class OffensiveStrategy extends Strategy {
                                                 float dist = (float) ballAtFrame.position.flatten().distance(enemyGoal);
                                                 boolean landsInGoal = ballAtFrame.makeMutable().isInGoal(teamSign);
 
-                                                if (landsInGoal) {
-                                                    if (!didLandInGoal) {
-                                                        didLandInGoal = true;
-                                                        timeToGoal = time;
-                                                        applyDodgeSettings = true;
-                                                        break;
-                                                    } else if (time < timeToGoal) {
+                                                if (didLandInGoal) { // The ball has to at least land in the goal to be better than the last simulation
+                                                    if (!landsInGoal)
+                                                        continue;
+
+                                                    if (time < timeToGoal) {
                                                         timeToGoal = time;
                                                         applyDodgeSettings = true;
                                                         break;
                                                     }
-                                                } else if (dist < minDistanceToGoal && time > 0.75f) {
-                                                    minDistanceToGoal = dist;
-                                                    applyDodgeSettings = true;
+                                                } else {
+                                                    if (landsInGoal) { // Lands in goal, but last one didn't? Definitely better than the last
+                                                        didLandInGoal = true;
+                                                        timeToGoal = time;
+                                                        applyDodgeSettings = true;
+                                                        break;
+                                                    } else if (dist < minDistanceToGoal && time > 0.75f) { // Check if it's better than the last sim which also didn't score
+                                                        minDistanceToGoal = dist;
+                                                        applyDodgeSettings = true;
+                                                    }
                                                 }
                                             }
                                             if (applyDodgeSettings) {
@@ -320,7 +325,13 @@ public class OffensiveStrategy extends Strategy {
 
                             if (this.hitPrediction != null) { // Found shot
                                 RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
+
+                                if (didLandInGoal)
+                                    RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (QuickChatSelection.Custom_Toxic_GitGut + 1));
+                                else
+                                    RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (QuickChatSelection.Apologies_Oops + 1));
                             } else { // Couldn't hit the ball
+                                RLBotDll.sendQuickChat(car.playerIndex, true, (byte) (QuickChatSelection.Custom_Useful_Faking + 1));
                                 dodgeManeuver.direction = null;
                                 dodgeManeuver.duration = 0;
                                 dodgeManeuver.delay = 9999;

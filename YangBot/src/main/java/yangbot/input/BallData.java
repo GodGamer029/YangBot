@@ -130,7 +130,7 @@ public class BallData {
     }
 
     public boolean isInGoal(int teamSign) {
-        return this.position.y > (BallData.RADIUS + RLConstants.goalDistance) * teamSign;
+        return isInAnyGoal() && Math.signum(this.position.y) == -teamSign;
     }
 
     public void step(float dt) {

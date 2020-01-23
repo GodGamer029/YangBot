@@ -11,6 +11,7 @@ public class RLConstants {
 
     public static final float goalDistance = 5120f; // Distance from center to goal
     public static final float goalCenterToPost = 892.755f;
+    public static final float goalHeight = 642.775f;
 
     public static Vector3 gravity = new Vector3(0, 0, -650);
 

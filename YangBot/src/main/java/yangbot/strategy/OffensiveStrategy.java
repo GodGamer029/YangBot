@@ -69,7 +69,7 @@ public class OffensiveStrategy extends Strategy {
 
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
-                .filter((frame) -> frame.ballData.position.z <= BallData.COLLISION_RADIUS / 2 + 200 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))
+                .filter((frame) -> frame.ballData.position.z <= BallData.COLLISION_RADIUS + 100 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))
                 .collect(Collectors.toList());
 
         if (strikeableFrames.size() > 0) {
@@ -107,7 +107,7 @@ public class OffensiveStrategy extends Strategy {
 
                 final var interceptFrame = interceptFrameOptional.get();
 
-                if (interceptFrame.ballData.velocity.magnitude() > 3500)
+                if (interceptFrame.ballData.velocity.magnitude() > 4000)
                     continue;
 
                 final Vector3 targetBallPos = interceptFrame.ballData.position;
@@ -115,14 +115,15 @@ public class OffensiveStrategy extends Strategy {
                 final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
                 final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 
-                final Vector3 driveTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getAverageHitboxExtent()));
+                final Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getAverageHitboxExtent()));
+                final Vector3 driveTarget = ballHitTarget;
                 final Vector3 carToDriveTarget = driveTarget.sub(startPosition).normalized();
                 final Vector3 endTangent = carToDriveTarget.mul(4).add(ballTargetToGoalTarget).withZ(0).normalized();
 
                 Curve currentPath;
                 Optional<Curve> curveOptional = Optional.empty();
-                //if(!RLConstants.isPosNearWall(startPosition.flatten(), 100) && !RLConstants.isPosNearWall(driveTarget.flatten(), 50) && startPosition.distance(driveTarget) > 300)
-                //    curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, driveTarget, carToDriveTarget, 25);
+                if ((RLConstants.isPosNearWall(startPosition.flatten(), 100) || RLConstants.isPosNearWall(driveTarget.flatten(), 50)) && startPosition.distance(driveTarget) > 400)
+                    curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, driveTarget, endTangent, 25);
 
                 if (curveOptional.isPresent())
                     currentPath = curveOptional.get();
@@ -184,7 +185,7 @@ public class OffensiveStrategy extends Strategy {
         final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 200));
 
         if (this.hitPrediction != null) {
-            this.hitPrediction.draw(renderer, Color.MAGENTA, 2);
+            this.hitPrediction.draw(renderer, Color.MAGENTA, 4);
             this.hitCar.hitbox.draw(renderer, this.hitCar.position, 1, Color.GREEN);
             renderer.drawCentered3dCube(Color.GREEN, this.contactPoint, 10);
             renderer.drawLine3d(Color.MAGENTA, this.contactPoint, this.contactPoint.add(this.contactNormal.mul(100)));
@@ -242,8 +243,8 @@ public class OffensiveStrategy extends Strategy {
                             int tim = 0;
 
                             for (float duration = Math.max(0.05f, this.dodgeManeuver.timer); duration <= 0.2f; duration += 0.05f) { // 0.1f, 0.15f, 0.2f
-                                for (float delay = duration + 0.1f; delay <= 0.6f; delay += 0.15f) {
-                                    for (float angleDiff = (float) (Math.PI * -0.8f); angleDiff < (float) (Math.PI * 0.8f); angleDiff += 0.2f) {
+                                for (float delay = duration + 0.05f; delay <= 0.6f; delay += 0.15f) {
+                                    for (float angleDiff = (float) (Math.PI * -0.8f); angleDiff < (float) (Math.PI * 0.8f); angleDiff += Math.PI * 0.15f) {
                                         tim++;
                                         CarData simCar = new CarData(car);
                                         simCar.hasWheelContact = false;
@@ -263,6 +264,7 @@ public class OffensiveStrategy extends Strategy {
                                         FoolGameData foolGameData = GameData.current().fool();
                                         Vector3 simContact = null;
 
+                                        // Simulate ball - car collision
                                         for (float time = 0; time < T + 0.1f; time += simDt) {
                                             ControlsOutput simControls = new ControlsOutput();
 
@@ -285,11 +287,12 @@ public class OffensiveStrategy extends Strategy {
                                             if (!frameOptional.isPresent())
                                                 break;
                                             simBall = frameOptional.get().ballData.makeMutable();
-                                            if (simBall.velocity.magnitude() > BallData.MAX_VELOCITY * 1.5f)
-                                                System.out.println("Got faulty ball: " + simBall.toString());
+                                            assert simBall.velocity.magnitude() < BallData.MAX_VELOCITY * 1.5f : "Got faulty ball: " + simBall.toString();
+
                                             simBall.hasBeenTouched = false;
                                         }
 
+                                        // Evaluate post-collision ball state
                                         if (simBall.hasBeenTouched) {
                                             if (!simCar.doubleJumped || simCar.dodgeTimer <= simDt * 3)
                                                 continue;
@@ -302,7 +305,7 @@ public class OffensiveStrategy extends Strategy {
                                                 if (!dataAtFrame.isPresent())
                                                     break;
                                                 ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
-                                                float dist = (float) ballAtFrame.position.flatten().distance(enemyGoal);
+                                                float dist = (float) ballAtFrame.position.distance(enemyGoal.withZ(RLConstants.goalHeight / 2));
                                                 boolean landsInGoal = ballAtFrame.makeMutable().isInGoal(teamSign);
 
                                                 if (didLandInGoal) { // The ball has to at least land in the goal to be better than the last simulation
@@ -320,7 +323,7 @@ public class OffensiveStrategy extends Strategy {
                                                         timeToGoal = time;
                                                         applyDodgeSettings = true;
                                                         break;
-                                                    } else if (dist < minDistanceToGoal && time > 0.75f) { // Check if it's better than the last sim which also didn't score
+                                                    } else if (dist < minDistanceToGoal && time > 0.25f) { // Check if it's better than the last sim which also didn't score
                                                         minDistanceToGoal = dist;
                                                         applyDodgeSettings = true;
                                                     }
@@ -347,14 +350,14 @@ public class OffensiveStrategy extends Strategy {
                             }
 
                             if (this.hitPrediction != null) { // Found shot
-                                RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
+                                //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.5f)).buildPacket());
 
                                 if (didLandInGoal)
                                     RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (QuickChatSelection.Reactions_Calculated));
                                 else
-                                    RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (QuickChatSelection.Apologies_Oops + 1));
+                                    RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (QuickChatSelection.Apologies_Oops));
                             } else { // Couldn't hit the ball
-                                RLBotDll.sendQuickChat(car.playerIndex, true, (byte) (QuickChatSelection.Custom_Useful_Faking + 1));
+                                RLBotDll.sendQuickChat(car.playerIndex, true, (byte) (QuickChatSelection.Information_TakeTheShot));
                                 dodgeManeuver.direction = null;
                                 dodgeManeuver.duration = 0;
                                 dodgeManeuver.delay = 9999;

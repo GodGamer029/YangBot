@@ -6,10 +6,7 @@ import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.manuever.DodgeManeuver;
-import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
-import yangbot.util.hitbox.YangCarHitbox;
-import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 
@@ -22,15 +19,7 @@ public class TestBot implements Bot {
     private float lastTick = -1;
     private boolean hasSetPriority = false;
 
-    private Vector3 lastContact = null;
-    private YangCarHitbox lastHitbox = null;
-    private Vector3 lastPos = null;
-
-    private CarData carSim;
     private DodgeManeuver simDodge;
-    private BallData simBall;
-    private YangBallPrediction simPrediction;
-    private float closest = 95;
     private float lastSpeed = 0;
 
     public TestBot(int playerIndex) {
@@ -177,7 +166,6 @@ public class TestBot implements Bot {
     enum State {
         RESET,
         INIT,
-        RUN,
-        STOP
+        RUN
     }
 }

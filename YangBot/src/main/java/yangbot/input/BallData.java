@@ -46,8 +46,11 @@ public class BallData {
         this.position = ball.position;
         this.velocity = ball.velocity;
         this.angularVelocity = ball.angularVelocity;
-        this.hasBeenTouched = ball.hasBeenTouched;
-        this.latestTouch = ball.latestTouch;
+        this.hasBeenTouched = ball.hasBeenTouched();
+        if (this.hasBeenTouched)
+            this.latestTouch = ball.getLatestTouch();
+        else
+            this.latestTouch = null;
         this.elapsedSeconds = ball.elapsedSeconds;
     }
 

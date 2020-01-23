@@ -9,8 +9,8 @@ public class ImmutableBallData {
     public final Vector3 position;
     public final Vector3 velocity;
     public final Vector3 angularVelocity;
-    public final BallTouch latestTouch;
-    public final boolean hasBeenTouched;
+    private final BallTouch latestTouch;
+    private final boolean hasBeenTouched;
     public final float elapsedSeconds;
 
     public ImmutableBallData(final Physics ballPhysics, float elapsedSeconds) {
@@ -38,6 +38,15 @@ public class ImmutableBallData {
         this.hasBeenTouched = false;
         this.latestTouch = null;
         this.elapsedSeconds = ballPhysics.elapsedSeconds();
+    }
+
+    public boolean hasBeenTouched() {
+        return this.hasBeenTouched && this.latestTouch != null;
+    }
+
+    public BallTouch getLatestTouch() {
+        assert hasBeenTouched();
+        return this.latestTouch;
     }
 
     public BallData makeMutable() {

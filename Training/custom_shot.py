@@ -16,13 +16,13 @@ class CustomHookShot(StrikerExercise):
     def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
         return GameState(
             ball=BallState(physics=Physics(
-                location=Vector3(-2000, 3000, 93),
-                velocity=Vector3(--1000, 0, rng.uniform(400, 700)),
+                location=Vector3(-4000, 3000, 93),
+                velocity=Vector3(500, 2000, 0),
                 angular_velocity=Vector3(0, 0, 0))),
             cars={
                 0: CarState(
                     physics=Physics(
-                        location=Vector3(rng.uniform(--1000, --2000), 1500, 25),
+                        location=Vector3(rng.uniform(100, 500), 2000, 25),
                         rotation=Rotator(0, pi / (0 + rng.uniform(-0.9, 0.9)), 0),
                         velocity=Vector3(0, 700, 0),
                         angular_velocity=Vector3(0, 0, 0)),

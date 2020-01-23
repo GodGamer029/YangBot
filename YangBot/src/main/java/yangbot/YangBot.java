@@ -18,13 +18,8 @@ import java.awt.*;
 public class YangBot implements Bot {
 
     private final int playerIndex;
-    /**
-     * This is the most important function. It will automatically get called by the framework with fresh data
-     * every frame. Respond with appropriate controls!
-     */
-    public float all = 0;
-    public int count = 0;
-    public int realCount = 0;
+
+
     private State state = State.RESET;
     private float timer = -1.0f;
     private float lastTick = -1;

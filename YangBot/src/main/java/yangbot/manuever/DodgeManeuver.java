@@ -79,7 +79,7 @@ public class DodgeManeuver extends Maneuver {
         if (duration > 0 && delay > 0)
             dodge_time = delay;
 
-        if (timer >= dodge_time && !car.doubleJumped && !car.hasWheelContact) {
+        if (timer >= dodge_time && !car.doubleJumped) {
             Vector2 direction_local = null;
 
             if ((target == null && direction == null) || (target != null && direction != null))
@@ -121,8 +121,9 @@ public class DodgeManeuver extends Maneuver {
                 System.err.println("Dodge maneuver has no direction nor target");
             }
             controlsOutput.withJump(true);
-        } else if (!car.hasWheelContact) {
+        } else if (!car.isGrounded() && !car.doubleJumped) {
             if (this.enablePreorient) {
+                this.turnManeuver.fool(gameData);
                 this.turnManeuver.target = this.preorientOrientation;
                 this.turnManeuver.step(dt, controlsOutput);
             }

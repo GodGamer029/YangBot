@@ -21,7 +21,7 @@ public class DefaultStrategy extends Strategy {
 
         controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
         controlsOutput.withThrottle(Math.max(0.05f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
-        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.distance(futureBallPos) > 1000 && car.boost > 40)
+        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.flatten().distance(futureBallPos.flatten()) > 1000 && car.boost > 40)
             controlsOutput.withBoost(true);
 
         if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)

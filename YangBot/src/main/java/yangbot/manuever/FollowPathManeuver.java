@@ -90,8 +90,8 @@ public class FollowPathManeuver extends Maneuver {
     public void draw(AdvancedRenderer renderer, CarData car) {
         float currentPos = this.path.findNearest(car.position);
         float distanceOffPath = (float) car.position.flatten().distance(this.path.pointAt(currentPos).flatten());
-
-        renderer.drawString2d(String.format("Current %.1f", 100 - (100 * currentPos / this.path.length)), Color.WHITE, new Point(500, 410), 1, 1);
+        float perc = 100 - (100 * currentPos / this.path.length);
+        renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, 410), 1, 1);
         renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, 430), 1, 1);
         if (this.arrivalTime > 0)
             renderer.drawString2d(String.format("Arriving in %.1fs", this.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 450), 2, 2);

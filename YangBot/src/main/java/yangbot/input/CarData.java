@@ -128,6 +128,13 @@ public class CarData {
         this.hitbox = new YangCarHitbox(this.orientation);
     }
 
+    public boolean isGrounded() {
+        if (RLConstants.isPosNearWall(this.position.flatten(), 20) || this.position.z >= RLConstants.arenaHeight - 100)
+            return this.hasWheelContact;
+        else
+            return this.position.z <= RLConstants.carElevation + 3;
+    }
+
     public Matrix2x2 getDodgeOrientation() {
         return Matrix2x2.fromRotation(this.orientation.toEuler().y);
     }

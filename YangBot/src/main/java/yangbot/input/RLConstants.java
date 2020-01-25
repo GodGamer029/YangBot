@@ -13,6 +13,8 @@ public class RLConstants {
     public static final float goalCenterToPost = 892.755f;
     public static final float goalHeight = 642.775f;
 
+    public static final float arenaHeight = 2044;
+
     public static Vector3 gravity = new Vector3(0, 0, -650);
 
     public static float gameLatencyCompensation = 0.f;

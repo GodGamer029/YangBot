@@ -109,7 +109,7 @@ public class YangBotJNAInterop {
         float tickFreq = 1f / tickrate;
 
         List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
-        for (int i = 0; i < flatPrediction.framesLength() / 3; i++) {
+        for (int i = 0; i < flatPrediction.framesLength(); i++) {
             FlatPhysics frame = flatPrediction.frames(i);
             ImmutableBallData data = new ImmutableBallData(frame);
             ballDataList.add(new YangBallPrediction.YangPredictionFrame(i * tickFreq + ballData.elapsedSeconds, i * tickFreq, data));

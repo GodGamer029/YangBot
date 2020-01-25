@@ -293,10 +293,10 @@ public class Curve {
         Vector3 ballCollisionBallPosition = new Vector3();
 
         final YangSphereHitbox carBox = car.hitbox.asSphere(1.1f);
-
-        for (float t = 0; t < relativeArrivalTime; t += dt) {
-            if (distToTarget <= 0) // Made it there before time ran out, shouldn't usually happen
-                break;
+        float t = 0;
+        for (; t < relativeArrivalTime; t += dt) {
+            //if (distToTarget <= 0) // Made it there before time ran out, shouldn't usually happen
+            //   break;
 
             final float timeUntilArrival = relativeArrivalTime - t;
             final float maxSpeed = Math.max(10, this.maxSpeedAt(distToTarget));
@@ -342,7 +342,7 @@ public class Curve {
             }
         }
 
-        this.pathCheckStatus = new PathCheckStatus(distToTarget < 150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition, currentSpeed);
+        this.pathCheckStatus = new PathCheckStatus(distToTarget < 150 && distToTarget > -150 ? PathStatus.VALID : PathStatus.SPEED_EXCEEDED, collidedWithBall, distanceOfBallCollision, ballCollisionContactPoint, ballCollisionBallPosition, currentSpeed);
         return this.pathCheckStatus;
     }
 

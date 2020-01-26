@@ -326,7 +326,7 @@ public class Curve {
             // Simulate the car
             {
                 ControlsOutput sampleOutput = new ControlsOutput();
-                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead), CarData.MAX_VELOCITY);
+                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead), CarData.MAX_VELOCITY, 0.04f);
 
                 if (boost <= 0)
                     sampleOutput.withBoost(false);

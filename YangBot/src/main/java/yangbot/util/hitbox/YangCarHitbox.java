@@ -17,9 +17,9 @@ public class YangCarHitbox extends YangHitbox {
 
     private Matrix3x3 orientation;
 
-    private Vector3 permF;
-    private Vector3 permL;
-    private Vector3 permU;
+    public Vector3 permF;
+    public Vector3 permL;
+    public Vector3 permU;
 
     public YangCarHitbox(BoxShape hitbox, Vector3 offsets, Matrix3x3 orientation) {
         this.hitboxLengths = new Vector3(hitbox.length(), hitbox.width(), hitbox.height()).mul(1, 1, 1);

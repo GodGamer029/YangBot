@@ -33,8 +33,8 @@ public class DribbleStrategy extends Strategy {
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        GameData gameData = GameData.current();
-        CarData car = gameData.getCarData();
+        final GameData gameData = GameData.current();
+        final CarData car = gameData.getCarData();
 
         if (!car.hasWheelContact || car.up().angle(new Vector3(0, 0, 1)) > Math.PI / 4) {
             this.setDone();

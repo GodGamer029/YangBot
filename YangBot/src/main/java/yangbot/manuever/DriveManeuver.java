@@ -14,12 +14,12 @@ public class DriveManeuver extends Maneuver {
     public static final float boost_acceleration = 991.667f;
     public static final float brake_acceleration = 3500.0f;
     public static final float coasting_acceleration = 525.0f;
-    public static final float reaction_time = 0.04f;
-
+    public float reaction_time = 0.04f;
 
     public Vector3 target = null;
     public float minimumSpeed = 1400f;
     public float maximumSpeed = CarData.MAX_VELOCITY;
+    public boolean allowBoostForLowSpeeds = true;
 
     public static float maxDistance(float currentSpeed, float time) {
         final float drivingSpeed = RLConstants.tickRate <= 60 ? 1238.3954f : 1235.0f;
@@ -113,17 +113,17 @@ public class DriveManeuver extends Maneuver {
         return -1.0f;
     }
 
-    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed) {
+    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime) {
         minimumSpeed = Math.min(minimumSpeed, CarData.MAX_VELOCITY);
         maximumSpeed = Math.min(maximumSpeed, CarData.MAX_VELOCITY);
         assert minimumSpeed <= maximumSpeed : "minimumSpeed (" + minimumSpeed + ") should always be equal or lower the maximumSpeed(" + maximumSpeed + ")";
 
-        float minimumAcceleration = (minimumSpeed - currentSpeed) / reaction_time;
-        float maximumAcceleration = (maximumSpeed - currentSpeed) / reaction_time;
+        float minimumAcceleration = (minimumSpeed - currentSpeed) / reactionTime;
+        float maximumAcceleration = (maximumSpeed - currentSpeed) / reactionTime;
 
         float brake_coast_transition = -(0.45f * brake_acceleration + 0.55f * coasting_acceleration);
         float coasting_throttle_transition = -0.5f * coasting_acceleration;
-        float throttle_boost_transition = 1.0f * throttleAcceleration(currentSpeed) + 0.5f * boost_acceleration;
+        float throttle_boost_transition = 1.0f * throttleAcceleration(currentSpeed) + 0.7f * boost_acceleration;
 
         //if (car.up().z < 0.7f) {
         //    brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
@@ -157,7 +157,10 @@ public class DriveManeuver extends Maneuver {
         final CarData car = gameData.getCarData();
 
         steerController(dt, controlsOutput, car);
-        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), this.minimumSpeed, this.maximumSpeed);
+        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), this.minimumSpeed, this.maximumSpeed, reaction_time);
+
+        if (!allowBoostForLowSpeeds && this.minimumSpeed < DriveManeuver.max_throttle_speed - 20)
+            controlsOutput.withBoost(false);
 
         if (car.position.sub(target).magnitude() < 100.f)
             this.setIsDone(true);

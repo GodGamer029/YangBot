@@ -1,26 +1,26 @@
 package yangbot.manuever;
 
 import yangbot.input.*;
+import yangbot.prediction.Curve;
 import yangbot.prediction.YangBallPrediction;
+import yangbot.util.AdvancedRenderer;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
+
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class DribbleManeuver extends Maneuver {
 
     public Vector2 direction = null;
-    public boolean hasBallPossession = false;
-    private BallState state;
-    private Vector3 ballPredictionPos = null;
-    private Vector3 ballPredictionVelocity = null;
-    private float ballArrival = 0;
-    private Vector3 impact = null;
-    private final RecoverToGroundManeuver recoverToGroundManuver;
-    private final DriveToPointManeuver driveToPointManeuver;
+    private final DriveManeuver driveManeuver;
+    private FollowPathManeuver followPathManeuver = null;
 
     public DribbleManeuver() {
-        recoverToGroundManuver = new RecoverToGroundManeuver();
-        driveToPointManeuver = new DriveToPointManeuver();
-        state = BallState.FIND_BALL;
+        driveManeuver = new DriveManeuver();
     }
 
     @Override
@@ -28,30 +28,17 @@ public class DribbleManeuver extends Maneuver {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
 
+        if (!car.isGrounded())
+            return false;
+
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
-        final float ballRadius = RLConstants.ballRadius;
-        for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
-            ImmutableBallData frameBall = frame.ballData;
-            Vector3 loc = frameBall.position;
-            Vector3 vel = frameBall.velocity;
 
-            if (frame.absoluteTime - car.elapsedSeconds < 0.2f)
-                continue;
+        float zThreshold = car.hitbox.permutatePoint(car.position, 0, 0, 1).z + BallData.COLLISION_RADIUS;
 
-            if (frame.absoluteTime - car.elapsedSeconds > 3.5f)
-                continue;
+        Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFramesBetweenRelative(0, 2f).stream().filter((f) -> f.ballData.position.z <= zThreshold && f.ballData.position.z > BallData.COLLISION_RADIUS * 1.2f && f.ballData.velocity.z <= 0).findFirst();
 
-            if (RLConstants.isPosNearWall(loc.flatten(), 10))
-                continue;
 
-            if (loc.z <= ballRadius + 2f && Math.abs(vel.z) <= 1f)
-                break;
-
-            if (vel.z < 0 && loc.z - ballRadius > car.position.z + 18f && loc.z - ballRadius < car.position.z + 30f)
-                return true;
-        }
-
-        return false;
+        return frameOptional.isPresent();
     }
 
     @Override
@@ -60,108 +47,87 @@ public class DribbleManeuver extends Maneuver {
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
         final ImmutableBallData ball = gameData.getBallData();
+        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
-        float vf = (float) car.velocity.dot(car.forward());
-        if (state == BallState.FIND_BALL) {
-
-            YangBallPrediction ballPrediction = gameData.getBallPrediction();
-            for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
-                ImmutableBallData frameBall = frame.ballData;
-                Vector3 loc = frameBall.position;
-                Vector3 vel = frameBall.velocity;
-
-                float sliceSeconds = frame.absoluteTime;
-                if (sliceSeconds - (car.elapsedSeconds) < 0.2f)
-                    continue;
-
-                if (sliceSeconds - (car.elapsedSeconds) > 3.5f)
-                    continue;
-
-                if (loc.z <= RLConstants.ballRadius + 2f && Math.abs(vel.z) <= 1f)
-                    break;
-
-                if (RLConstants.isPosNearWall(loc.flatten(), 10))
-                    continue;
-
-                if (vel.z < 0 &&
-                        loc.z - RLConstants.ballRadius > car.position.z + RLConstants.carElevation &&
-                        loc.z - RLConstants.ballRadius < car.position.z + RLConstants.carElevation + 12f) {
-                    ballPredictionPos = loc.add(vel.mul(dt));
-                    ballPredictionVelocity = vel;
-                    ballArrival = sliceSeconds;
-
-                    state = BallState.GOTO_BALL;
-                    break;
-                }
-            }
-
-            if (state != BallState.GOTO_BALL)
-                this.setIsDone(true);
-        } else if (state == BallState.GOTO_BALL) {
-
-            float dist = (float) car.position.flatten().distance(ballPredictionPos.flatten());
-            if (car.elapsedSeconds >= ballArrival || (dist < 15 && ball.position.z - RLConstants.ballRadius > car.position.z + RLConstants.carElevation)) {
-                if (dist < 50) {
-                    //System.out.println("Starting dribble; "+dist);
-                    state = BallState.DRIBBLING;
-                } else {
-                    //System.out.println("Refinding ball; "+dist);
-                    state = BallState.FIND_BALL;
-                }
-                return;
-            }
-
-            YangBallPrediction ballPrediction = gameData.getBallPrediction();
-            boolean weFoundTheBall = false;
-            for (YangBallPrediction.YangPredictionFrame frame : ballPrediction.frames) {
-                ImmutableBallData frameBall = frame.ballData;
-                Vector3 loc = frameBall.position;
-                Vector3 vel = frameBall.velocity;
-                if (vel.z < 0 && loc.z - RLConstants.ballRadius > car.position.z + 17f && loc.z - RLConstants.ballRadius < car.position.z + 40f && Math.abs(ballArrival - frame.absoluteTime) < 0.2f) {
-                    weFoundTheBall = true;
-                    ballPredictionPos = loc;
-                    ballPredictionVelocity = vel;
-                    ballArrival = frame.absoluteTime;
-                    break;
-                }
-            }
-            if (!weFoundTheBall) {
-                state = BallState.FIND_BALL;
-                // System.out.println("Couldn't get to ball timeLeft: "+(ballArrival - car.elapsedSeconds));
-                return;
-            }
-
-
-            {
-                float targetVelocity = Math.max(((float) ballPredictionVelocity.flatten().magnitude() - 30), 0);
-
-                driveToPointManeuver.targetPosition = ballPredictionPos.add(car.forward().mul(-10));
-                driveToPointManeuver.targetVelocity = 0;
-                driveToPointManeuver.step(dt, controlsOutput);
-            }
-        } else if (state == BallState.DRIBBLING) {
-            float toBallDistance = (float) car.position.flatten().distance(ball.position.flatten());
-            if (toBallDistance > 200 || (ball.position.z - RLConstants.ballRadius < car.position.z + 10f && Math.abs(ball.velocity.z) < 0.05f)) {
-                state = BallState.FIND_BALL;
-                hasBallPossession = false;
-                return;
-            }
-
-            if (car.hasWheelContact && car.up().angle(new Vector3(0, 0, 1)) < Math.PI / 10) {
-                driveToPointManeuver.targetPosition = new Vector3(ball.position.flatten().add(ball.velocity.flatten().mul(dt)), car.position.z);
-                driveToPointManeuver.targetVelocity = (float) ball.velocity.flatten().magnitude() - 30f;
-                driveToPointManeuver.step(dt, controlsOutput);
-            } else {
-                hasBallPossession = false;
-                if (!car.hasWheelContact) {
-                    recoverToGroundManuver.orientationTarget = ball.position.flatten().sub(car.position.flatten()).normalized();
-                    recoverToGroundManuver.step(dt, controlsOutput);
-                }
-                return;
-            }
+        if (!car.isGrounded() || !isViable()) {
+            this.setDone();
+            return;
         }
 
-        hasBallPossession = state == BallState.DRIBBLING && ball.position.z - RLConstants.ballRadius > car.position.z + 15f;
+        float zThreshold = car.hitbox.permutatePoint(car.position, 0, 0, 1).z + BallData.COLLISION_RADIUS;
+        Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFramesBetweenRelative(RLConstants.tickFrequency, 2f).stream().filter((f) -> f.ballData.position.z <= zThreshold && f.ballData.velocity.z < 0).findFirst();
+        if (frameOptional.isPresent()) {
+            YangBallPrediction.YangPredictionFrame frame = frameOptional.get();
+            Vector3 driveTarget = frame.ballData.position.withZ(car.position.z);
+
+            // Ball Control
+            {
+                Vector2 ballVel = ball.velocity.flatten();
+                float ballSpeed = (float) ballVel.magnitude();
+
+                float forwardDisplacement = 0;
+                float leftDisplacement = 0;
+                // Throttle
+                {
+                    renderer.drawString2d("BallSpeed: " + ballSpeed, Color.WHITE, new Point(500, 700), 2, 2);
+                    if (ballSpeed < 1000)
+                        forwardDisplacement = -1f;
+                    else if (ballSpeed > 2000)
+                        forwardDisplacement = 1;
+                    else
+                        forwardDisplacement = MathUtils.lerp(-0.8f, 0.8f, (ballSpeed - 1000f) / 400f);
+                }
+
+
+                // Steer
+                if (ballVel.magnitude() > 10) {
+                    final int teamSign = car.team * 2 - 1;
+                    final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 200));
+                    Vector2 target = enemyGoal;
+                    float angle = MathUtils.clip((float) ball.velocity.flatten().normalized().correctionAngle(enemyGoal.sub(ball.position.flatten()).normalized()), -1, 1);
+                    leftDisplacement = -angle;
+                }
+
+
+                float scaler = Math.max(1, Math.abs(forwardDisplacement) + Math.abs(leftDisplacement));
+                driveTarget = driveTarget.add(car.hitbox.permF.mul(forwardDisplacement / scaler));
+                driveTarget = driveTarget.add(car.hitbox.permL.mul(leftDisplacement));
+            }
+
+            if (car.position.distance(driveTarget) < 150) {
+                driveManeuver.target = driveTarget.add(ball.velocity.flatten().mul(0.2f).withZ(0));
+                if (car.position.distance(driveTarget) < 30)
+                    driveManeuver.minimumSpeed = (float) ball.velocity.flatten().magnitude();
+                else
+                    driveManeuver.minimumSpeed = (float) car.position.distance(driveTarget) / Math.max(RLConstants.tickFrequency, frame.relativeTime);
+
+                driveManeuver.reaction_time = 0.1f;
+                driveManeuver.maximumSpeed = driveManeuver.minimumSpeed + 25;
+                driveManeuver.minimumSpeed += 5;
+                driveManeuver.allowBoostForLowSpeeds = false;
+                driveManeuver.step(dt, controlsOutput);
+                if (controlsOutput.holdBoost())
+                    System.out.println(driveManeuver.minimumSpeed + ", " + car.position.distance(driveTarget) + ", " + frame.relativeTime);
+            } else {
+                if (followPathManeuver == null || Math.abs(followPathManeuver.arrivalTime - frame.absoluteTime) > 0.1f || followPathManeuver.arrivalTime - car.elapsedSeconds <= 0) {
+                    followPathManeuver = new FollowPathManeuver();
+                    List<Curve.ControlPoint> controlPoints = new ArrayList<>();
+
+                    controlPoints.add(new Curve.ControlPoint(car.position, car.forward()));
+                    controlPoints.add(new Curve.ControlPoint(driveTarget, car.forward().mul(-1)));
+
+                    Curve currentPath = new Curve(controlPoints);
+                    followPathManeuver.path = currentPath;
+                    followPathManeuver.arrivalTime = frame.absoluteTime;
+
+                }
+                followPathManeuver.step(dt, controlsOutput);
+                followPathManeuver.draw(renderer, car);
+                followPathManeuver.path.draw(renderer);
+                renderer.drawCentered3dCube(Color.YELLOW, frame.ballData.position.withZ(zThreshold), 50);
+            }
+        }
     }
 
     @Override
@@ -169,9 +135,4 @@ public class DribbleManeuver extends Maneuver {
         return null;
     }
 
-    enum BallState {
-        FIND_BALL,
-        GOTO_BALL,
-        DRIBBLING
-    }
 }

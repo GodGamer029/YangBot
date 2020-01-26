@@ -76,10 +76,10 @@ public class FollowPathManeuver extends Maneuver {
         boolean enableSlide = false;
 
         if (Math.abs(maxSpeedAtPathSection) < 50) { // Very likely to be stuck in a turn that is impossible
-            driveManeuver.minimumSpeed = 200;
+            driveManeuver.minimumSpeed = 50;
             enableSlide = true;
         }
-
+        driveManeuver.maximumSpeed = driveManeuver.minimumSpeed;
         driveManeuver.step(dt, controlsOutput);
         if (enableSlide) {
             controlsOutput.withSlide();
@@ -100,7 +100,7 @@ public class FollowPathManeuver extends Maneuver {
         renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, 570), 2, 2);
     }
 
-    float distanceError(float s0, float T, float dt, float v0, float vT, float aT) {
+    public float distanceError(float s0, float T, float dt, float v0, float vT, float aT) {
         int num_steps = (int) (T / dt);
         float s = s0;
         float v = v0;
@@ -120,7 +120,7 @@ public class FollowPathManeuver extends Maneuver {
         return s;
     }
 
-    float determineSpeedPlan(float s, float T, float dt, CarData car) {
+    public float determineSpeedPlan(float s, float T, float dt, CarData car) {
         float v0 = (float) car.velocity.magnitude();
         float vf = arrivalSpeed;
 
@@ -146,7 +146,7 @@ public class FollowPathManeuver extends Maneuver {
         }
 
         expected_error = error;
-        expected_speed = MathUtils.interpolateQuadratic(v0, vf, a, DriveManeuver.reaction_time, T);
+        expected_speed = MathUtils.interpolateQuadratic(v0, vf, a, 0.04f, T);
 
         return expected_speed;
     }

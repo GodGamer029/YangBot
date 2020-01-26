@@ -38,6 +38,7 @@ public class OffensiveStrategy extends Strategy {
     private Vector3 positionAtBallHit;
     private float lastBallHit = 0;
     private float randomDodgeStart = 0.3f;
+    private Strategy suggestedStrat = null;
 
     @Override
     protected void planStrategyInternal() {
@@ -62,6 +63,11 @@ public class OffensiveStrategy extends Strategy {
             this.setDone();
             return;
         }
+
+        if (DribbleStrategy.isViable()) {
+            suggestedStrat = new DribbleStrategy();
+        }
+
 
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
@@ -410,6 +416,6 @@ public class OffensiveStrategy extends Strategy {
 
     @Override
     public Optional<Strategy> suggestStrategy() {
-        return Optional.empty();
+        return Optional.ofNullable(suggestedStrat);
     }
 }

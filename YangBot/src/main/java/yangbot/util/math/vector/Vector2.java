@@ -110,9 +110,8 @@ public class Vector2 {
     }
 
     public Vector2 normalized() {
-
         if (isZero()) {
-            throw new IllegalStateException("Cannot normalize a vector with length zero!");
+            return new Vector2();
         }
         return this.mul(1.f / magnitude());
     }

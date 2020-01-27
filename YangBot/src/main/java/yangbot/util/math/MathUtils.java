@@ -5,14 +5,17 @@ import yangbot.util.math.vector.Vector3;
 public class MathUtils {
 
     public static float lerp(float a, float b, float t) {
+        assert t >= 0 && t <= 1 : "t=" + t;
         return a * (1.0f - t) + b * t;
     }
 
     public static double lerp(double a, double b, double t) {
+        assert t >= 0 && t <= 1 : "t=" + t;
         return a * (1.0f - t) + b * t;
     }
 
     public static Vector3 lerp(Vector3 a, Vector3 b, double t) {
+        assert t >= 0 && t <= 1 : "t=" + t;
         return a.mul(1.0f - t).add(b.mul(t));
     }
 
@@ -43,12 +46,11 @@ public class MathUtils {
         return value;
     }
 
-    // The following isn't really useful, just writing down my thoughts
-    public double getSpeedInDirection(Vector3 velocity, Vector3 direction) {
-        return velocity.dot(direction);
-    }
-
-    public Vector3 getVelocityInDirection(Vector3 velocity, Vector3 direction) {
-        return direction.mul(getSpeedInDirection(velocity, direction));
+    public static float remap(float value, float rangeStart, float rangeEnd, float newRangeStart, float newRangeEnd) {
+        value -= rangeStart;
+        value /= rangeEnd - rangeStart; // now mapped between 0 - 1
+        value *= newRangeEnd - newRangeStart;
+        value += newRangeStart;
+        return value;
     }
 }

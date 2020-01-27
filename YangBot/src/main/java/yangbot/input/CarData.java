@@ -27,6 +27,7 @@ public class CarData {
     public static final float MASS = 180f;
     public static final Matrix3x3 INERTIA;
     public static final Matrix3x3 INV_INERTIA;
+    public static final float BOOST_CONSUMPTION = 33.3f;
 
     static {
         Matrix3x3 inertia;

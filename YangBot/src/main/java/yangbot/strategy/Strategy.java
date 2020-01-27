@@ -49,7 +49,7 @@ public abstract class Strategy {
         long ms = System.currentTimeMillis();
         planStrategyInternal();
         long duration = System.currentTimeMillis() - ms;
-        if (duration > RLConstants.tickFrequency * 1000 * 3.5)
+        if (duration > RLConstants.tickFrequency * 1000 * 2.5)
             System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to plan its strategy");
 
         plannedStrategy = true;
@@ -90,7 +90,7 @@ public abstract class Strategy {
         long ms = System.currentTimeMillis();
         stepInternal(dt, controlsOutput);
         long duration = System.currentTimeMillis() - ms;
-        if (duration > RLConstants.tickFrequency * 1000 * 3.5)
+        if (duration > RLConstants.tickFrequency * 1000 * 2)
             System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to execute its strategy");
     }
 

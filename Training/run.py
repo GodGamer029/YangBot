@@ -4,6 +4,7 @@ import importlib
 from rlbottraining.common_exercises.bronze_goalie import BallRollingToGoalie as BronzeBallRollingToGoalie
 from rlbottraining.common_exercises.silver_goalie import TryNotToOwnGoal
 from rlbottraining.common_exercises.silver_striker import HookShot
+from rlbottraining.common_exercises.dribbling import Dribbling
 from rlbot.matchconfig.match_config import PlayerConfig, Team
 import gold_goalie
 from gold_goalie import GoldBallRollingToGoalie

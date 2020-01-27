@@ -331,7 +331,7 @@ public class Curve {
                 if (boost <= 0)
                     sampleOutput.withBoost(false);
                 else if (sampleOutput.holdBoost())
-                    boost -= 33.3f * dt;
+                    boost -= CarData.BOOST_CONSUMPTION * dt;
 
                 final float forceForward = CarData.driveForceForward(sampleOutput, currentSpeed, 0, 0);
                 final float forceLeft = CarData.driveForceLeft(sampleOutput, currentSpeed, 0, 0);

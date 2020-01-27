@@ -18,6 +18,7 @@ public class FollowPathManeuver extends Maneuver {
     float expected_error;
     float expected_speed;
     public DriveManeuver driveManeuver;
+    public boolean allowBackwardsDriving = false;
 
     public FollowPathManeuver() {
         driveManeuver = new DriveManeuver();
@@ -55,31 +56,48 @@ public class FollowPathManeuver extends Maneuver {
             final float T_min = RLConstants.tickFrequency;
             final float timeUntilArrival = Math.max(arrivalTime - car.elapsedSeconds, T_min);
 
-            if (arrivalSpeed != -1)
+            if (arrivalSpeed != -1) {
                 driveManeuver.minimumSpeed = determineSpeedPlan(pathDistanceFromTarget, timeUntilArrival, dt, car);
-            else
+                driveManeuver.maximumSpeed = driveManeuver.minimumSpeed;
+            } else {
                 driveManeuver.minimumSpeed = pathDistanceFromTarget / timeUntilArrival;
+                driveManeuver.maximumSpeed = driveManeuver.minimumSpeed;
+            }
 
             this.setIsDone(timeUntilArrival <= T_min);
         } else {
-            if (arrivalSpeed != -1)
+            if (arrivalSpeed != -1) {
                 driveManeuver.minimumSpeed = arrivalSpeed;
-            else
-                driveManeuver.minimumSpeed = DriveManeuver.max_throttle_speed;
+                driveManeuver.maximumSpeed = arrivalSpeed;
+            } else {
+                driveManeuver.minimumSpeed = DriveManeuver.max_throttle_speed - 10;
+                driveManeuver.maximumSpeed = CarData.MAX_VELOCITY;
+            }
 
             this.setIsDone(pathDistanceFromTarget <= 50f);
         }
 
         final float maxSpeedAtPathSection = path.maxSpeedAt(pathDistanceFromTarget - currentSpeed * (4f * dt));
 
-        driveManeuver.minimumSpeed = Math.min(driveManeuver.minimumSpeed, maxSpeedAtPathSection);
+        driveManeuver.maximumSpeed = Math.min(maxSpeedAtPathSection, driveManeuver.maximumSpeed);
+        driveManeuver.minimumSpeed = Math.min(driveManeuver.minimumSpeed, driveManeuver.maximumSpeed);
+
+        if (allowBackwardsDriving && car.forward().dot(path.tangentAt(pathDistanceFromTarget - currentSpeed * (4f * dt))) < 0) {
+            float temp = driveManeuver.maximumSpeed;
+            driveManeuver.maximumSpeed = driveManeuver.minimumSpeed * -1;
+            driveManeuver.minimumSpeed = temp * -1;
+
+            driveManeuver.target = driveManeuver.target.add(car.position.sub(driveManeuver.target).mul(-1));
+        }
+
         boolean enableSlide = false;
 
-        if (Math.abs(maxSpeedAtPathSection) < 50) { // Very likely to be stuck in a turn that is impossible
-            driveManeuver.minimumSpeed = 50;
+        if (Math.abs(maxSpeedAtPathSection) < 100) { // Very likely to be stuck in a turn that is impossible
+            driveManeuver.minimumSpeed = 100;
+            driveManeuver.maximumSpeed = 200;
             enableSlide = true;
         }
-        driveManeuver.maximumSpeed = driveManeuver.minimumSpeed;
+
         driveManeuver.step(dt, controlsOutput);
         if (enableSlide) {
             controlsOutput.withSlide();
@@ -87,9 +105,14 @@ public class FollowPathManeuver extends Maneuver {
         }
     }
 
+    public float getDistanceOffPath(CarData car) {
+        float currentPos = this.path.findNearest(car.position);
+        return (float) car.position.flatten().distance(this.path.pointAt(currentPos).flatten());
+    }
+
     public void draw(AdvancedRenderer renderer, CarData car) {
         float currentPos = this.path.findNearest(car.position);
-        float distanceOffPath = (float) car.position.flatten().distance(this.path.pointAt(currentPos).flatten());
+        float distanceOffPath = this.getDistanceOffPath(car);
         float perc = 100 - (100 * currentPos / this.path.length);
         renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, 410), 1, 1);
         renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, 430), 1, 1);

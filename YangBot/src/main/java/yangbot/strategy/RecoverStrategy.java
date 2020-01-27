@@ -108,7 +108,7 @@ public class RecoverStrategy extends Strategy {
         if (speedflipPossible && simulationTime < 0.5f) {
             double backWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, -1, 0, -1)).sub(impactPosition));
             double frontWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, 1, 0, -1)).sub(impactPosition));
-            if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight - 15 > backWheelsHeight && !car.doubleJumped) {
+            if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight - 15 > backWheelsHeight) {
                 controlsOutput.withJump(true);
                 controlsOutput.withPitch(-1);
                 controlsOutput.withYaw(0);

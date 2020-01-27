@@ -2,8 +2,6 @@ package yangbot.strategy;
 
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.QuickChatSelection;
-import rlbot.gamestate.GameInfoState;
-import rlbot.gamestate.GameState;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.manuever.DodgeManeuver;
@@ -46,7 +44,7 @@ public class OffensiveStrategy extends Strategy {
         CarData car = gameData.getCarData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
-        RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
+        //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
 
         if (this.state == State.FOLLOW_PATH_STRIKE && this.followPathManeuver.arrivalTime > car.elapsedSeconds && this.followPathManeuver.arrivalTime - car.elapsedSeconds < 0.5f)
             return; // Don't replan when we are close to hitting the ball
@@ -71,7 +69,7 @@ public class OffensiveStrategy extends Strategy {
 
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
-                .filter((frame) -> frame.ballData.position.z <= BallData.COLLISION_RADIUS + 80 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))
+                .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 80 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f)) && !frame.ballData.makeMutable().isInAnyGoal())
                 .collect(Collectors.toList());
 
         if (strikeableFrames.size() > 0) {
@@ -84,7 +82,10 @@ public class OffensiveStrategy extends Strategy {
             YangBallPrediction strikePrediction = YangBallPrediction.from(strikeableFrames, RLConstants.tickFrequency);
 
             final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 1000));
-            final Line2 enemyGoalLine = new Line2(enemyGoal.sub(RLConstants.goalCenterToPost * 0.8f, 0), enemyGoal.add(RLConstants.goalCenterToPost * 0.8f, 0));
+            final float goalCenterToPostDistance = RLConstants.goalCenterToPost - BallData.COLLISION_RADIUS * 2;
+            assert goalCenterToPostDistance > 100; // Could fail with smaller goals
+            assert enemyGoal.x == 0; // Could fail with custom goals
+            final Line2 enemyGoalLine = new Line2(enemyGoal.sub(goalCenterToPostDistance, 0), enemyGoal.add(goalCenterToPostDistance, 0));
             final Vector3 startPosition = car.position.add(car.velocity.mul(RLConstants.tickFrequency * 2));
             final Vector3 startTangent = car.forward().mul(3).add(car.velocity.normalized()).normalized();
 
@@ -366,10 +367,10 @@ public class OffensiveStrategy extends Strategy {
                             if (this.hitPrediction != null) { // Found shot
                                 //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
 
-                                if (didLandInGoal)
-                                    RLBotDll.sendQuickChat(car.playerIndex, false, QuickChatSelection.Reactions_Calculated);
-                                else
-                                    RLBotDll.sendQuickChat(car.playerIndex, false, QuickChatSelection.Apologies_Oops);
+                                if (didLandInGoal) {
+                                    //RLBotDll.sendQuickChat(car.playerIndex, false, QuickChatSelection.Reactions_Calculated);
+                                    RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (62)); // Yeet!
+                                }
 
                             } else { // Couldn't hit the ball
                                 RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_TakeTheShot);

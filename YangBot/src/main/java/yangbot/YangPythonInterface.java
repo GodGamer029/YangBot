@@ -11,17 +11,20 @@ public class YangPythonInterface extends SocketServer {
     }
 
     @Override
-    protected Bot initBot(int index, String botType, int team) {
-        switch (MainClass.BOT_TYPE) {
-            case PRODUCTION:
-                return new YangBot(index);
-            case TEST:
-                return new TestBot(index);
-            case TRAINING:
-                return new TrainingBot(index);
-            case TRAINING_TEST:
-                return new TrainingTestBot(index);
+    protected Bot initBot(int index, String botName, int team) {
+        if (botName.equalsIgnoreCase("YangBot")) {
+            switch (MainClass.BOT_TYPE) {
+                case PRODUCTION:
+                    return new YangBot(index);
+                case TEST:
+                    return new TestBot(index);
+                case TRAINING:
+                    return new TrainingBot(index);
+                case TRAINING_TEST:
+                    return new TrainingTestBot(index);
+            }
+            throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
         }
-        throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
+        throw new IllegalArgumentException("Unknown Bot Name: " + botName);
     }
 }

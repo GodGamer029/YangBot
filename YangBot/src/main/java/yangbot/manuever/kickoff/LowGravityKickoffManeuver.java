@@ -18,11 +18,6 @@ public class LowGravityKickoffManeuver extends Maneuver {
     }
 
     @Override
-    public boolean isViable() {
-        return false;
-    }
-
-    @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final ImmutableBallData ball = gameData.getBallData();

@@ -113,16 +113,18 @@ public class YangBallPrediction {
             lastAbsTime = frame.get().absoluteTime;
             time = frame.get().relativeTime;
             ImmutableBallData ball = frame.get().ballData;
+
+            if (ball.makeMutable().isInAnyGoal()) {
+                renderer.drawCentered3dCube(color.brighter().brighter(), ball.position, 50);
+                renderer.drawString3d(String.format("Goal! (%.1f)", time), Color.WHITE, ball.position.add(0, 0, 150), 1, 1);
+                renderer.drawLine3d(color, lastPos, ball.position);
+                break;
+            }
+
             if (lastPos.distance(ball.position) < 50)
                 continue;
             renderer.drawLine3d(color, lastPos, ball.position);
             lastPos = ball.position;
-
-            if (ball.makeMutable().isInAnyGoal()) {
-                renderer.drawCentered3dCube(color.brighter().brighter(), ball.position, 50);
-                renderer.drawString3d("Goal!", Color.WHITE, ball.position.add(0, 0, 150), 1, 1);
-                break;
-            }
         }
     }
 

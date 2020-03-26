@@ -68,8 +68,8 @@ public class NeutralStrategy extends Strategy {
                     float pathLength = path.length;
                     if (pad.isFullBoost())
                         pathLength -= 800;
-                    if (path.length < shortestPathLength && path.length > 0) {
-                        shortestPathLength = path.length;
+                    if (pathLength < shortestPathLength && path.length > 0) {
+                        shortestPathLength = Math.max(0, pathLength);
                         shortestPath = path;
                     }
                 }

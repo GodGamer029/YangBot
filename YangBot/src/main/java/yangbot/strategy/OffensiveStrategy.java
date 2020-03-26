@@ -7,6 +7,7 @@ import yangbot.input.*;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.FollowPathManeuver;
 import yangbot.prediction.Curve;
+import yangbot.prediction.EpicPathPlanner;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.hitbox.YangCarHitbox;
@@ -16,7 +17,6 @@ import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -66,9 +66,9 @@ public class OffensiveStrategy extends Strategy {
             suggestedStrat = new DribbleStrategy();
         }
 
-
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
+                .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * frame.relativeTime * 0.6f)) == -teamSign) // Ball is closer to enemy goal than to own
                 .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 80 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f)) && !frame.ballData.makeMutable().isInAnyGoal())
                 .collect(Collectors.toList());
 
@@ -132,16 +132,10 @@ public class OffensiveStrategy extends Strategy {
                 if (curveOptional.isPresent())
                     currentPath = curveOptional.get();
                 else {
-                    //System.out.println("Falling back to simple path");
-                    List<Curve.ControlPoint> controlPoints = new ArrayList<>();
-
-                    // Construct Path
-                    {
-                        controlPoints.add(new Curve.ControlPoint(startPosition, startTangent));
-                        controlPoints.add(new Curve.ControlPoint(ballHitTarget, endTangent.mul(-1)));
-
-                        currentPath = new Curve(controlPoints);
-                    }
+                    currentPath = new EpicPathPlanner()
+                            .withStart(startPosition, startTangent)
+                            .withEnd(ballHitTarget, endTangent.mul(-1))
+                            .plan().get();
                 }
 
                 if (currentPath.length == 0 || Float.isNaN(currentPath.length) || currentPath.points.size() == 0)
@@ -244,6 +238,7 @@ public class OffensiveStrategy extends Strategy {
                             dodgeManeuver.direction = direction;
 
                             final float simDt = RLConstants.tickFrequency;
+                            final float maximumTimeForGoal = 2.5f;
 
                             float minDistanceToGoal = (float) ballAtArrival.flatten().distance(enemyGoal);
                             boolean didLandInGoal = false;
@@ -321,7 +316,7 @@ public class OffensiveStrategy extends Strategy {
                                                     break;
                                                 ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
                                                 float dist = (float) ballAtFrame.position.distance(enemyGoal.withZ(RLConstants.goalHeight / 2));
-                                                boolean landsInGoal = ballAtFrame.makeMutable().isInGoal(teamSign);
+                                                boolean landsInGoal = time <= maximumTimeForGoal && ballAtFrame.makeMutable().isInGoal(teamSign);
 
                                                 if (didLandInGoal) { // The ball has to at least land in the goal to be better than the last simulation
                                                     if (!landsInGoal)
@@ -338,7 +333,7 @@ public class OffensiveStrategy extends Strategy {
                                                         timeToGoal = time;
                                                         applyDodgeSettings = true;
                                                         break;
-                                                    } else if (dist < minDistanceToGoal && time > 0.25f) { // Check if it's better than the last sim which also didn't score
+                                                    } else if (dist < minDistanceToGoal && time > 0.2f) { // Check if it's better than the last sim which also didn't score
                                                         minDistanceToGoal = dist;
                                                         applyDodgeSettings = true;
                                                     }
@@ -384,7 +379,8 @@ public class OffensiveStrategy extends Strategy {
                         }
                     }
 
-                    dodgeManeuver.step(dt, controlsOutput);
+                    if (!dodgeManeuver.isDone())
+                        dodgeManeuver.step(dt, controlsOutput);
 
                     if (ball.hasBeenTouched() && ball.getLatestTouch().playerIndex == car.playerIndex && car.elapsedSeconds - ball.getLatestTouch().gameSeconds - dodgeManeuver.timer < -0.1f)
                         dodgeManeuver.setDone();

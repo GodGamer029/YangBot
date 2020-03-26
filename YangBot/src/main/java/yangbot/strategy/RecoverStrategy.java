@@ -78,7 +78,9 @@ public class RecoverStrategy extends Strategy {
         if (speedflipPossible) {
             Vector3 left = targetOrientationMatrix.left();
             targetOrientationMatrix = Matrix3x3.axisToRotation(left.mul(Math.PI * -0.175)).matrixMul(targetOrientationMatrix);
-        }
+            groundTurnManeuver.maxErrorAngularVelocity = 0.15f;
+        } else
+            groundTurnManeuver.maxErrorAngularVelocity = 1f;
         groundTurnManeuver.target = targetOrientationMatrix;
 
         if (car.boost > 60 && groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact

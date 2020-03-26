@@ -24,11 +24,6 @@ public class RegularKickoffManeuver extends Maneuver {
     private float timer = 0;
 
     @Override
-    public boolean isViable() {
-        return false;
-    }
-
-    @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();

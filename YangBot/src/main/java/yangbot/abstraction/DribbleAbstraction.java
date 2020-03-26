@@ -1,7 +1,10 @@
-package yangbot.manuever;
+package yangbot.abstraction;
 
 import yangbot.input.*;
+import yangbot.manuever.DriveManeuver;
+import yangbot.manuever.FollowPathManeuver;
 import yangbot.prediction.Curve;
+import yangbot.prediction.EpicPathPlanner;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.MathUtils;
@@ -9,17 +12,15 @@ import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
-public class DribbleManeuver extends Maneuver {
+public class DribbleAbstraction extends Abstraction {
 
     public Vector2 direction = null;
     private final DriveManeuver driveManeuver;
     private FollowPathManeuver followPathManeuver = null;
 
-    public DribbleManeuver() {
+    public DribbleAbstraction() {
         driveManeuver = new DriveManeuver();
     }
 
@@ -41,7 +42,7 @@ public class DribbleManeuver extends Maneuver {
     }
 
     @Override
-    public void step(float dt, ControlsOutput controlsOutput) {
+    public RunState stepInternal(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
@@ -53,8 +54,7 @@ public class DribbleManeuver extends Maneuver {
         final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 100));
 
         if (!car.isGrounded() || !isViable()) {
-            this.setDone();
-            return;
+            return RunState.DONE;
         }
 
         float zThreshold = car.hitbox.permutatePoint(car.position, 0, 0, 1).z + BallData.COLLISION_RADIUS + 5;
@@ -135,12 +135,10 @@ public class DribbleManeuver extends Maneuver {
                     final Vector3 endPosition = driveTarget;
                     final Vector3 endTangent = car.forward().mul(-1);
 
-                    List<Curve.ControlPoint> controlPoints = new ArrayList<>();
-
-                    controlPoints.add(new Curve.ControlPoint(startPosition, startTangent));
-                    controlPoints.add(new Curve.ControlPoint(endPosition, endTangent.mul(-1)));
-
-                    Curve currentPath = new Curve(controlPoints);
+                    Curve currentPath = new EpicPathPlanner()
+                            .withStart(startPosition, startTangent)
+                            .withEnd(endPosition, endTangent.mul(-1))
+                            .plan().get();
                     /*if(startPosition.distance(endPosition) > 200 && currentPath.tangentAt(Math.max(0, currentPath.findNearest(car.position) - 5)).dot(car.forward()) < 0){ // Following the path will probably fail, we can't drive backwards
                         Optional<Curve> curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, endPosition, endTangent, 15);
                         if(curveOptional.isPresent())
@@ -149,8 +147,7 @@ public class DribbleManeuver extends Maneuver {
 
                     Curve.PathCheckStatus pathCheckStatus = currentPath.doPathChecking(car, frame.absoluteTime - 0.1f, null);
                     if (!pathCheckStatus.isValid() && !this.isViable()) {
-                        this.setDone();
-                        return;
+                        return RunState.DONE;
                     }
 
                     followPathManeuver.path = currentPath;
@@ -162,11 +159,6 @@ public class DribbleManeuver extends Maneuver {
 
             }
         }
+        return RunState.CONTINUE;
     }
-
-    @Override
-    public CarData simulate(CarData car) {
-        return null;
-    }
-
 }

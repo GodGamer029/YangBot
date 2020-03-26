@@ -25,11 +25,6 @@ public class FollowPathManeuver extends Maneuver {
     }
 
     @Override
-    public boolean isViable() {
-        return false;
-    }
-
-    @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final float tReact = 0.3f;
 

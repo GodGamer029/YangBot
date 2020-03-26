@@ -54,11 +54,6 @@ public class DodgeManeuver extends Maneuver {
     }
 
     @Override
-    public boolean isViable() {
-        throw new IllegalStateException("Not implemented");
-    }
-
-    @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
@@ -121,6 +116,7 @@ public class DodgeManeuver extends Maneuver {
                 System.err.println("Dodge maneuver has no direction nor target");
             }
             controlsOutput.withJump(true);
+
         } else if (!car.isGrounded() && !car.doubleJumped) {
             if (this.enablePreorient) {
                 this.turnManeuver.fool(gameData);

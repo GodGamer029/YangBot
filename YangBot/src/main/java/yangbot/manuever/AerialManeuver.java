@@ -27,11 +27,6 @@ public class AerialManeuver extends Maneuver {
     }
 
     @Override
-    public boolean isViable() {
-        return false;
-    }
-
-    @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final float j_speed = DodgeManeuver.speed;
         final float j_acceleration = DodgeManeuver.acceleration;

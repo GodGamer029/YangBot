@@ -13,8 +13,8 @@ public class TurnManeuver extends Maneuver {
     };
     public ControlsOutput controls = new ControlsOutput();
     public Matrix3x3 target = null;
-    public float eps_phi = 0.10f;
-    public float eps_omega = 0.15f;
+    public float maxErrorOrientation = 0.10f;
+    public float maxErrorAngularVelocity = 0.15f;
     private Vector3 omega = new Vector3();
     private Vector3 omega_local = new Vector3();
     private Vector3 dphi_dt = new Vector3();
@@ -140,11 +140,6 @@ public class TurnManeuver extends Maneuver {
     }
 
     @Override
-    public boolean isViable() {
-        return false;
-    }
-
-    @Override
     public void step(float dt, ControlsOutput controlsOutput) {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
@@ -154,7 +149,7 @@ public class TurnManeuver extends Maneuver {
         omega_local = omega.dot(theta);
         phi = Vector3.rotationToAxis(theta);
 
-        this.setIsDone((phi.magnitude() < eps_phi) && (omega.magnitude() < eps_omega));
+        this.setIsDone((phi.magnitude() < maxErrorOrientation) && (omega.magnitude() < maxErrorAngularVelocity));
 
         if (this.isDone()) {
             controls.withRoll(0);
@@ -213,8 +208,8 @@ public class TurnManeuver extends Maneuver {
         carCopy.elapsedSeconds = 0;
         TurnManeuver fakeTurn = new TurnManeuver();
         fakeTurn.target = this.target;
-        fakeTurn.eps_omega = this.eps_omega;
-        fakeTurn.eps_phi = this.eps_phi;
+        fakeTurn.maxErrorAngularVelocity = this.maxErrorAngularVelocity;
+        fakeTurn.maxErrorOrientation = this.maxErrorOrientation;
         fakeTurn.horizon_time = this.horizon_time;
 
         FoolGameData foolGameData = GameData.current().fool();

@@ -17,12 +17,6 @@ public abstract class Maneuver {
     public Maneuver() {
     }
 
-    public boolean isViable() {
-        throw new IllegalStateException("Not implemented in class " + this.getClass().getSimpleName());
-    }
-
-    ;
-
     public abstract void step(float dt, ControlsOutput controlsOutput);
 
     public abstract CarData simulate(CarData car);

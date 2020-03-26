@@ -4,16 +4,14 @@ import yangbot.input.*;
 import yangbot.manuever.DodgeManeuver;
 import yangbot.manuever.DriveManeuver;
 import yangbot.manuever.FollowPathManeuver;
-import yangbot.optimizers.path.AvoidObstacleInPathUtil;
 import yangbot.prediction.Curve;
+import yangbot.prediction.EpicPathPlanner;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 public class DefendStrategy extends Strategy {
@@ -103,24 +101,17 @@ public class DefendStrategy extends Strategy {
                     final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
                     final Vector3 targetPos = interceptFrame.ballData.position;
 
-                    Curve currentPath;
-                    List<Curve.ControlPoint> controlPoints = new ArrayList<>();
-                    // Construct Path
-                    {
-                        controlPoints.add(new Curve.ControlPoint(car.position.add(car.forward().mul(10)), car.forward()));
-                        controlPoints.add(new Curve.ControlPoint(targetPos.withZ(car.position.z), new Vector3(0, -teamSign, 0)));
+                    Optional<Curve> curveOptional = new EpicPathPlanner()
+                            .withStart(car.position.add(car.forward().mul(10)), car.forward())
+                            .withEnd(targetPos.withZ(car.position.z), new Vector3(0, -teamSign, 0))
+                            .withBallAvoidance(true, car, interceptFrame.absoluteTime, true)
+                            .plan();
 
-                        currentPath = new Curve(controlPoints);
+                    if (curveOptional.isPresent()) {
+                        validPath = curveOptional.get();
+                        arrivalTime = interceptFrame.absoluteTime;
                     }
 
-                    // Check if path is valid
-                    {
-                        currentPath = AvoidObstacleInPathUtil.doSth(currentPath, car, interceptFrame.absoluteTime, ballPrediction, 7);
-                        if (currentPath != null) {
-                            validPath = currentPath;
-                            arrivalTime = interceptFrame.absoluteTime;
-                        }
-                    }
                     t -= RLConstants.simulationTickFrequency * 4; // 15 ticks / s
                 } while (t > 0);
 
@@ -140,26 +131,15 @@ public class DefendStrategy extends Strategy {
             case FOLLOW_PATH_STRIKE:
                 break;
             case ROTATE: {
-                Curve nextPath;
-                Curve.PathCheckStatus status;
-                // Construct Path
-                {
-                    List<Curve.ControlPoint> controlPoints = new ArrayList<>();
-                    {
-                        controlPoints.add(new Curve.ControlPoint(car.position, car.forward()));
-                        controlPoints.add(new Curve.ControlPoint(new Vector3(0, RLConstants.goalDistance * 0.9f * teamSign, car.position.z), new Vector3(0, teamSign, 0)));
+                Optional<Curve> pathOpt = new EpicPathPlanner()
+                        .withStart(car.position, car.forward())
+                        .withEnd(new Vector3(0, RLConstants.goalDistance * 0.9f * teamSign, car.position.z), new Vector3(0, teamSign, 0))
+                        .withBallAvoidance(true, car, -1, false)
+                        .plan();
 
-                        nextPath = new Curve(controlPoints);
-                    }
+                assert pathOpt.isPresent() : "Path should be present when no ball avoidance is required";
 
-                    {
-                        Curve avoidedPath = AvoidObstacleInPathUtil.doSth(nextPath, car, -1, ballPrediction, 7);
-                        if (avoidedPath != null)
-                            nextPath = avoidedPath;
-                    }
-                }
-
-                followPathManeuver.path = nextPath;
+                followPathManeuver.path = pathOpt.get();
                 followPathManeuver.arrivalTime = -1;
                 state = State.FOLLOW_PATH;
             }

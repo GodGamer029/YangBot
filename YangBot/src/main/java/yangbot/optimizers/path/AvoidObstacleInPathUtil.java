@@ -6,10 +6,11 @@ import yangbot.prediction.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.List;
+import java.util.Optional;
 
 public class AvoidObstacleInPathUtil {
 
-    public static Curve doSth(Curve currentPath, CarData car, float arrivalTimeAbsolute, YangBallPrediction ballPrediction, int maxIterations) {
+    public static Optional<Curve> mutatePath(Curve currentPath, CarData car, float arrivalTimeAbsolute, YangBallPrediction ballPrediction, int maxIterations) {
         assert currentPath.getControlPoints() != null && currentPath.getControlPoints().size() > 0 : "Control points are needed to change the path";
 
         Curve.PathCheckStatus pathStatus = currentPath.getPathCheckStatus();
@@ -33,10 +34,10 @@ public class AvoidObstacleInPathUtil {
                 }
             }
             if (pathStatus.isValid() && !pathStatus.collidedWithBall) {
-                return currentPath;
+                return Optional.of(currentPath);
             }
         }
-        return lastValidPath;
+        return Optional.ofNullable(lastValidPath);
     }
 
     public static List<Curve.ControlPoint> applyBallCollisionFix(Curve.PathCheckStatus pathCheckStatus, List<Curve.ControlPoint> controlPoints, Curve currentPath, int tries) {

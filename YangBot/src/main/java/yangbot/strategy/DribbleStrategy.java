@@ -1,19 +1,20 @@
 package yangbot.strategy;
 
+import yangbot.abstraction.Abstraction;
+import yangbot.abstraction.DribbleAbstraction;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.manuever.DribbleManeuver;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
 
 public class DribbleStrategy extends Strategy {
 
-    private DribbleManeuver dribbleManeuver;
+    private DribbleAbstraction dribbleAbstraction;
 
     public static boolean isViable() {
-        return new DribbleManeuver().isViable();
+        return new DribbleAbstraction().isViable();
     }
 
     @Override
@@ -26,8 +27,8 @@ public class DribbleStrategy extends Strategy {
             return;
         }
 
-        dribbleManeuver = new DribbleManeuver();
-        if (!dribbleManeuver.isViable())
+        dribbleAbstraction = new DribbleAbstraction();
+        if (!dribbleAbstraction.isViable())
             this.setDone(true);
     }
 
@@ -41,8 +42,8 @@ public class DribbleStrategy extends Strategy {
             return;
         }
 
-        dribbleManeuver.step(dt, controlsOutput);
-        if (dribbleManeuver.isDone())
+        Abstraction.RunState dribbleRunState = dribbleAbstraction.step(dt, controlsOutput);
+        if (dribbleRunState == Abstraction.RunState.DONE)
             this.setDone();
     }
 

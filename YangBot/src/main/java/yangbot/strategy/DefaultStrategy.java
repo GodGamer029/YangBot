@@ -1,6 +1,7 @@
 package yangbot.strategy;
 
 import yangbot.input.*;
+import yangbot.manuever.DriveManeuver;
 import yangbot.prediction.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
@@ -17,14 +18,18 @@ public class DefaultStrategy extends Strategy {
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
         CarData car = gameData.getCarData();
 
-        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.flatten().sub(ball.position.flatten()).magnitude() / car.velocity.flatten().magnitude())));
+        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.sub(ball.position.sub()).magnitude() / car.velocity.flatten().magnitude())));
 
-        controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
+        if (!RLConstants.isPosNearWall(futureBallPos.flatten(), BallData.COLLISION_RADIUS + 10) || futureBallPos.z > RLConstants.arenaHeight * 0.8f)
+            futureBallPos = futureBallPos.withZ(0);
+
+        DriveManeuver.steerController(controlsOutput, car, futureBallPos);
+        //controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
         controlsOutput.withThrottle(Math.max(0.05f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
-        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.flatten().distance(futureBallPos.flatten()) > 1000 && car.boost > 40)
+        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.flatten().distance(futureBallPos.flatten()) > 1000 && car.boost > 40 && car.velocity.dot(car.forward()) < 2000)
             controlsOutput.withBoost(true);
 
-        if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 3f)
+        if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 2f)
             controlsOutput.withSlide(true);
     }
 
@@ -63,7 +68,8 @@ public class DefaultStrategy extends Strategy {
             }
         } else {
             jumpFromWallTick = 0;
-            if (car.position.z > 200) {
+            // On the ceiling
+            if (car.position.z > 200 && car.up().dot(new Vector3(0, 0, -1)) > 0.9f) {
                 jumpFromWallTick = (int) (0.15f / RLConstants.tickFrequency);
                 controlsOutput.withJump(true);
                 return;

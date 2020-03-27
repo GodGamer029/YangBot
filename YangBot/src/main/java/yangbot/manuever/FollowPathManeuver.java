@@ -113,7 +113,10 @@ public class FollowPathManeuver extends Maneuver {
         renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, 430), 1, 1);
         if (this.arrivalTime > 0)
             renderer.drawString2d(String.format("Arriving in %.1fs", this.arrivalTime - car.elapsedSeconds), Color.WHITE, new Point(500, 450), 2, 2);
-        renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
+        else
+            renderer.drawString2d(String.format("Speed %.1fs", car.velocity.magnitude()), Color.WHITE, new Point(500, 450), 2, 2);
+        //renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
+        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, 490), 2, 2);
         renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, 530), 2, 2);
         renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, 570), 2, 2);
     }

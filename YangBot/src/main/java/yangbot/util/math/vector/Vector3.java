@@ -99,6 +99,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return new Vector3(x - other.x, y - other.y, z - other.z);
     }
 
+    public Vector3 sub(float xS, float yS, float zS) {
+        return new Vector3(x - xS, y - yS, z - zS);
+    }
+
     public Vector3 sub(float other) {
         return new Vector3(x - other, y - other, z - other);
     }

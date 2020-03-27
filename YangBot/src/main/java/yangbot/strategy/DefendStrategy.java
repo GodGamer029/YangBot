@@ -176,7 +176,11 @@ public class DefendStrategy extends Strategy {
                 if (distanceCarToDefend + 300 > distanceBallToDefend && (followPathManeuver.arrivalTime < 0 || followPathManeuver.arrivalTime - car.elapsedSeconds > 0.4f)) {
                     followPathManeuver.arrivalSpeed = 2200;
                 } else {
-                    followPathManeuver.arrivalSpeed = DriveManeuver.max_throttle_speed - 10;
+                    // Arrival in 0.4s?
+                    if (Math.max(1, car.position.distance(followPathManeuver.path.pointAt(0))) / Math.max(1, car.velocity.flatten().magnitude()) < 0.4f)
+                        followPathManeuver.arrivalSpeed = DriveManeuver.max_throttle_speed - 10;
+                    else
+                        followPathManeuver.arrivalSpeed = -1;
                 }
 
                 followPathManeuver.draw(renderer, car);

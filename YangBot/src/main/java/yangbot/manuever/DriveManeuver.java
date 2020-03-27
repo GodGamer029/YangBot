@@ -144,11 +144,11 @@ public class DriveManeuver extends Maneuver {
         }
     }
 
-    private void steerController(float dt, ControlsOutput output, CarData car) {
-        Vector3 target_local = target.sub(car.position).dot(car.orientation);
+    public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {
+        Vector3 target_local = targetPos.sub(car.position).dot(car.orientation);
 
         float angle = (float) Math.atan2(target_local.y, target_local.x);
-        output.withSteer(MathUtils.clip(3.0f * angle * Math.signum(this.minimumSpeed), -1f, 1f));
+        output.withSteer(MathUtils.clip(3.0f * angle * (float) Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
     }
 
     @Override
@@ -156,7 +156,7 @@ public class DriveManeuver extends Maneuver {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
 
-        steerController(dt, controlsOutput, car);
+        steerController(controlsOutput, car, this.target);
         speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), this.minimumSpeed, this.maximumSpeed, reaction_time);
 
         if (!allowBoostForLowSpeeds && this.minimumSpeed < DriveManeuver.max_throttle_speed - 20)

@@ -38,7 +38,14 @@ public class DribbleAbstraction extends Abstraction {
 
         Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFramesBetweenRelative(0, 3f).stream().filter((f) -> f.ballData.position.z <= zThreshold && f.ballData.position.z > zThreshold - 20 && f.ballData.velocity.z <= 0 && !RLConstants.isPosNearWall(f.ballData.position.flatten(), 50)).findFirst();
 
-        return frameOptional.isPresent();
+        if (!frameOptional.isPresent())
+            return false;
+
+        float speedRequired = (float) car.position.flatten().distance(frameOptional.get().ballData.position.flatten()) / Math.max(0.15f, frameOptional.get().relativeTime);
+        if (speedRequired > CarData.MAX_VELOCITY + 50)
+            return false;
+
+        return true;
     }
 
     @Override
@@ -104,6 +111,11 @@ public class DribbleAbstraction extends Abstraction {
                         forwardDisplacement = 0.8f;
                     else
                         forwardDisplacement = MathUtils.remap(ballSpeed, lowSpeedLimit, highSpeedLimit, -0.8f, 0.8f);
+                }
+
+                if (Math.abs(frame.ballData.velocity.z) > 300) {
+                    forwardDisplacement *= 0.3f;
+                    leftDisplacement *= 0.3f;
                 }
 
                 float scaler = Math.max(1, Math.abs(forwardDisplacement) + Math.abs(leftDisplacement));

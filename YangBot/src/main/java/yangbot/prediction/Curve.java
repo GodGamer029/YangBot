@@ -334,7 +334,7 @@ public class Curve {
                     boost -= CarData.BOOST_CONSUMPTION * dt;
 
                 final float forceForward = CarData.driveForceForward(sampleOutput, currentSpeed, 0, 0);
-                final float forceLeft = CarData.driveForceLeft(sampleOutput, currentSpeed, 0, 0);
+                final float forceLeft = 0 /*CarData.driveForceLeft(sampleOutput, currentSpeed, 0, 0)*/;
 
                 currentSpeed += forceForward * dt + Math.abs(forceLeft * dt);
                 currentSpeed = Math.min(Math.abs(currentSpeed), CarData.MAX_VELOCITY);

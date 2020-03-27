@@ -27,6 +27,10 @@ public abstract class Abstraction {
         return runState;
     }
 
+    public final boolean isDone() {
+        return this.isDone;
+    }
+
     protected abstract RunState stepInternal(float dt, ControlsOutput controlsOutput);
 
     public enum RunState {

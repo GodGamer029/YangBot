@@ -1,12 +1,13 @@
 package yangbot.strategy;
 
-import yangbot.abstraction.StrikeAbstraction;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
-import yangbot.prediction.Curve;
-import yangbot.prediction.EpicPathPlanner;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.path.Curve;
+import yangbot.path.EpicPathPlanner;
+import yangbot.strategy.abstraction.StrikeAbstraction;
+import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.util.math.Line2;
 import yangbot.util.math.vector.Vector2;
@@ -20,8 +21,8 @@ import java.util.stream.Collectors;
 public class OffensiveStrategy extends Strategy {
 
     private StrikeAbstraction strikeAbstraction = new StrikeAbstraction(null);
+    private FollowPathManeuver followPathManeuver = new FollowPathManeuver();
     private State state = State.IDK;
-    private boolean hasSolvedGoodHit = false;
     private YangBallPrediction hitPrediction = null;
     private CarData hitCar = null;
     private Vector3 contactPoint = null;
@@ -42,14 +43,9 @@ public class OffensiveStrategy extends Strategy {
 
         //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
 
-        // Don't replan when we are close to hitting the ball
-        /*if (this.state == State.FOLLOW_PATH_STRIKE && this.followPathManeuver.arrivalTime > car.elapsedSeconds && this.followPathManeuver.arrivalTime - car.elapsedSeconds < 0.5f)
-            return;*/
-
         if (this.checkReset(1.5f))
             return;
 
-        this.hasSolvedGoodHit = false;
         this.state = State.IDK;
 
         final int teamSign = car.team * 2 - 1;
@@ -59,16 +55,43 @@ public class OffensiveStrategy extends Strategy {
             return;
         }
 
+        // Ball is closer to own goal / out of position
+        if (Math.signum((ball.position.y + ball.velocity.y * 0.4f) - (car.position.y + car.velocity.y * 0.2f) + teamSign * 100) == teamSign) {
+            Vector3 endPos = ball.position.add(ball.velocity.mul(0.4f)).withZ(RLConstants.carElevation).add(0, teamSign * 700, 0);
+            endPos = endPos.withX(endPos.x * 0.7f);
+            Vector3 endTangent = new Vector3(0, teamSign, 0)
+                    .add(car.forward())
+                    .add(ball.velocity.normalized())
+                    .normalized();
+
+            // Out of position!
+            Optional<Curve> optionalCurve = new EpicPathPlanner()
+                    .withStart(car.position, car.forward())
+                    .withEnd(endPos, endTangent)
+                    .withBallAvoidance(true, car, -1, false)
+                    //.withCreationStrategy(EpicPathPlanner.PathCreationStrategy.NAVMESH)
+                    .plan();
+
+            if (optionalCurve.isPresent()) {
+                this.state = State.ROTATE;
+                this.followPathManeuver = new FollowPathManeuver();
+                this.followPathManeuver.arrivalTime = car.elapsedSeconds + 1.5f;
+                this.followPathManeuver.path = optionalCurve.get();
+            }
+        }
+
         if (DribbleStrategy.isViable()) {
             suggestedStrat = new DribbleStrategy();
         }
 
         // Make sure we dont hit the ball back to our goal
         if (Math.signum(ball.position.y - car.position.y) == -teamSign) {
+            final boolean allowWallHits = false;
+
             List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                     .stream()
                     .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * frame.relativeTime * 0.6f)) == -teamSign) // Ball is closer to enemy goal than to own
-                    .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 80 || RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f)) && !frame.ballData.makeMutable().isInAnyGoal())
+                    .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 80 || (allowWallHits && RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))) && !frame.ballData.makeMutable().isInAnyGoal())
                     .collect(Collectors.toList());
 
             if (strikeableFrames.size() > 0) {
@@ -170,7 +193,7 @@ public class OffensiveStrategy extends Strategy {
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        if (this.reevaluateStrategy(this.hasSolvedGoodHit ? 1.2f : 0.7f))
+        if (this.reevaluateStrategy(this.strikeAbstraction.strikeSolved ? 1.2f : 0.7f))
             return;
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
@@ -211,6 +234,18 @@ public class OffensiveStrategy extends Strategy {
             case IDK:
                 DefaultStrategy.smartBallChaser(dt, controlsOutput);
                 break;
+            case ROTATE:
+                if (car.position.z > 300) {
+                    DefaultStrategy.smartBallChaser(dt, controlsOutput);
+                } else {
+                    this.followPathManeuver.step(dt, controlsOutput);
+                    this.followPathManeuver.draw(renderer, car);
+                    this.followPathManeuver.path.draw(renderer);
+                    if (this.followPathManeuver.isDone())
+                        this.reevaluateStrategy(0);
+                }
+
+                break;
             case FOLLOW_PATH_STRIKE:
                 this.strikeAbstraction.step(dt, controlsOutput);
                 if (this.strikeAbstraction.isDone())
@@ -222,7 +257,8 @@ public class OffensiveStrategy extends Strategy {
 
     enum State {
         IDK,
-        FOLLOW_PATH_STRIKE
+        FOLLOW_PATH_STRIKE,
+        ROTATE
     }
 
     @Override

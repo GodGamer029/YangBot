@@ -5,7 +5,7 @@ import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
 import yangbot.cpp.FlatPhysics;
 import yangbot.cpp.YangBotJNAInterop;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.hitbox.YangHitbox;
 import yangbot.util.hitbox.YangSphereHitbox;
 import yangbot.util.math.MathUtils;

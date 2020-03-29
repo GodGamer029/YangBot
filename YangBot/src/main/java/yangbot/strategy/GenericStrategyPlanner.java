@@ -4,7 +4,7 @@ import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector2;
 
 import java.util.Comparator;

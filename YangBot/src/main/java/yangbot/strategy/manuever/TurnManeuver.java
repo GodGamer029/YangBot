@@ -1,4 +1,4 @@
-package yangbot.manuever;
+package yangbot.strategy.manuever;
 
 import yangbot.input.*;
 import yangbot.util.math.vector.Matrix3x3;

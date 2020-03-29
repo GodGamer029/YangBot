@@ -1,8 +1,9 @@
 package yangbot.input;
 
 import rlbot.flat.GameInfo;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.input.interrupt.InterruptManager;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class GameData {
     protected float dt = 1 / 60f;
     protected AdvancedRenderer advancedRenderer = null;
     private static final Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
+    private YangBallPrediction ballPrediction = null;
 
     public GameData(Long threadId) {
     }
@@ -42,6 +44,10 @@ public class GameData {
         this.gravityZ = gameInfo.worldGravityZ();
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
+        this.ballPrediction = YangBallPrediction.get();
+
+        if (this.ballData.hasBeenTouched())
+            InterruptManager.ballTouchInterrupt(this.ballData.getLatestTouch());
     }
 
     public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
@@ -51,10 +57,15 @@ public class GameData {
         this.gravityZ = gravity;
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
+        this.ballPrediction = YangBallPrediction.get();
     }
 
     public YangBallPrediction getBallPrediction() {
-        return YangBallPrediction.get();
+        return this.ballPrediction;
+    }
+
+    public void setBallPrediction(YangBallPrediction ballPrediction) {
+        this.ballPrediction = ballPrediction;
     }
 
     public Vector3 getGravity() {

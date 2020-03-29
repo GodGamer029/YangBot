@@ -1,4 +1,4 @@
-package yangbot.manuever.kickoff;
+package yangbot.strategy.manuever.kickoff;
 
 import yangbot.input.CarData;
 import yangbot.input.GameData;

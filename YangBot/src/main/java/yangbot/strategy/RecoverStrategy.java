@@ -3,10 +3,10 @@ package yangbot.strategy;
 import yangbot.cpp.FlatCarCollisionInfo;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
-import yangbot.manuever.DodgeManeuver;
-import yangbot.manuever.TurnManeuver;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.strategy.manuever.DodgeManeuver;
+import yangbot.strategy.manuever.TurnManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 

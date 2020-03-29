@@ -1,7 +1,6 @@
-package yangbot.prediction;
+package yangbot.path;
 
 import yangbot.input.CarData;
-import yangbot.util.Graph;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
@@ -33,7 +32,6 @@ public class Navigator {
 
     public static void initStatics(int[] parameters, float[] times, int[] paths, Graph.Edge[] edges, Vector3[] nav_nodes, Vector3[] nav_normals) {
         navigationGraph = new Graph(edges);
-
 
         navigationNodes = nav_nodes;
         navigationNormals = nav_normals;

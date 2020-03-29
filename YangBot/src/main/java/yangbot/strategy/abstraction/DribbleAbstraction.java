@@ -1,12 +1,12 @@
-package yangbot.abstraction;
+package yangbot.strategy.abstraction;
 
 import yangbot.input.*;
-import yangbot.manuever.DriveManeuver;
-import yangbot.manuever.FollowPathManeuver;
-import yangbot.prediction.Curve;
-import yangbot.prediction.EpicPathPlanner;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.path.Curve;
+import yangbot.path.EpicPathPlanner;
+import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
@@ -19,6 +19,7 @@ public class DribbleAbstraction extends Abstraction {
     public Vector2 direction = null;
     private final DriveManeuver driveManeuver;
     private FollowPathManeuver followPathManeuver = null;
+    public boolean hasBallControl = false;
 
     public DribbleAbstraction() {
         driveManeuver = new DriveManeuver();
@@ -32,9 +33,12 @@ public class DribbleAbstraction extends Abstraction {
         if (!car.isGrounded())
             return false;
 
+        if (car.up().angle(new Vector3(0, 0, 1)) > Math.PI / 4)
+            return false;
+
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
-        float zThreshold = car.hitbox.permutatePoint(car.position, 0, 0, 1).z + BallData.COLLISION_RADIUS;
+        float zThreshold = car.hitbox.permutatePoint(car.position, 0, 0, 1).z + BallData.COLLISION_RADIUS + 5;
 
         Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFramesBetweenRelative(0, 3f).stream().filter((f) -> f.ballData.position.z <= zThreshold && f.ballData.position.z > zThreshold - 20 && f.ballData.velocity.z <= 0 && !RLConstants.isPosNearWall(f.ballData.position.flatten(), 50)).findFirst();
 
@@ -42,7 +46,7 @@ public class DribbleAbstraction extends Abstraction {
             return false;
 
         float speedRequired = (float) car.position.flatten().distance(frameOptional.get().ballData.position.flatten()) / Math.max(0.15f, frameOptional.get().relativeTime);
-        if (speedRequired > CarData.MAX_VELOCITY + 50)
+        if (speedRequired > CarData.MAX_VELOCITY)
             return false;
 
         return true;
@@ -57,6 +61,8 @@ public class DribbleAbstraction extends Abstraction {
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
+        this.hasBallControl = false;
+
         final int teamSign = car.team * 2 - 1;
         final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 100));
 
@@ -65,7 +71,11 @@ public class DribbleAbstraction extends Abstraction {
         }
 
         float zThreshold = car.hitbox.permutatePoint(car.position, 0, 0, 1).z + BallData.COLLISION_RADIUS + 5;
-        Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFramesBetweenRelative(RLConstants.tickFrequency, 3f).stream().filter((f) -> f.ballData.position.z <= zThreshold && f.ballData.velocity.z <= 10).findFirst();
+
+        if (car.position.withZ(zThreshold).distance(ball.position) < 100)
+            this.hasBallControl = true;
+
+        Optional<YangBallPrediction.YangPredictionFrame> frameOptional = ballPrediction.getFramesBetweenRelative(RLConstants.tickFrequency, 3f).stream().filter((f) -> f.ballData.position.z <= zThreshold && f.ballData.velocity.z <= 0).findFirst();
         if (frameOptional.isPresent()) {
             YangBallPrediction.YangPredictionFrame frame = frameOptional.get();
             renderer.drawCentered3dCube(Color.YELLOW, frame.ballData.position, BallData.RADIUS + 30);
@@ -84,7 +94,7 @@ public class DribbleAbstraction extends Abstraction {
                 if (ballVel.magnitude() > 10) {
                     Vector2 target = enemyGoal;
                     float angle = (float) ball.velocity.flatten().normalized().correctionAngle(enemyGoal.sub(ball.position.flatten()).normalized());
-                    leftDisplacement = MathUtils.clip((float) Math.pow(-angle * 2, 3), -0.8f, 0.8f);
+                    leftDisplacement = MathUtils.clip((float) Math.pow(-angle * 2, 3), -0.9f, 0.9f);
                 }
 
                 // Throttle
@@ -122,7 +132,7 @@ public class DribbleAbstraction extends Abstraction {
                 driveTarget = driveTarget.add(car.hitbox.permF.mul(forwardDisplacement / scaler));
                 driveTarget = driveTarget.add(car.hitbox.permL.mul(leftDisplacement));
 
-                renderer.drawString2d("F: " + (forwardDisplacement / scaler) + "\nL: " + leftDisplacement, Color.WHITE, new Point(500, 750), 2, 2);
+                renderer.drawString2d("F: " + (forwardDisplacement / scaler) + "\nL: " + leftDisplacement, this.hasBallControl ? Color.GREEN : Color.WHITE, new Point(500, 750), 2, 2);
             }
 
             if (car.position.distance(driveTarget) < 150) {
@@ -168,7 +178,6 @@ public class DribbleAbstraction extends Abstraction {
                 followPathManeuver.step(dt, controlsOutput);
                 followPathManeuver.draw(renderer, car);
                 followPathManeuver.path.draw(renderer);
-
             }
         }
         return RunState.CONTINUE;

@@ -1,10 +1,10 @@
 package yangbot.strategy;
 
-import yangbot.abstraction.Abstraction;
-import yangbot.abstraction.DribbleAbstraction;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.strategy.abstraction.Abstraction;
+import yangbot.strategy.abstraction.DribbleAbstraction;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;

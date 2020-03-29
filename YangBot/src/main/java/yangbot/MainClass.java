@@ -4,8 +4,8 @@ import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.MatchSettings;
 import rlbot.manager.BotManager;
 import yangbot.cpp.YangBotCppInterop;
-import yangbot.prediction.Navigator;
-import yangbot.util.Graph;
+import yangbot.path.Graph;
+import yangbot.path.Navigator;
 import yangbot.util.io.LEDataInputStream;
 import yangbot.util.io.PortReader;
 import yangbot.util.math.vector.Vector3;
@@ -19,11 +19,6 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * See JavaAgent.py for usage instructions.
- * <p>
- * Look inside SampleBot.java for the actual bot logic!
- */
 public class MainClass {
 
     private static final Integer DEFAULT_PORT = 19265;

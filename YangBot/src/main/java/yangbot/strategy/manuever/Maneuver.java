@@ -1,4 +1,4 @@
-package yangbot.manuever;
+package yangbot.strategy.manuever;
 
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;

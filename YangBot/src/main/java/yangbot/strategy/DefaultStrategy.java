@@ -1,8 +1,8 @@
 package yangbot.strategy;
 
 import yangbot.input.*;
-import yangbot.manuever.DriveManeuver;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
@@ -18,7 +18,7 @@ public class DefaultStrategy extends Strategy {
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
         CarData car = gameData.getCarData();
 
-        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.sub(ball.position.sub()).magnitude() / car.velocity.flatten().magnitude())));
+        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.sub(ball.position).magnitude() / car.velocity.flatten().magnitude())));
 
         if (!RLConstants.isPosNearWall(futureBallPos.flatten(), BallData.COLLISION_RADIUS + 10) || futureBallPos.z > RLConstants.arenaHeight * 0.8f)
             futureBallPos = futureBallPos.withZ(0);

@@ -1,10 +1,10 @@
-package yangbot.manuever.kickoff;
+package yangbot.strategy.manuever.kickoff;
 
 import yangbot.input.*;
-import yangbot.manuever.DodgeManeuver;
-import yangbot.manuever.FollowPathManeuver;
-import yangbot.manuever.Maneuver;
-import yangbot.prediction.EpicPathPlanner;
+import yangbot.path.EpicPathPlanner;
+import yangbot.strategy.manuever.DodgeManeuver;
+import yangbot.strategy.manuever.FollowPathManeuver;
+import yangbot.strategy.manuever.Maneuver;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 

@@ -1,18 +1,23 @@
-package yangbot.abstraction;
+package yangbot.strategy.abstraction;
 
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.QuickChatSelection;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
-import yangbot.manuever.DodgeManeuver;
-import yangbot.manuever.FollowPathManeuver;
-import yangbot.prediction.Curve;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.input.interrupt.BallTouchInterrupt;
+import yangbot.input.interrupt.InterruptManager;
+import yangbot.optimizers.graders.Grader;
+import yangbot.optimizers.graders.OffensiveGrader;
+import yangbot.path.Curve;
+import yangbot.strategy.manuever.DodgeManeuver;
+import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 /*
@@ -27,11 +32,13 @@ public class StrikeAbstraction extends Abstraction {
 
     public Curve path;
     public float arrivalTime = 0;
+    public boolean strikeSolved = false;
     private DodgeManeuver strikeDodge;
     private FollowPathManeuver followPath;
     private State state = State.DRIVE;
     private boolean solvedGoodStrike = false;
-    private boolean strikeSolved = false;
+    public Grader customGrader;
+    private BallTouchInterrupt ballTouchInterrupt = null;
 
     public StrikeAbstraction(Curve path) {
         this.path = path;
@@ -43,6 +50,8 @@ public class StrikeAbstraction extends Abstraction {
         this.followPath = new FollowPathManeuver();
         this.followPath.path = path;
         this.followPath.arrivalTime = this.arrivalTime;
+
+        this.customGrader = new OffensiveGrader();
     }
 
     @Override
@@ -64,6 +73,12 @@ public class StrikeAbstraction extends Abstraction {
 
         switch (this.state) {
             case DRIVE:
+                if (this.ballTouchInterrupt == null)
+                    this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt(-1);
+
+                if (this.ballTouchInterrupt.hasInterrupted())
+                    return RunState.DONE;
+
                 this.followPath.path.draw(renderer);
                 this.followPath.draw(renderer, car);
                 this.followPath.step(dt, controlsOutput);
@@ -171,36 +186,13 @@ public class StrikeAbstraction extends Abstraction {
                                         //YangBallPrediction simBallPred = simBall.makeBallPrediction(1f/120f, 3);
 
                                         boolean applyDodgeSettings = false;
+                                        final GameData tempGameData = new GameData(0L);
+                                        tempGameData.update(simCar, new ImmutableBallData(simBall), new ArrayList<>(), gameData.getGravity().z, dt, renderer);
+                                        tempGameData.setBallPrediction(simBallPred);
 
-                                        for (float time = 0; time < Math.min(3, simBallPred.relativeTimeOfLastFrame()); time += RLConstants.simulationTickFrequency * 2) {
-                                            Optional<YangBallPrediction.YangPredictionFrame> dataAtFrame = simBallPred.getFrameAtRelativeTime(time);
-                                            if (dataAtFrame.isEmpty())
-                                                break;
-                                            ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
-                                            float dist = (float) ballAtFrame.position.distance(enemyGoal.withZ(RLConstants.goalHeight / 2));
-                                            boolean landsInGoal = time <= maximumTimeForGoal && ballAtFrame.makeMutable().isInGoal(teamSign);
+                                        if (this.customGrader.isImproved(tempGameData))
+                                            applyDodgeSettings = true;
 
-                                            if (didLandInGoal) { // The ball has to at least land in the goal to be better than the last simulation
-                                                if (!landsInGoal)
-                                                    continue;
-
-                                                if (time < timeToGoal) {
-                                                    timeToGoal = time;
-                                                    applyDodgeSettings = true;
-                                                    break;
-                                                }
-                                            } else {
-                                                if (landsInGoal) { // Lands in goal, but last one didn't? Definitely better than the last
-                                                    didLandInGoal = true;
-                                                    timeToGoal = time;
-                                                    applyDodgeSettings = true;
-                                                    break;
-                                                } else if (dist < minDistanceToGoal && time > 0.2f) { // Check if it's better than the last sim which also didn't score
-                                                    minDistanceToGoal = dist;
-                                                    applyDodgeSettings = true;
-                                                }
-                                            }
-                                        }
                                         if (applyDodgeSettings) {
                                             this.strikeDodge.delay = simDodge.delay;
                                             this.strikeDodge.target = null;
@@ -238,7 +230,8 @@ public class StrikeAbstraction extends Abstraction {
                             System.out.println(">>> Could not hit ball, aborting...");
                         }
 
-                        System.out.println("Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + tim + " simulations");
+                        System.out.println(" > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + tim + " simulations");
+                        System.out.println(" > Ball " + (didLandInGoal ? "lands in goal" : "missed"));
                     }
                 }
 

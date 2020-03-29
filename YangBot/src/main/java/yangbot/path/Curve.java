@@ -1,12 +1,13 @@
-package yangbot.prediction;
+package yangbot.path;
 
 import yangbot.cpp.FlatCurve;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.RLConstants;
-import yangbot.manuever.DriveManeuver;
+import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.hitbox.YangSphereHitbox;
 import yangbot.util.math.CubicHermite;
 import yangbot.util.math.MathUtils;

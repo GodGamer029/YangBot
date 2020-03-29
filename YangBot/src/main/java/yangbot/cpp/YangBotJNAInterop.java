@@ -9,8 +9,8 @@ import rlbot.cppinterop.ByteBufferStruct;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ImmutableBallData;
-import yangbot.prediction.Curve;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.path.Curve;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
 import java.nio.ByteBuffer;

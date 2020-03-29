@@ -3,6 +3,7 @@ package yangbot.strategy;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
+import yangbot.input.interrupt.Interrupt;
 
 import java.util.Optional;
 
@@ -53,6 +54,13 @@ public abstract class Strategy {
             System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to plan its strategy");
 
         plannedStrategy = true;
+    }
+
+    protected final boolean reevaluateStrategy(Interrupt interrupt) {
+        if (interrupt.hasInterrupted())
+            planStrategy(true);
+
+        return this.isDone();
     }
 
     protected final boolean reevaluateStrategy(float timeout) {

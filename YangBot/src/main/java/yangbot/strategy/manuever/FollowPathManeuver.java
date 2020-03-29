@@ -1,10 +1,10 @@
-package yangbot.manuever;
+package yangbot.strategy.manuever;
 
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
-import yangbot.prediction.Curve;
+import yangbot.path.Curve;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.MathUtils;
 

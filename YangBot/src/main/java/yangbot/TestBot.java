@@ -5,7 +5,7 @@ import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.manuever.DodgeManeuver;
+import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 
 import java.awt.*;

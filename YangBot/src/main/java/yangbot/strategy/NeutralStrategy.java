@@ -6,8 +6,8 @@ import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
-import yangbot.manuever.FollowPathManeuver;
-import yangbot.prediction.Curve;
+import yangbot.path.Curve;
+import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
@@ -28,6 +28,7 @@ public class NeutralStrategy extends Strategy {
         GameData gameData = GameData.current();
         CarData car = gameData.getCarData();
         final ImmutableBallData ball = gameData.getBallData();
+        final int teamSign = car.team * 2 - 1;
 
         if (!car.hasWheelContact) {
             this.setDone();
@@ -40,6 +41,7 @@ public class NeutralStrategy extends Strategy {
             List<BoostPad> fullPads = BoostManager.getAllBoosts();
             List<BoostPad> closestPadList = fullPads.stream()
                     .filter((pad) -> pad.isActive() || pad.boostAvailableIn() < 1)
+                    .filter((pad) -> Math.signum(ball.position.y - pad.getLocation().y) == -teamSign) // Pad is closer to our goal than ball
                     .filter((pad) -> Math.abs(car.forward().flatten().correctionAngle(pad.getLocation().flatten().sub(car.position.add(car.velocity.mul(0.2f)).flatten()).normalized())) < 0.5f)
                     .sorted((a, b) -> (int) (a.getLocation().distance(car.position) - b.getLocation().distance(car.position)))
                     .limit(5)
@@ -62,7 +64,7 @@ public class NeutralStrategy extends Strategy {
                                             .normalized().mul(100)
                             );
                     controlPoints.add(new Curve.ControlPoint(padLocation, offToBallLocation.sub(padLocation).normalized()));
-                    controlPoints.add(new Curve.ControlPoint(offToBallLocation, offToBallLocation.add(ball.position.add(ball.velocity.mul(0.8f)).sub(offToBallLocation).withZ(0).normalized().mul(150))));
+                    // controlPoints.add(new Curve.ControlPoint(offToBallLocation, offToBallLocation.add(ball.position.add(ball.velocity.mul(0.8f)).sub(offToBallLocation).withZ(0).normalized().mul(150))));
 
                     Curve path = new Curve(controlPoints);
                     float pathLength = path.length;
@@ -97,6 +99,7 @@ public class NeutralStrategy extends Strategy {
             }
             case GET_BOOST: {
                 followPathManeuver.path.draw(gameData.getAdvancedRenderer());
+                followPathManeuver.draw(gameData.getAdvancedRenderer(), gameData.getCarData());
                 followPathManeuver.step(dt, controlsOutput);
                 controlsOutput.withBoost(false);
                 if (followPathManeuver.isDone())

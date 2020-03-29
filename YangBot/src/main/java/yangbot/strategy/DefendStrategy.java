@@ -1,13 +1,13 @@
 package yangbot.strategy;
 
 import yangbot.input.*;
-import yangbot.manuever.DodgeManeuver;
-import yangbot.manuever.DriveManeuver;
-import yangbot.manuever.FollowPathManeuver;
-import yangbot.prediction.Curve;
-import yangbot.prediction.EpicPathPlanner;
-import yangbot.prediction.YangBallPrediction;
+import yangbot.path.Curve;
+import yangbot.path.EpicPathPlanner;
+import yangbot.strategy.manuever.DodgeManeuver;
+import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
@@ -57,7 +57,7 @@ public class DefendStrategy extends Strategy {
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        if (this.reevaluateStrategy((state == State.FOLLOW_PATH || state == State.FOLLOW_PATH_STRIKE) ? 1.2f : 0.3f))
+        if (this.reevaluateStrategy((state == State.FOLLOW_PATH || state == State.FOLLOW_PATH_STRIKE) ? 1.2f : 0.2f))
             return; // Return if we are done
 
         GameData gameData = GameData.current();
@@ -116,7 +116,8 @@ public class DefendStrategy extends Strategy {
                 } while (t > 0);
 
                 if (validPath == null) {
-                    this.reevaluateStrategy(0);
+                    this.state = State.BALLCHASE;
+                    this.reevaluateStrategy(0.1f);
                     return;
                 }
                 state = State.FOLLOW_PATH_STRIKE;

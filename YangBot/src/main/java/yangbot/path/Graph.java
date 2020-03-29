@@ -1,4 +1,6 @@
-package yangbot.util;
+package yangbot.path;
+
+import yangbot.util.IntArrayList;
 
 import java.util.Arrays;
 
@@ -71,7 +73,6 @@ public class Graph {
         }
 
         //System.out.println("analyze: bellman_ford_iteration took "+((System.nanoTime() - ms) * 0.000001f)+"ms");
-
 
         return bestParents;
     }

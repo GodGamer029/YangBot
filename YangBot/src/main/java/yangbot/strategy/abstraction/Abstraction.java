@@ -1,4 +1,4 @@
-package yangbot.abstraction;
+package yangbot.strategy.abstraction;
 
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;

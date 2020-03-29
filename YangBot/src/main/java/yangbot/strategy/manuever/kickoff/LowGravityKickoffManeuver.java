@@ -1,11 +1,11 @@
-package yangbot.manuever.kickoff;
+package yangbot.strategy.manuever.kickoff;
 
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
-import yangbot.manuever.AerialManeuver;
-import yangbot.manuever.Maneuver;
+import yangbot.strategy.manuever.AerialManeuver;
+import yangbot.strategy.manuever.Maneuver;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 

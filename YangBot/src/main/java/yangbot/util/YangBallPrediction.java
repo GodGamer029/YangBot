@@ -1,4 +1,4 @@
-package yangbot.prediction;
+package yangbot.util;
 
 import rlbot.cppinterop.RLBotDll;
 import rlbot.cppinterop.RLBotInterfaceException;
@@ -8,7 +8,6 @@ import rlbot.flat.PredictionSlice;
 import yangbot.input.BallData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
-import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;

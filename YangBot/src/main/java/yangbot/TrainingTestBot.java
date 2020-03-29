@@ -5,8 +5,8 @@ import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.prediction.YangBallPrediction;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;

@@ -1,17 +1,21 @@
 package yangbot.path;
 
+import javafx.util.Pair;
 import yangbot.util.IntArrayList;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.Arrays;
+import java.util.PriorityQueue;
 
 public class Graph {
 
     private int numEdges;
     private int numVertices;
 
-    private int[] offsets;
-    private int[] destinations;
-    private float[] weights;
+    public int[] offsets;
+    public int[] destinations;
+    public float[] weights;
+    public float[] lastBestWeights;
 
     public Graph(Edge[] edges) {
         try {
@@ -54,6 +58,79 @@ public class Graph {
 
     }
 
+    public int[] astar_sssp(int start, int end, float maximum_weight) {
+        Vector3 destNode = Navigator.navigationNodes[end / Navigator.numDirectionDistinctions];
+
+        final int nbits = 64;
+        final long one = 1;
+
+        long[] closeSet = new long[(numVertices + nbits - 1) / nbits];
+
+        float[] predictedWeights = new float[numVertices];
+        Arrays.fill(predictedWeights, -1);
+        int[] bestParents = new int[numVertices];
+        Arrays.fill(bestParents, -1);
+        float[] bestWeights = new float[numVertices];
+        Arrays.fill(bestWeights, maximum_weight);
+
+        PriorityQueue<Pair</*id*/Integer, /*total weight*/Float>> openSet = new PriorityQueue<>((x, y) -> Float.compare(x.getValue() + predictedWeights[x.getKey()], y.getValue() + predictedWeights[y.getKey()]));
+
+        openSet.add(new Pair<>(start, 0f));
+        int i = 0;
+        while (!openSet.isEmpty()) {
+            i++;
+            final var current = openSet.remove();
+            final int currentId = current.getKey();
+            // Has been visited?
+            if ((closeSet[currentId / nbits] & (one << (currentId % nbits))) == 0) {
+
+                if (currentId == end) {
+                    System.out.println("Iterations: " + i);
+                    return bestParents;
+                }
+
+                // Add current node to close set
+                closeSet[currentId / nbits] |= (one << (currentId % nbits));
+
+                // Loop through neighbours
+                final int neighbourBegin = offsets[currentId];
+                final int neighbourEnd = offsets[currentId + 1];
+
+                for (int j = neighbourBegin; j < neighbourEnd; j++) {
+
+                    final int neighbourId = destinations[j];
+                    final int neighbourIdNode = neighbourId / Navigator.numDirectionDistinctions;
+                    // Not visited yet?
+                    if ((closeSet[neighbourId / nbits] & (one << (neighbourId % nbits))) == 0) {
+
+                        // Heuristic: Seconds it takes to go from neighbour to end node at max speed + 100
+                        float predictedWeight = predictedWeights[neighbourIdNode];
+                        if (predictedWeight == -1) {
+                            predictedWeight = ((float) Navigator.navigationNodes[neighbourIdNode].distance(destNode)) / (1400 + 100);
+                            predictedWeights[neighbourIdNode] = predictedWeight;
+                        }
+
+                        // G Cost
+                        float distToNeighbour = weights[j];
+                        float totalWeight = current.getValue() + distToNeighbour;
+
+                        if (totalWeight < bestWeights[neighbourId]) {
+                            bestWeights[neighbourId] = totalWeight;
+                            bestParents[neighbourId] = currentId;
+
+                            openSet.add(new Pair<>(neighbourId, totalWeight));
+                        }
+                    }
+                }
+            }/*else{
+                if(current.getValue() < bestWeights[current.getKey()])
+                    System.out.println("Neighbour in set twice: "+current.getValue()+" old "+bestWeights[current.getKey()]);
+            }*/
+        }
+        System.out.println("Iterations: " + i);
+        return bestParents;
+    }
+
     public int[] bellman_ford_sssp(int start, float maximum_weight) {
         int[] bestParents = new int[numVertices];
         Arrays.fill(bestParents, -1);
@@ -68,12 +145,15 @@ public class Graph {
 
         long ms = System.nanoTime();
 
+        int hop = 0;
         for (int iter = 0; iter < 128 && frontier.getSize() > 0; iter++) {
             bellman_ford_iteration(frontier, bestParents, bestWeights);
+            hop++;
         }
+        System.out.println("Hop: " + hop);
 
         //System.out.println("analyze: bellman_ford_iteration took "+((System.nanoTime() - ms) * 0.000001f)+"ms");
-
+        lastBestWeights = bestWeights;
         return bestParents;
     }
 

@@ -1,5 +1,6 @@
 package yangbot.strategy.abstraction;
 
+import org.jetbrains.annotations.NotNull;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.QuickChatSelection;
 import yangbot.cpp.YangBotJNAInterop;
@@ -30,18 +31,17 @@ import java.util.Optional;
  */
 public class StrikeAbstraction extends Abstraction {
 
-    public Curve path;
     public float arrivalTime = 0;
     public boolean strikeSolved = false;
     private DodgeManeuver strikeDodge;
     private FollowPathManeuver followPath;
-    private State state = State.DRIVE;
+    private State state;
     private boolean solvedGoodStrike = false;
     public Grader customGrader;
     private BallTouchInterrupt ballTouchInterrupt = null;
 
     public StrikeAbstraction(Curve path) {
-        this.path = path;
+        this.state = State.DRIVE;
 
         this.strikeDodge = new DodgeManeuver();
         this.strikeDodge.delay = 0.4f;
@@ -54,11 +54,20 @@ public class StrikeAbstraction extends Abstraction {
         this.customGrader = new OffensiveGrader();
     }
 
+    public StrikeAbstraction(@NotNull Grader customGrader) {
+        this.state = State.STRIKE;
+
+        this.strikeDodge = new DodgeManeuver();
+        this.strikeDodge.delay = 0.4f;
+        this.strikeDodge.duration = 0.2f;
+
+        this.customGrader = customGrader;
+    }
+
     @Override
     protected RunState stepInternal(float dt, ControlsOutput controlsOutput) {
         assert arrivalTime > 0;
-        //assert strikeTarget != null;
-        assert path != null;
+        assert followPath.path != null;
 
         this.followPath.arrivalTime = this.arrivalTime;
 
@@ -67,9 +76,6 @@ public class StrikeAbstraction extends Abstraction {
         final ImmutableBallData ball = gameData.getBallData();
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
-
-        final int teamSign = car.team * 2 - 1;
-        final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 1000));
 
         switch (this.state) {
             case DRIVE:
@@ -80,7 +86,7 @@ public class StrikeAbstraction extends Abstraction {
                     return RunState.DONE;
 
                 this.followPath.path.draw(renderer);
-                this.followPath.draw(renderer, car);
+                //this.followPath.draw(renderer, car);
                 this.followPath.step(dt, controlsOutput);
 
                 float distanceOffPath = (float) car.position.flatten().distance(this.followPath.path.pointAt(this.followPath.path.findNearest(car.position)).flatten());
@@ -114,19 +120,14 @@ public class StrikeAbstraction extends Abstraction {
                         strikeDodge.direction = direction;
 
                         final float simDt = RLConstants.tickFrequency;
-                        final float maximumTimeForGoal = 2.5f;
-
-                        float minDistanceToGoal = (float) ballAtArrival.flatten().distance(enemyGoal);
-                        boolean didLandInGoal = false;
-                        float timeToGoal = -1;
 
                         long ms = System.currentTimeMillis();
-                        int tim = 0;
+                        int simulationCount = 0;
 
                         for (float duration = Math.max(0.1f, this.strikeDodge.timer); duration <= 0.2f; duration += 0.05f) { // 0.1f, 0.15f, 0.2f
                             for (float delay = duration + 0.05f; delay <= 0.6f; delay += 0.15f) {
                                 for (float angleDiff = (float) (Math.PI * -0.8f); angleDiff < (float) (Math.PI * 0.8f); angleDiff += Math.PI * 0.15f) {
-                                    tim++;
+                                    simulationCount++;
                                     CarData simCar = new CarData(car);
                                     simCar.hasWheelContact = false;
                                     simCar.elapsedSeconds = 0;
@@ -148,7 +149,7 @@ public class StrikeAbstraction extends Abstraction {
                                     }
 
                                     FoolGameData foolGameData = GameData.current().fool();
-                                    Vector3 simContact = null;
+                                    //Vector3 simContact = null;
 
                                     // Simulate ball - car collision
                                     for (float time = 0; time < T + 0.2f; time += simDt) {
@@ -161,7 +162,7 @@ public class StrikeAbstraction extends Abstraction {
 
                                         simCar.step(simControls, simDt);
 
-                                        simContact = simBall.collide(simCar, -3);
+                                        simBall.collide(simCar, -3);
 
                                         if (simBall.hasBeenTouched)
                                             break;
@@ -182,6 +183,7 @@ public class StrikeAbstraction extends Abstraction {
                                     if (simBall.hasBeenTouched) {
                                         if (!simCar.doubleJumped || simCar.dodgeTimer <= simDt * 3)
                                             continue;
+
                                         YangBallPrediction simBallPred = YangBotJNAInterop.getBallPrediction(simBall, 60);
                                         //YangBallPrediction simBallPred = simBall.makeBallPrediction(1f/120f, 3);
 
@@ -217,21 +219,17 @@ public class StrikeAbstraction extends Abstraction {
                         if (this.strikeSolved) { // Found shot
                             //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
 
-                            if (didLandInGoal) {
-                                //RLBotDll.sendQuickChat(car.playerIndex, false, QuickChatSelection.Reactions_Calculated);
-                                RLBotDll.sendQuickChat(car.playerIndex, false, (byte) (62)); // Yeet!
-                            }
                         } else { // Couldn't hit the ball
                             RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_TakeTheShot);
                             strikeDodge.direction = null;
                             strikeDodge.duration = 0;
                             strikeDodge.delay = 9999;
                             strikeDodge.setDone();
-                            System.out.println(">>> Could not hit ball, aborting...");
+                            System.out.println(car.playerIndex + ": >>> Could not hit ball, aborting... (Grader: " + this.customGrader.getClass().getSimpleName() + ")");
                         }
 
-                        System.out.println(" > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + tim + " simulations");
-                        System.out.println(" > Ball " + (didLandInGoal ? "lands in goal" : "missed"));
+                        System.out.println(car.playerIndex + ":  > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + simulationCount + " simulations");
+                        //.out.println(" > Ball " + (didLandInGoal ? "lands in goal" : "missed"));
                     }
                 }
 

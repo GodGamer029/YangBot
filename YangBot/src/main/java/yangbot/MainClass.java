@@ -15,7 +15,9 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,7 @@ public class MainClass {
                 BOT_TYPE = BotType.TRAINING_TEST;
         }
         System.out.println("Using Bot type: " + BOT_TYPE);
-        //lazyLoadNavigator();
+        lazyLoadNavigator();
         lazyLoadRLU();
         BotManager botManager = new BotManager();
         botManager.setRefreshRate(120);
@@ -116,9 +118,9 @@ public class MainClass {
             int[] parameters = new int[4];
             int[] paths = new int[13707632];
             float[] times = new float[13707632]; // 129791
-            Graph.Edge[] edges = new Graph.Edge[1530349]; // 1530349 for soccer
-            Vector3[] nav_nodes = new Vector3[12115]; // 12115 for soccer
-            Vector3[] nav_normals = new Vector3[12115];
+            List<Graph.Edge> edges = new ArrayList<>();
+            List<Vector3> nav_nodes = new ArrayList<>();
+            List<Vector3> nav_normals = new ArrayList<>();
             System.out.println("Allocated arrays " + (System.currentTimeMillis() - ns) + "ms");
             Thread.sleep(0);
             {
@@ -127,7 +129,7 @@ public class MainClass {
                     parameters[i] = para.readIntLE();
             }
             System.out.println("Read parameters");
-            Thread.sleep(0);
+            /*Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
                 LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("LUT_paths.bin"));
@@ -143,39 +145,42 @@ public class MainClass {
                 for (int i = 0; i < times.length; i++)
                     times[i] = para.readFloatLE();
             }
-            System.out.println("Read times " + (System.currentTimeMillis() - ns) + "ms");
+            System.out.println("Read times " + (System.currentTimeMillis() - ns) + "ms");*/
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_graph.bin"));
-                for (int i = 0; i < edges.length; i++) {
-                    edges[i] = new Graph.Edge(para.readIntLE(),
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_edges.bin"));
+                while (para.available() > 0) {
+                    edges.add(new Graph.Edge(para.readIntLE(),
                             para.readIntLE(),
-                            para.readFloatLE());
+                            para.readFloatLE()));
                 }
             }
-            System.out.println("Read NAV_GRAPH " + (System.currentTimeMillis() - ns) + "ms");
+            System.out.println("Read NAV_GRAPH(" + edges.size() + ") " + (System.currentTimeMillis() - ns) + "ms");
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
                 LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_nodes.bin"));
-                for (int i = 0; i < nav_nodes.length; i++) {
-                    nav_nodes[i] = new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE());
+                while (para.available() > 0) {
+                    Vector3 vec = new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE());
+                    if (vec.z <= 15)
+                        vec = vec.withZ(15);
+                    nav_nodes.add(vec);
                 }
             }
-            System.out.println("Read NAV_NODES " + (System.currentTimeMillis() - ns) + "ms");
+            System.out.println("Read NAV_NODES(" + nav_nodes.size() + ") " + (System.currentTimeMillis() - ns) + "ms");
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
                 LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_normals.bin"));
-                for (int i = 0; i < nav_normals.length; i++) {
-                    nav_normals[i] = new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE());
+                while (para.available() > 0) {
+                    nav_normals.add(new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE()));
                 }
             }
-            System.out.println("Read NAV_NORMALS " + (System.currentTimeMillis() - ns) + "ms");
+            System.out.println("Read NAV_NORMALS(" + nav_normals.size() + ") " + (System.currentTimeMillis() - ns) + "ms");
             Thread.sleep(0);
             ns = System.currentTimeMillis();
-            Navigator.initStatics(parameters, times, paths, edges, nav_nodes, nav_normals);
+            Navigator.initStatics(parameters, null, null, edges.toArray(new Graph.Edge[0]), nav_nodes.toArray(new Vector3[0]), nav_normals.toArray(new Vector3[0]));
             System.out.println("Navigator-Init in " + (System.currentTimeMillis() - ns) + "ms");
             System.gc();
         } catch (Exception e) {

@@ -57,6 +57,7 @@ public class CarData {
     public final YangCarHitbox hitbox;
     public boolean doubleJumped;
     public boolean jumped;
+    public int goalsScored = 0;
 
     public final boolean isBot;
     public final String name;
@@ -86,6 +87,7 @@ public class CarData {
         this.playerIndex = index;
         this.doubleJumped = playerInfo.doubleJumped();
         this.jumped = playerInfo.jumped();
+        this.goalsScored = playerInfo.scoreInfo().goals();
 
         if (isBot && name.endsWith("(" + (playerIndex + 1) + ")"))
             strippedName = name.substring(0, name.length() - 3).toLowerCase();
@@ -113,6 +115,7 @@ public class CarData {
         this.name = o.name;
         this.strippedName = o.strippedName;
         this.playerIndex = o.playerIndex;
+        this.goalsScored = o.goalsScored;
     }
 
     public CarData(Vector3 position, Vector3 velocity, Vector3 angularVelocity, Matrix3x3 orientation) {
@@ -127,6 +130,10 @@ public class CarData {
         this.strippedName = this.name;
         this.playerIndex = -1;
         this.hitbox = new YangCarHitbox(this.orientation);
+    }
+
+    public int getTeamSign() {
+        return this.team * 2 - 1;
     }
 
     public boolean isGrounded() {

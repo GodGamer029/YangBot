@@ -5,8 +5,6 @@ import yangbot.util.math.vector.Vector3;
 
 public class RLConstants {
 
-    public static final float ballRadius = 92.75f;
-    public static final float carHeight = 36.16f;
     public static final float carElevation = 17.01f;
 
     public static final float goalDistance = 5120f; // Distance from center to goal
@@ -14,6 +12,10 @@ public class RLConstants {
     public static final float goalHeight = 642.775f;
 
     public static final float arenaHeight = 2044;
+    public static final float arenaWidth = 8192;
+    public static final float arenaHalfWidth = arenaWidth / 2;
+    public static final float arenaLength = 10240;
+    public static final float arenaHalfLength = arenaLength / 2;
 
     public static Vector3 gravity = new Vector3(0, 0, -650);
 

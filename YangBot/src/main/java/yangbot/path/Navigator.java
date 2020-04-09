@@ -1,5 +1,6 @@
 package yangbot.path;
 
+import javafx.util.Pair;
 import yangbot.input.CarData;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix3x3;
@@ -7,8 +8,11 @@ import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Navigator {
 
@@ -16,7 +20,7 @@ public class Navigator {
     public static Vector3[] navigationTangents;
     public static Vector3[] navigationNormals;
     private static AtomicBoolean loadedStatics = new AtomicBoolean(false);
-    private static int nTheta = 16;
+    public static int numDirectionDistinctions = 16;
     private static int scale = -1;
     private static int nx = -1;
     private static int nv = -1;
@@ -24,11 +28,20 @@ public class Navigator {
     private static int[] strides = new int[3];
     private static float[] LUT_times;
     private static int[] LUT_paths;
-    private static int source_node = -1;
-    private static int source_direction = -1;
-    private static int[] navigation_paths;
-    private static Vector3 source;
-    private static Graph navigationGraph;
+    public static Graph navigationGraph;
+    public final PathAlgorithm pathAlgorithm;
+    public int source_node = -1;
+    public int source_direction = -1;
+    public int[] navigation_paths;
+    public Vector3 source;
+
+    public Navigator(PathAlgorithm pathAlgorithm) {
+        this.pathAlgorithm = pathAlgorithm;
+    }
+
+    public static boolean isLoaded() {
+        return loadedStatics.get();
+    }
 
     public static void initStatics(int[] parameters, float[] times, int[] paths, Graph.Edge[] edges, Vector3[] nav_nodes, Vector3[] nav_normals) {
         navigationGraph = new Graph(edges);
@@ -38,55 +51,40 @@ public class Navigator {
 
         scale = parameters[0];
         nx = parameters[1];
-        nTheta = parameters[2];
+        numDirectionDistinctions = parameters[2];
         nv = parameters[3];
 
-        if (nTheta >= 1024)
+        if (numDirectionDistinctions >= 1024)
             throw new IllegalStateException("Read faulty parameters");
 
-        directions = new Vector3[nTheta];
+        directions = new Vector3[numDirectionDistinctions];
 
-        final float k = nTheta / 6.28318530f;
-        System.out.println("Direction-Init with " + nTheta + " elements");
-        for (int i = 0; i < nTheta; i++) {
+        final float k = numDirectionDistinctions / 6.28318530f;
+        System.out.println("Direction-Init with " + numDirectionDistinctions + " elements");
+        for (int i = 0; i < numDirectionDistinctions; i++) {
             directions[i] = new Vector3(Math.cos(((float) i) / k), Math.sin(((float) i) / k), 0f);
         }
 
-        strides[0] = nv * nTheta * (2 * nx + 1);
-        strides[1] = nv * nTheta;
+        strides[0] = nv * numDirectionDistinctions * (2 * nx + 1);
+        strides[1] = nv * numDirectionDistinctions;
         strides[2] = nv;
 
         LUT_times = times;
         LUT_paths = paths;
 
-        navigationTangents = new Vector3[navigationNormals.length * nTheta];
+        navigationTangents = new Vector3[navigationNormals.length * numDirectionDistinctions];
         for (int i = 0; i < navigationNormals.length; i++) {
             Matrix3x3 basis = Matrix3x3.R3_basis(navigationNormals[i]);
-            for (int j = 0; j < nTheta; j++) {
-                navigationTangents[i * nTheta + j] = basis.dot(directions[j]);
+            for (int j = 0; j < numDirectionDistinctions; j++) {
+                navigationTangents[i * numDirectionDistinctions + j] = basis.dot(directions[j]);
             }
         }
 
         loadedStatics.set(true);
     }
 
-    private int to_id(int x, int y, int theta, int v) {
-        return (((x + nx) * strides[0] + (y + nx) * strides[1] + theta * strides[2] + v));
-    }
-
-    private LutComp from_id(long id) {
-        int x = (int) ((id / strides[0]) - nx);
-        id %= strides[0];
-        int y = (int) ((id / strides[1]) - nx);
-        id %= strides[1];
-        int theta = (int) (id / strides[2]);
-        id %= strides[2];
-        int v = (int) (id);
-        return new LutComp(x, y, theta, v);
-    }
-
     private Curve lutPathTo(CarData car, Vector3 destination, Vector3 tangent, float offset) {
-        final float k = nTheta / 6.28318530f;
+        final float k = numDirectionDistinctions / 6.28318530f;
         final Vector3 n = new Vector3(0, 0, 1f);
 
         Vector3 unitTangent = tangent.normalized();
@@ -101,7 +99,7 @@ public class Navigator {
         tangentLocal = unitTangent.dot(orientation);
         float angle = (float) Math.atan2(tangentLocal.y, tangentLocal.x);
         int theta = Math.round(k * angle);
-        if (theta < 0) theta += nTheta;
+        if (theta < 0) theta += numDirectionDistinctions;
 
         int v = -1;
         int v_min = 0;
@@ -154,6 +152,21 @@ public class Navigator {
         return new Curve(ctrl_pts);
     }
 
+    private int to_id(int x, int y, int theta, int v) {
+        return (((x + nx) * strides[0] + (y + nx) * strides[1] + theta * strides[2] + v));
+    }
+
+    private LutComp from_id(long id) {
+        int x = (int) ((id / strides[0]) - nx);
+        id %= strides[0];
+        int y = (int) ((id / strides[1]) - nx);
+        id %= strides[1];
+        int theta = (int) (id / strides[2]);
+        id %= strides[2];
+        int v = (int) (id);
+        return new LutComp(x, y, theta, v);
+    }
+
     private Curve navmeshPathTo(CarData car, Vector3 destination, Vector3 tangent, float offset) {
         Vector3 unitTangent = tangent.normalized();
 
@@ -169,20 +182,26 @@ public class Navigator {
 
         int destination_direction = -1;
         float maximum_alignment = -2.0f;
-        for (int j = 0; j < nTheta; j++) {
-            float alignment = (float) unitTangent.dot(navigationTangents[destinationNode * nTheta + j]);
+        for (int j = 0; j < numDirectionDistinctions; j++) {
+            float alignment = (float) unitTangent.dot(navigationTangents[destinationNode * numDirectionDistinctions + j]);
             if (alignment > maximum_alignment) {
                 destination_direction = j;
                 maximum_alignment = alignment;
             }
         }
 
-        int source_id = source_node * nTheta + source_direction;
-        int dest_id = destinationNode * nTheta + destination_direction;
+        int source_id = source_node * numDirectionDistinctions + source_direction;
+        int dest_id = destinationNode * numDirectionDistinctions + destination_direction;
+
+        if (this.pathAlgorithm == PathAlgorithm.ASTAR) {
+            long ms = System.nanoTime();
+            navigation_paths = navigationGraph.astar_sssp(source_id, dest_id, 8F);
+            System.out.println("Navigator: astar_sssp took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");
+        }
 
         Vector3 p = navigationNodes[destinationNode];
         Vector3 t = navigationTangents[dest_id];
-        Vector3 n = navigationNormals[dest_id / nTheta];
+        Vector3 n = navigationNormals[dest_id / numDirectionDistinctions];
 
         destination = destination.sub(n.mul(destination.sub(p).dot(n)));
         List<Curve.ControlPoint> ctrl_pts = new ArrayList<>();
@@ -197,9 +216,9 @@ public class Navigator {
             // if it exists, add another control point to the path
             if (dest_id != -1) {
 
-                p = navigationNodes[dest_id / nTheta];
+                p = navigationNodes[dest_id / numDirectionDistinctions];
                 t = navigationTangents[dest_id];
-                n = navigationNormals[dest_id / nTheta];
+                n = navigationNormals[dest_id / numDirectionDistinctions];
 
                 ctrl_pts.add(new Curve.ControlPoint(p, t, n));
 
@@ -233,10 +252,65 @@ public class Navigator {
                 e.printStackTrace();
             }
         }
+
         //if (Math.max(car.position.z, destination.z) < 50) {
         //return lutPathTo(car, destination, tangent, offset);
         //} else
         return navmeshPathTo(car, destination, tangent, offset);
+    }
+
+    public Pair<Integer, Vector3> findClosestNode(Vector3 pos, Vector3 direction) {
+        if (!loadedStatics.get())
+            throw new IllegalStateException("Navigator didn't load yet");
+
+        var closestNode = this.findClosestNode(pos);
+        if (closestNode == null)
+            return null;
+
+        float maximum_alignment = -2.0f;
+        int dir = 0;
+        for (int j = 0; j < numDirectionDistinctions; j++) {
+            float alignment = (float) direction.dot(navigationTangents[closestNode.getKey() * numDirectionDistinctions + j]);
+            if (alignment > maximum_alignment) {
+                dir = j;
+                maximum_alignment = alignment;
+            }
+        }
+
+        return new Pair<>(closestNode.getKey() * numDirectionDistinctions + dir, closestNode.getValue());
+    }
+
+    public Pair<Integer, Vector3> findClosestNode(Vector3 pos) {
+        if (!loadedStatics.get())
+            throw new IllegalStateException("Navigator didn't load yet");
+        int closest = -1;
+        float minimum = 1000000.0f;
+        for (int i = 0; i < navigationNodes.length; i++) {
+            float distance = (float) pos.sub(navigationNodes[i]).magnitude();
+            if (distance < minimum) {
+                closest = i;
+                minimum = distance;
+            }
+        }
+        if (closest == -1)
+            return null;
+        else
+            return new Pair<>(closest, navigationNodes[closest]);
+    }
+
+    public List<Pair<Integer, Vector3>> findClosestNodes(Vector3 pos, int num) {
+        if (!loadedStatics.get()) {
+            System.err.println("Navigator didn't load yet");
+            return new ArrayList<>();
+        }
+
+        return IntStream.range(0, navigationNodes.length)
+                .boxed()
+                .map(node -> new Pair<>(node, pos.sub(navigationNodes[node]).magnitude()))
+                .sorted(Comparator.comparingDouble(Pair::getValue))
+                .limit(num)
+                .map(p -> new Pair<>(p.getKey(), navigationNodes[p.getKey()]))
+                .collect(Collectors.toList());
     }
 
     public void analyzeSurroundings(CarData car) {
@@ -247,43 +321,58 @@ public class Navigator {
                 e.printStackTrace();
             }
         }
-        source = car.position;
-        int nnodes = navigationNodes.length;
 
-        long ms = System.nanoTime();
+        this.source = car.position;
 
-        source_node = -1;
+        this.source_node = -1;
         float minimum = 1000000.0f;
-        for (int i = 0; i < nnodes; i++) {
-            float distance = (float) source.sub(navigationNodes[i]).magnitude();
+        for (int i = 0; i < navigationNodes.length; i++) {
+            float distance = (float) this.source.sub(navigationNodes[i]).magnitude();
             if (distance < minimum) {
                 source_node = i;
                 minimum = distance;
             }
         }
-        System.out.println("analyze: sourceNode took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");
-        ms = System.nanoTime();
 
-        Vector3 p = navigationNodes[source_node];
-        Vector3 n = navigationNormals[source_node];
-        source = source.sub(n.mul(source.sub(p).dot(n)));
+        Vector3 p = navigationNodes[this.source_node];
+        Vector3 n = navigationNormals[this.source_node];
+        this.source = this.source.sub(n.mul(this.source.sub(p).dot(n)));
 
         Vector3 f = car.forward();
-        source_direction = -1;
+        this.source_direction = -1;
         float maximum_alignment = -2.0f;
-        for (int j = 0; j < nTheta; j++) {
-            float alignment = (float) f.dot(navigationTangents[source_node * nTheta + j]);
+        for (int j = 0; j < numDirectionDistinctions; j++) {
+            float alignment = (float) f.dot(navigationTangents[this.source_node * numDirectionDistinctions + j]);
             if (alignment > maximum_alignment) {
-                source_direction = j;
+                this.source_direction = j;
                 maximum_alignment = alignment;
             }
         }
-        System.out.println("analyze: direction took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");
-        ms = System.nanoTime();
 
-        int source_id = source_node * nTheta + source_direction;
-        navigation_paths = navigationGraph.bellman_ford_sssp(source_id, 15f);
-        System.out.println("analyze: bellman_ford_sssp took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");
+        int source_id = this.source_node * numDirectionDistinctions + this.source_direction;
+
+        switch (this.pathAlgorithm) {
+            case BELLMANN_FORD: {
+                long ms = System.nanoTime();
+
+                navigation_paths = navigationGraph.bellman_ford_sssp(source_id, 8F);
+                System.out.println("Navigator: bellman_ford_sssp took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");
+            }
+            case ASTAR: {
+                /*long ms = System.nanoTime();
+                navigation_paths = navigationGraph.astar_sssp(source_id, -1, 8F);
+                System.out.println("Navigator: astar_sssp took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");*/
+            }
+        }
+
+    }
+
+    public enum PathAlgorithm {
+        BELLMANN_FORD,
+        ASTAR
+    }
+
+    private static class NavData {
 
     }
 

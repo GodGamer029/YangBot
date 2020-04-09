@@ -71,6 +71,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return 0;
     }
 
+    public rlbot.vector.Vector3 toRlbot() {
+        return new rlbot.vector.Vector3(x, y, z);
+    }
+
     public int toFlatbuffer(FlatBufferBuilder builder) {
         return rlbot.flat.Vector3.createVector3(builder, x, y, z);
     }

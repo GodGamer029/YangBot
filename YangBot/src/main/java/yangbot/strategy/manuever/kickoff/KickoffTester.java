@@ -1,8 +1,16 @@
 package yangbot.strategy.manuever.kickoff;
 
+import javafx.util.Pair;
+import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
+import yangbot.util.math.MathUtils;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class KickoffTester {
 
@@ -25,6 +33,33 @@ public class KickoffTester {
         else {
             return KickOffLocation.UNKNOWN;
         }
+    }
+
+    public static boolean shouldGoForKickoff(CarData localCar, List<CarData> teammates, BallData ballData) {
+        if (teammates.size() <= 1) // Only 1 bot
+            return true;
+
+        assert teammates.contains(localCar);
+
+        List<Pair<CarData, /*distance to ball*/Double>> temp = new ArrayList<>(teammates)
+                .stream()
+                .map((c) -> new Pair<>(c, c.position.distance(ballData.position)))
+                .sorted(Comparator.comparingDouble(Pair::getValue)) // Least distance to ball goes
+                .limit(2)
+                .collect(Collectors.toList());
+
+        Pair<CarData, Double> first = temp.get(0);
+        Pair<CarData, Double> second = temp.get(1);
+
+        if (first.getKey().playerIndex != localCar.playerIndex && second.getKey().playerIndex != localCar.playerIndex)
+            return false; // We are not any of the closest 2 cars
+
+        if (MathUtils.doublesAreEqual(first.getValue(), second.getValue(), 1)) {
+            // Distance is equal for both cars? Left goes!
+            temp.sort(Comparator.comparingDouble(p -> p.getKey().position.x * p.getKey().getTeamSign()));
+        }
+
+        return temp.get(0).getKey().playerIndex == localCar.playerIndex;
     }
 
     public enum KickOffLocation {

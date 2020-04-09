@@ -184,7 +184,7 @@ public class DefendStrategy extends Strategy {
                         followPathManeuver.arrivalSpeed = -1;
                 }
 
-                followPathManeuver.draw(renderer, car);
+                //followPathManeuver.draw(renderer, car);
             }
 
             if ((state == State.FOLLOW_PATH_STRIKE && (!car.hasWheelContact || followPathManeuver.isDone() || followPathManeuver.arrivalTime - car.elapsedSeconds <= dodgeManeuver.delay + RLConstants.tickFrequency))) {

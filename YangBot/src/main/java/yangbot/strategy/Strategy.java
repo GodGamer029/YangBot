@@ -40,7 +40,8 @@ public abstract class Strategy {
 
     @SuppressWarnings("WeakerAccess")
     public final void planStrategy(boolean force) {
-        float currentGameTime = GameData.current().getCarData().elapsedSeconds;
+        final GameData gameData = GameData.current();
+        float currentGameTime = gameData.getCarData().elapsedSeconds;
         if (lastResetCheck < 0)
             lastResetCheck = currentGameTime;
         if (plannedStrategy && !force)
@@ -51,7 +52,7 @@ public abstract class Strategy {
         planStrategyInternal();
         long duration = System.currentTimeMillis() - ms;
         if (duration > RLConstants.tickFrequency * 1000 * 2.5)
-            System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to plan its strategy");
+            System.out.println(gameData.getBotIndex() + ": " + this.getClass().getSimpleName() + " took " + duration + "ms to plan its strategy");
 
         plannedStrategy = true;
     }
@@ -92,16 +93,23 @@ public abstract class Strategy {
     protected abstract void stepInternal(float dt, ControlsOutput controlsOutput);
 
     public final void step(float dt, ControlsOutput controlsOutput) {
+        final GameData gameData = GameData.current();
         if (!plannedStrategy)
             planStrategy();
+
+        if (this.getClass() != DefaultStrategy.class)
+            assert !this.isDone : this.getClass().getSimpleName() + " was already done, can't execute step()";
 
         long ms = System.currentTimeMillis();
         stepInternal(dt, controlsOutput);
         long duration = System.currentTimeMillis() - ms;
         if (duration > RLConstants.tickFrequency * 1000 * 2)
-            System.out.println(this.getClass().getSimpleName() + " took " + duration + "ms to execute its strategy");
+            System.out.println(gameData.getBotIndex() + ": " + this.getClass().getSimpleName() + " took " + duration + "ms to execute its strategy");
     }
 
     public abstract Optional<Strategy> suggestStrategy();
 
+    public String getAdditionalInformation() {
+        return "";
+    }
 }

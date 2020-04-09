@@ -27,9 +27,9 @@ public class Curve {
     public float length;
     public ArrayList<Vector3> points;
     public float[] maxSpeeds;
-    private ArrayList<Vector3> tangents;
-    private float[] curvatures;
-    private float[] distances;
+    public ArrayList<Vector3> tangents;
+    public float[] curvatures;
+    public float[] distances;
 
     private static int ndiv = 20;
 
@@ -438,7 +438,7 @@ public class Curve {
             Vector3 b = points.get(i + 1);
 
             float alpha = (float) MathUtils.clip(b.sub(a).dot(c.sub(a)) / b.sub(a).dot(b.sub(a)), 0f, 1f);
-            assert !Float.isNaN(alpha);
+            assert !Float.isNaN(alpha) : a.toString() + ":" + b.toString();
             float distance = (float) c.sub(a.add(b.sub(a).mul(alpha))).magnitude();
 
             if (distance < minDistance) {
@@ -519,7 +519,7 @@ public class Curve {
         return time;
     }
 
-    private float maximizeSpeedWithThrottle(float additionalAcceleration, float v0, float distance) {
+    public float maximizeSpeedWithThrottle(float additionalAcceleration, float v0, float distance) {
         final float dt = RLConstants.simulationTickFrequency;
         float currentDistance = 0.0f;
         float currentVelocity = v0;
@@ -537,7 +537,7 @@ public class Curve {
         return currentVelocity;
     }
 
-    private float maximizeSpeedWithoutThrottle(float additionalAcceleration, float v0, float distance) {
+    public float maximizeSpeedWithoutThrottle(float additionalAcceleration, float v0, float distance) {
         final float dt = RLConstants.simulationTickFrequency;
         final float dv = additionalAcceleration * dt;
 

@@ -12,7 +12,7 @@ public class YangPythonInterface extends SocketServer {
 
     @Override
     protected Bot initBot(int index, String botName, int team) {
-        if (botName.equalsIgnoreCase("YangBot")) {
+        if (botName.startsWith("YangBot")) {
             switch (MainClass.BOT_TYPE) {
                 case PRODUCTION:
                     return new YangBot(index);

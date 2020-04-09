@@ -176,7 +176,7 @@ public class DribbleAbstraction extends Abstraction {
                     followPathManeuver.arrivalTime = frame.absoluteTime;
                 }
                 followPathManeuver.step(dt, controlsOutput);
-                followPathManeuver.draw(renderer, car);
+                //followPathManeuver.draw(renderer, car);
                 followPathManeuver.path.draw(renderer);
             }
         }

@@ -20,6 +20,7 @@ public class GameData {
     protected float gravityZ = -650;
     protected float dt = 1 / 60f;
     protected AdvancedRenderer advancedRenderer = null;
+    private int botIndex = 0;
     private static final Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
     private YangBallPrediction ballPrediction = null;
 
@@ -45,6 +46,7 @@ public class GameData {
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = YangBallPrediction.get();
+        this.botIndex = carData.playerIndex;
 
         if (this.ballData.hasBeenTouched())
             InterruptManager.ballTouchInterrupt(this.ballData.getLatestTouch());
@@ -58,6 +60,7 @@ public class GameData {
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = YangBallPrediction.get();
+        this.botIndex = carData.playerIndex;
     }
 
     public YangBallPrediction getBallPrediction() {
@@ -90,5 +93,9 @@ public class GameData {
 
     public AdvancedRenderer getAdvancedRenderer() {
         return advancedRenderer;
+    }
+
+    public int getBotIndex() {
+        return this.botIndex;
     }
 }

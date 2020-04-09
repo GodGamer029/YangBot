@@ -99,7 +99,7 @@ public class NeutralStrategy extends Strategy {
             }
             case GET_BOOST: {
                 followPathManeuver.path.draw(gameData.getAdvancedRenderer());
-                followPathManeuver.draw(gameData.getAdvancedRenderer(), gameData.getCarData());
+                //followPathManeuver.draw(gameData.getAdvancedRenderer(), gameData.getCarData());
                 followPathManeuver.step(dt, controlsOutput);
                 controlsOutput.withBoost(false);
                 if (followPathManeuver.isDone())

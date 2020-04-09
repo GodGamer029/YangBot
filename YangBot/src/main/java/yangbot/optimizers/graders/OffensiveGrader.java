@@ -33,7 +33,7 @@ public class OffensiveGrader extends Grader {
                 break;
             ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
             float dist = (float) ballAtFrame.position.distance(enemyGoal.withZ(RLConstants.goalHeight / 2));
-            boolean landsInGoal = time <= maximumTimeForGoal && ballAtFrame.makeMutable().isInGoal(teamSign);
+            boolean landsInGoal = time <= maximumTimeForGoal && ballAtFrame.makeMutable().isInEnemyGoal(teamSign);
 
             if (didLandInGoal) { // The ball has to at least land in the goal to be better than the last simulation
                 if (!landsInGoal)

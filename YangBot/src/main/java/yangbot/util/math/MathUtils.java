@@ -53,4 +53,20 @@ public class MathUtils {
         value += newRangeStart;
         return value;
     }
+
+    public static boolean floatsAreEqual(float value1, float value2) {
+        return Float.floatToIntBits(value1) == Float.floatToIntBits(value2);
+    }
+
+    public static boolean floatsAreEqual(float value1, float value2, double delta) {
+        return floatsAreEqual(value1, value2) || Math.abs(value1 - value2) <= delta;
+    }
+
+    public static boolean doublesAreEqual(double value1, double value2) {
+        return Double.doubleToLongBits(value1) == Double.doubleToLongBits(value2);
+    }
+
+    public static boolean doublesAreEqual(double value1, double value2, double delta) {
+        return doublesAreEqual(value1, value2) || Math.abs(value1 - value2) <= delta;
+    }
 }

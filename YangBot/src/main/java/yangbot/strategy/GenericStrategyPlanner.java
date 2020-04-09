@@ -14,19 +14,6 @@ import java.util.stream.Collectors;
 
 public class GenericStrategyPlanner extends StrategyPlanner {
 
-    public static boolean isOutOfPosition(GameData gameData) {
-        // TODO
-        final CarData car = gameData.getCarData();
-        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
-        final ImmutableBallData ballData = gameData.getBallData();
-
-        int teamSign = car.team * 2 - 1;
-        Vector2 myGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
-
-
-        return false;
-    }
-
     @Override
     protected void planStrategyInternal() {
         GameData gameData = GameData.current();
@@ -89,15 +76,11 @@ public class GenericStrategyPlanner extends StrategyPlanner {
                 awareness += 0.2f;
         }
 
-        if (awareness >= 0.5f) {
-            newDecidedStrategy = new OffensiveStrategy();
-        } else if (awareness <= 0f) {
+        if (awareness <= -0.3f) {
             newDecidedStrategy = new DefendStrategy();
         } else {
-            newDecidedStrategy = new NeutralStrategy();
+            newDecidedStrategy = new OffensiveStrategy();
         }
-
-        //System.out.println("-> Decided on " + newDecidedStrategy.getClass().getSimpleName() + " with awareness=" + awareness);
 
         this.setDone();
     }

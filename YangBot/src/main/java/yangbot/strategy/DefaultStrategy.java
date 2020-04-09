@@ -16,17 +16,21 @@ public class DefaultStrategy extends Strategy {
         final GameData gameData = GameData.current();
         final ImmutableBallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
-        CarData car = gameData.getCarData();
+        final CarData car = gameData.getCarData();
 
-        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.sub(ball.position).magnitude() / car.velocity.flatten().magnitude())));
+        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(2, car.position.sub(ball.position).magnitude() / (car.velocity.flatten().magnitude() + 50))));
 
         if (!RLConstants.isPosNearWall(futureBallPos.flatten(), BallData.COLLISION_RADIUS + 10) || futureBallPos.z > RLConstants.arenaHeight * 0.8f)
             futureBallPos = futureBallPos.withZ(0);
 
+        if (Math.abs(car.position.y) > RLConstants.goalDistance - 50) {
+            futureBallPos = new Vector3(0, 0, 0);
+        }
+
         DriveManeuver.steerController(controlsOutput, car, futureBallPos);
         //controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
         controlsOutput.withThrottle(Math.max(0.05f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
-        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.flatten().distance(futureBallPos.flatten()) > 1000 && car.boost > 40 && car.velocity.dot(car.forward()) < 2000)
+        if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.flatten().distance(futureBallPos.flatten()) > 1000 && car.boost > 60 && car.velocity.dot(car.forward()) < 2000)
             controlsOutput.withBoost(true);
 
         if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 2f)

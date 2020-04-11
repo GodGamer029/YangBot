@@ -152,14 +152,9 @@ public class DribbleAbstraction extends Abstraction {
                 if (followPathManeuver == null || Math.abs(followPathManeuver.arrivalTime - frame.absoluteTime) > 0.1f || followPathManeuver.arrivalTime - car.elapsedSeconds <= 0 || followPathManeuver.getDistanceOffPath(car) > 50) {
                     followPathManeuver = new FollowPathManeuver();
 
-                    final Vector3 startPosition = car.position.add(car.forward().mul(10));
-                    final Vector3 startTangent = car.forward();
-                    final Vector3 endPosition = driveTarget;
-                    final Vector3 endTangent = car.forward().mul(-1);
-
                     Curve currentPath = new EpicPathPlanner()
-                            .withStart(startPosition, startTangent)
-                            .withEnd(endPosition, endTangent.mul(-1))
+                            .withStart(car, 10)
+                            .withEnd(driveTarget, car.forward())
                             .plan().get();
                     /*if(startPosition.distance(endPosition) > 200 && currentPath.tangentAt(Math.max(0, currentPath.findNearest(car.position) - 5)).dot(car.forward()) < 0){ // Following the path will probably fail, we can't drive backwards
                         Optional<Curve> curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, endPosition, endTangent, 15);

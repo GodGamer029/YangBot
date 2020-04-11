@@ -121,6 +121,8 @@ public class MainClass {
             List<Graph.Edge> edges = new ArrayList<>();
             List<Vector3> nav_nodes = new ArrayList<>();
             List<Vector3> nav_normals = new ArrayList<>();
+            String navmeshPrefix = "soccar";
+
             System.out.println("Allocated arrays " + (System.currentTimeMillis() - ns) + "ms");
             Thread.sleep(0);
             {
@@ -149,7 +151,7 @@ public class MainClass {
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_edges.bin"));
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream(navmeshPrefix + "_navigation_edges.bin"));
                 while (para.available() > 0) {
                     edges.add(new Graph.Edge(para.readIntLE(),
                             para.readIntLE(),
@@ -160,7 +162,7 @@ public class MainClass {
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_nodes.bin"));
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream(navmeshPrefix + "_navigation_nodes.bin"));
                 while (para.available() > 0) {
                     Vector3 vec = new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE());
                     if (vec.z <= 15)
@@ -172,7 +174,7 @@ public class MainClass {
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream("soccar_navigation_normals.bin"));
+                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream(navmeshPrefix + "_navigation_normals.bin"));
                 while (para.available() > 0) {
                     nav_normals.add(new Vector3(para.readFloatLE(), para.readFloatLE(), para.readFloatLE()));
                 }

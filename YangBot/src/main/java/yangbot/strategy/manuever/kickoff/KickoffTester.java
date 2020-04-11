@@ -27,8 +27,8 @@ public class KickoffTester {
         if (xPos >= 2040 && xPos <= 2056)
             return KickOffLocation.CORNER;
         else if (xPos >= 250 && xPos <= 262)
-            return KickOffLocation.MIDDLE;
-        else if (xPos == 0)
+            return KickOffLocation.OFF_CENTER;
+        else if (MathUtils.floatsAreEqual(xPos, 0, 1))
             return KickOffLocation.CENTER;
         else {
             return KickOffLocation.UNKNOWN;
@@ -64,7 +64,7 @@ public class KickoffTester {
 
     public enum KickOffLocation {
         CORNER,
-        MIDDLE,
+        OFF_CENTER,
         CENTER,
         UNKNOWN
     }

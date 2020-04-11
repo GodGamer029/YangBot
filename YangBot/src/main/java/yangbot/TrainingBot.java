@@ -6,6 +6,7 @@ import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.strategy.DefaultStrategy;
+import yangbot.strategy.RecoverStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.vector.Vector3;
@@ -82,6 +83,11 @@ public class TrainingBot implements Bot {
             renderer.drawString2d(String.format("State: %s", state.name()), Color.WHITE, new Point(10, 510), 2, 2);
             if (state == State.RUN)
                 renderer.drawString2d(String.format("Strategy: %s", currentPlan.getClass().getSimpleName()), Color.WHITE, new Point(10, 630), 2, 2);
+
+            renderer.drawString3d(this.playerIndex + ": " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 50), 1, 1);
+            if (currentPlan != null)
+                renderer.drawString3d(currentPlan.getAdditionalInformation(), Color.WHITE, car.position.add(0, 0, 100), 1, 1);
+
         }
 
         return output;
@@ -119,8 +125,13 @@ public class TrainingBot implements Bot {
         BoostManager.loadGameTickPacket(packet);
 
         DataPacket dataPacket = new DataPacket(packet, playerIndex);
-
-        ControlsOutput controlsOutput = processInput(dataPacket);
+        ControlsOutput controlsOutput;
+        try {
+            controlsOutput = processInput(dataPacket);
+        } catch (Exception e) {
+            controlsOutput = new ControlsOutput();
+            e.printStackTrace();
+        }
 
         lastTick = dataPacket.gameInfo.secondsElapsed();
 

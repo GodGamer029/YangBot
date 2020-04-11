@@ -116,10 +116,6 @@ public class Vector2 {
         return this.mul(1.f / magnitude());
     }
 
-    public double dotProduct(Vector2 other) {
-        return x * other.x + y * other.y;
-    }
-
     public Vector2 dot(Matrix2x2 mat) {
         float[] vA = new float[2];
         for (int i = 0; i < 2; i++) {

@@ -57,6 +57,13 @@ public abstract class Strategy {
         plannedStrategy = true;
     }
 
+    protected final boolean reevaluateStrategy(Interrupt interrupt, float timeout) {
+        if (interrupt.hasInterrupted())
+            reevaluateStrategy(timeout);
+
+        return this.isDone();
+    }
+
     protected final boolean reevaluateStrategy(Interrupt interrupt) {
         if (interrupt.hasInterrupted())
             planStrategy(true);

@@ -1,10 +1,7 @@
 package yangbot.strategy.advisor;
 
 import javafx.util.Pair;
-import yangbot.input.CarData;
-import yangbot.input.GameData;
-import yangbot.input.ImmutableBallData;
-import yangbot.input.RLConstants;
+import yangbot.input.*;
 import yangbot.util.math.vector.Vector2;
 
 import java.util.Comparator;
@@ -14,11 +11,14 @@ import java.util.stream.Collectors;
 
 public class RotationAdvisor {
 
-    private static boolean isInfrontOfBall(CarData car, ImmutableBallData ball) {
+    public static boolean isInfrontOfBall(CarData car, ImmutableBallData ball) {
         return !isAheadOfBall(car, ball);
     }
 
-    private static boolean isAheadOfBall(CarData car, ImmutableBallData ball) {
+    public static boolean isAheadOfBall(CarData car, ImmutableBallData ball) {
+        if (car.hitbox.getClosestPointOnHitbox(car.position, ball.position).distance(ball.position) - BallData.COLLISION_RADIUS < 80)
+            return false;
+
         if (Math.signum(ball.position.y - car.position.y) == car.getTeamSign())
             return true;
 
@@ -27,7 +27,7 @@ public class RotationAdvisor {
         return car.position.flatten().distance(enemyGoal) + 50 < ball.position.flatten().distance(enemyGoal);
     }
 
-    private static boolean isHeadedBack(CarData car) {
+    public static boolean isHeadedBack(CarData car) {
         final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * (RLConstants.goalDistance + 1000));
 
         final Vector2 carToOwnGoal = ownGoal.sub(car.position.flatten()).normalized();
@@ -52,10 +52,32 @@ public class RotationAdvisor {
         if (teammates.size() <= 1)
             return Advice.ATTACK;
 
+        long numberOfCarsAbleToDefend = teammates.stream()
+                .filter(c -> !isAheadOfBall(c, ballData))
+                .filter(c -> c.position.distance(ballData.position) > 300)
+                .count();
+
+        float medianBoost = (float) teammates.stream()
+                .sorted(Comparator.comparingDouble(c -> c.boost))
+                .collect(Collectors.toList())
+                .get((teammates.size() - 1) / 2).boost;
+
         // Find car with least time to ball
         Optional<CarData> attackingCarOptional = teammates.stream()
+                // Exclude myself if too little boost
+                //.filter(c -> c.boost >= medianBoost || !c.strippedName.equalsIgnoreCase("yangbot"))
                 .filter(c -> isInfrontOfBall(c, ballData))
                 .filter(c -> !isHeadedBack(c))
+                .filter(c -> {
+                    // Bypass for small distances
+                    if (localCar.position.flatten().distance(ballData.position.flatten()) < 500)
+                        return true;
+
+                    float yDist = Math.abs(localCar.position.y - ballData.position.y);
+                    float xDist = Math.abs(localCar.position.x - ballData.position.x);
+
+                    return yDist > xDist * 0.75f; // Attack from middle, not side
+                })
                 .map(c -> new Pair<>(c, c.position.distance(ballData.position) / (c.forward().flatten().dot(c.velocity.flatten()) + 50)))
                 .min(Comparator.comparingDouble(Pair::getValue))
                 .map(Pair::getKey); // Convert back to CarData
@@ -66,6 +88,15 @@ public class RotationAdvisor {
         final CarData attackingCar = attackingCarOptional.get();
 
         // TODO: recognize passing plays
+
+        if (numberOfCarsAbleToDefend <= 1) {
+            if (attackingCar.playerIndex == localCar.playerIndex) {
+                if (Math.abs(localCar.position.y - ballData.position.y) < 1000)
+                    return Advice.RETREAT;
+                return Advice.IDLE;
+            } else
+                return Advice.RETREAT;
+        }
 
         return attackingCar.playerIndex == localCar.playerIndex ? Advice.ATTACK : Advice.IDLE;
     }

@@ -31,7 +31,7 @@ public class DefensiveGrader extends Grader {
                 break;
 
             ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
-            float dist = (float) ballAtFrame.position.distance(ownGoal.withZ(RLConstants.goalHeight / 2));
+            float dist = (float) ballAtFrame.position.flatten().distance(ownGoal);
             boolean landsInGoal = ballAtFrame.makeMutable().isInOwnGoal(teamSign);
 
             if (landsInGoal)

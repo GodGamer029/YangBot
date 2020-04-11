@@ -87,12 +87,16 @@ public class FollowPathManeuver extends Maneuver {
 
         boolean enableSlide = false;
 
-        if (Math.abs(maxSpeedAtPathSection) < 100) { // Very likely to be stuck in a turn that is impossible
-            driveManeuver.minimumSpeed = 100;
+        if (Math.abs(maxSpeedAtPathSection) < 200) { // Very likely to be stuck in a turn that is impossible
+            driveManeuver.minimumSpeed = 200;
             driveManeuver.maximumSpeed = 200;
             enableSlide = true;
         }
 
+        if (this.arrivalSpeed == -1 && this.arrivalTime == -1)
+            driveManeuver.reaction_time = 0.5f;
+        else
+            driveManeuver.reaction_time = 0.04f;
         driveManeuver.step(dt, controlsOutput);
         if (enableSlide) {
             controlsOutput.withSlide();

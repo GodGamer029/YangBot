@@ -1,6 +1,5 @@
 package yangbot;
 
-import javafx.util.Pair;
 import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
@@ -17,10 +16,6 @@ import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
 
 public class TestBot implements Bot {
 
@@ -64,7 +59,7 @@ public class TestBot implements Bot {
         switch (state) {
             case RESET: {
                 timer = 0.0f;
-                nav = new Navigator(Navigator.PathAlgorithm.ASTAR);
+                nav = new Navigator(Navigator.PathAlgorithm.BELLMANN_FORD);
                 state = State.INIT;
                 pathManeuver = new FollowPathManeuver();
                /* RLBotDll.setGameState(new GameState()
@@ -87,8 +82,8 @@ public class TestBot implements Bot {
             case INIT: {
                 timer = 2;
 
-                /*if(Navigator.isLoaded())
-                    this.state = State.RUN;*/
+                //if(Navigator.isLoaded())
+                this.state = State.RUN;
 
                 double dist = ball.position.flatten().sub(controlCar.position.flatten()).normalized().dot(controlCar.velocity.flatten());
                 renderer.drawString2d(String.format("Dist: %.1f", dist), Color.WHITE, new Point(300, 300), 2, 2);
@@ -97,9 +92,66 @@ public class TestBot implements Bot {
             }
             case RUN: {
 
-                if (timer > 0.2f) {
+                final float minIdleDistance = 1500;
+                final float maxIdleDistance = 4000;
+                final int gridSize = 20/*Math.max(9, teammates.size() * 3)*/;
+
+                float[] grid = new float[gridSize];
+
+                //for(var p : teammates)
+                {
+                    for (int i = 0; i < gridSize; i++) {
+                        float gridSpot = MathUtils.remap(i, 0, gridSize - 1, minIdleDistance, maxIdleDistance);
+                        float idleDist = MathUtils.clip(Math.abs(controlCar.position.y - ball.position.y), minIdleDistance, maxIdleDistance);
+                        float distance = Math.abs(idleDist - gridSpot);
+                        if (distance >= 0)
+                            grid[i] += 1 / Math.max(distance, 10);
+                    }
+                }
+
+                int lowestSpot = 0;
+                float lowestDist = 9999999;
+                float highestDist = 0;
+                float meanValue = 0;
+                for (int i = 0; i < gridSize; i++) {
+                    meanValue += grid[i];
+                    if (grid[i] < lowestDist) {
+                        lowestDist = grid[i];
+                        lowestSpot = i;
+                    }
+                    if (grid[i] > highestDist) {
+                        highestDist = grid[i];
+                    }
+                }
+                meanValue /= gridSize;
+
+                float idleDist = MathUtils.clip(Math.abs(controlCar.position.y - ball.position.y), minIdleDistance, maxIdleDistance);
+                renderer.drawString3d(String.format("%.2f", idleDist), Color.WHITE, controlCar.position.add(0, 0, 50), 1, 1);
+
+                //if(car.playerIndex == 0)
+                {
+                    for (int i = 0; i < gridSize; i++) {
+                        float gridSpot = MathUtils.remap(i, 0, gridSize - 1, minIdleDistance, maxIdleDistance);
+                        float val = 1 - MathUtils.clip(MathUtils.remap(grid[i], lowestDist, highestDist, 0, 1), 0, 1);
+                        var col = new Color(val, val, val);
+
+                        if (i == lowestSpot)
+                            col = Color.GREEN;
+                        float ySize = (maxIdleDistance - minIdleDistance) / (gridSize - 1);
+                        renderer.drawCentered3dCube(col, new Vector3(car.position.x, teamSign * gridSpot + ball.position.y, 50), new Vector3(10, ySize, 200));
+                        renderer.drawString3d(String.format("%.5f", grid[i]), Color.WHITE, new Vector3(car.position.x, teamSign * gridSpot + ball.position.y, 200), 1, 1);
+                    }
+                }
+
+                /*if (timer > 0.1f) {
                     nav.analyzeSurroundings(controlCar);
                     timer = 0;
+                }
+
+                var curv = nav.pathTo(controlCar.forward(), ball.position, new Vector3(1, 0, 0), 10);
+                if(curv != null){
+                    curv.draw(renderer);
+                    //System.out.println("length: "+curv.length+" ");
                 }
 
                 /*int firstNodeDir = nav.findClosestNode(new Vector3(0, 1800, 0), new Vector3(1, 1, 0).normalized()).getKey();
@@ -140,6 +192,7 @@ public class TestBot implements Bot {
                 }*/
 
 
+                /*
                 Vector3 destination = ballPrediction.getFrameAtRelativeTime((float) Math.min(2, car.position.sub(ball.position).magnitude() / Math.max(1, car.velocity.magnitude()))).get().ballData.position;
                 ;
                 Vector3 destTangent = enemyGoal.withZ(0).sub(destination).normalized();
@@ -254,7 +307,7 @@ public class TestBot implements Bot {
                                 //this.pathManeuver.arrivalTime = car.elapsedSeconds + weight;
                                 this.pathManeuver.step(dt, output);
                                 this.pathManeuver.draw(renderer, car);
-                            }*/
+                            }*
 
                             renderer.drawString3d(String.format(Locale.US, "%.2fs", weight), Color.WHITE, MathUtils.lerp(ctrl_pts.get(i).getValue().point.add(ctrl_pts.get(i).getValue().normal.mul(10)), ctrl_pts.get(i + 1).getValue().point.add(ctrl_pts.get(i + 1).getValue().normal.mul(10)), 0.5f).toRlbot(), 1, 1);
                         }
@@ -263,7 +316,7 @@ public class TestBot implements Bot {
                         //curv.draw(coolBoi);
                         coolBoi.finishAndSendIfDifferent();
                     }
-                }
+                } */
 
                 break;
             }

@@ -40,7 +40,16 @@ public class StrikeAbstraction extends Abstraction {
     public Grader customGrader;
     private BallTouchInterrupt ballTouchInterrupt = null;
 
+    private static boolean debugMessages = false;
+    public float maxJumpDelay = 0.6f;
+    public float jumpDelayStep = 0.15f;
+    public float jumpBeforeStrikeDelay = 0.3f;
+
     public StrikeAbstraction(Curve path) {
+        this(path, new OffensiveGrader());
+    }
+
+    public StrikeAbstraction(Curve path, @NotNull Grader grader) {
         this.state = State.DRIVE;
 
         this.strikeDodge = new DodgeManeuver();
@@ -49,9 +58,8 @@ public class StrikeAbstraction extends Abstraction {
 
         this.followPath = new FollowPathManeuver();
         this.followPath.path = path;
-        this.followPath.arrivalTime = this.arrivalTime;
 
-        this.customGrader = new OffensiveGrader();
+        this.customGrader = grader;
     }
 
     public StrikeAbstraction(@NotNull Grader customGrader) {
@@ -91,41 +99,46 @@ public class StrikeAbstraction extends Abstraction {
 
                 float distanceOffPath = (float) car.position.flatten().distance(this.followPath.path.pointAt(this.followPath.path.findNearest(car.position)).flatten());
                 if (distanceOffPath > 100) {
+                    if (debugMessages)
+                        System.out.println("Quitting strike because distanceOffPath: " + distanceOffPath);
                     return RunState.DONE;
                 }
 
-                if (this.followPath.arrivalTime - car.elapsedSeconds < 0.3f || this.followPath.isDone()) {
+                if (this.followPath.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.followPath.isDone()) {
                     this.state = State.STRIKE;
                 }
                 break;
             case STRIKE:
                 if (!this.solvedGoodStrike && this.strikeDodge.timer >= Math.min(0.20f, 0.05f + RLConstants.gameLatencyCompensation)) {
                     this.solvedGoodStrike = true;
+
                     Optional<YangBallPrediction.YangPredictionFrame> ballFrameAtArrivalOptional = ballPrediction.getFrameAtRelativeTime(0.4f - strikeDodge.timer + RLConstants.tickFrequency);
                     assert ballFrameAtArrivalOptional.isPresent();
 
                     YangBallPrediction.YangPredictionFrame ballFrameAtArrival = ballFrameAtArrivalOptional.get();
                     final Vector3 ballAtArrival = ballFrameAtArrival.ballData.position;
                     float T = (float) ((ballAtArrival.flatten().sub(car.position.flatten()).magnitude() - BallData.COLLISION_RADIUS) / car.velocity.flatten().magnitude());
-                    if (T > 0.5f || T <= RLConstants.tickFrequency) {
+                    if (T > Math.min(this.jumpBeforeStrikeDelay + 0.5f, DodgeManeuver.timeout) || T <= RLConstants.tickFrequency) {
                         strikeDodge.direction = null;
-                        strikeDodge.target = null; // ballAtArrival
+                        strikeDodge.target = null;
                         strikeDodge.duration = 0f;
                         strikeDodge.delay = 999;
                         strikeDodge.setDone();
+                        if (debugMessages)
+                            System.out.println("Disabling strikeDodge because T=" + T + " jumpBeforeStrikeDelay=" + this.jumpBeforeStrikeDelay);
                     } else {
                         strikeDodge.target = null;
                         Vector3 carAtArrival = car.position.add(car.velocity.mul(T - RLConstants.tickFrequency * 2));
                         Vector2 direction = ballAtArrival.flatten().sub(carAtArrival.flatten()).normalized();
                         strikeDodge.direction = direction;
 
-                        final float simDt = RLConstants.tickFrequency;
+                        final float simDt = RLConstants.simulationTickFrequency;
 
                         long ms = System.currentTimeMillis();
                         int simulationCount = 0;
 
-                        for (float duration = Math.max(0.1f, this.strikeDodge.timer); duration <= 0.2f; duration += 0.05f) { // 0.1f, 0.15f, 0.2f
-                            for (float delay = duration + 0.05f; delay <= 0.6f; delay += 0.15f) {
+                        for (float duration = Math.max(0.1f, this.strikeDodge.timer); duration <= 0.2f; duration = duration < 0.2f ? 0.2f : 999f) { // 0.1f, 0.15f, 0.2f
+                            for (float delay = duration + 0.05f; delay <= this.maxJumpDelay; delay += this.jumpDelayStep) {
                                 for (float angleDiff = (float) (Math.PI * -0.8f); angleDiff < (float) (Math.PI * 0.8f); angleDiff += Math.PI * 0.15f) {
                                     simulationCount++;
                                     CarData simCar = new CarData(car);
@@ -218,7 +231,8 @@ public class StrikeAbstraction extends Abstraction {
 
                         if (this.strikeSolved) { // Found shot
                             //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
-
+                            if (debugMessages)
+                                System.out.println("Optimized dodgeManeuver: delay=" + this.strikeDodge.delay + " duration=" + this.strikeDodge.duration + " ");
                         } else { // Couldn't hit the ball
                             RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_TakeTheShot);
                             strikeDodge.direction = null;
@@ -229,22 +243,34 @@ public class StrikeAbstraction extends Abstraction {
                         }
 
                         System.out.println(car.playerIndex + ":  > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + simulationCount + " simulations");
-                        //.out.println(" > Ball " + (didLandInGoal ? "lands in goal" : "missed"));
                     }
                 }
 
                 if (!strikeDodge.isDone())
                     strikeDodge.step(dt, controlsOutput);
 
-                if (ball.hasBeenTouched() && ball.getLatestTouch().playerIndex == car.playerIndex && car.elapsedSeconds - ball.getLatestTouch().gameSeconds - strikeDodge.timer < -0.1f)
+                if (ball.hasBeenTouched() && ball.getLatestTouch().playerIndex == car.playerIndex && car.elapsedSeconds - ball.getLatestTouch().gameSeconds - strikeDodge.timer < -0.1f) {
                     strikeDodge.setDone();
+                }
 
-                if (strikeDodge.isDone())
+                if (strikeDodge.isDone()) {
+                    if (debugMessages)
+                        System.out.println("Quitting strike because strikeDodge isDone: " + strikeDodge.timer + " " + strikeDodge.delay + " " + strikeDodge.duration);
                     return RunState.DONE;
+                }
+
                 break;
         }
 
         return RunState.CONTINUE;
+    }
+
+    @Override
+    public boolean canInterrupt() {
+        if (state == State.STRIKE && this.strikeDodge.timer > 0 && !this.strikeDodge.isDone())
+            return false;
+
+        return super.canInterrupt();
     }
 
     enum State {

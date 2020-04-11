@@ -266,6 +266,8 @@ public class Curve {
     }
 
     public PathCheckStatus doPathChecking(CarData car, float absoluteArrivalTime, YangBallPrediction ballPrediction) {
+        assert this.curvatures.length > 0;
+
         if (ballPrediction == null)
             ballPrediction = YangBallPrediction.empty();
         if (absoluteArrivalTime < 0)
@@ -300,7 +302,7 @@ public class Curve {
             //   break;
 
             final float timeUntilArrival = relativeArrivalTime - t;
-            final float maxSpeed = Math.max(10, this.maxSpeedAt(distToTarget));
+            final float maxSpeed = Math.max(50, this.maxSpeedAt(distToTarget));
             final float avgSpeedAhead = distToTarget / Math.max(timeUntilArrival, dt);
 
             if (avgSpeedAhead > CarData.MAX_VELOCITY + 50) {
@@ -354,8 +356,11 @@ public class Curve {
                 lastPoint = point;
                 continue;
             }
-            renderer.drawLine3d(Color.RED, lastPoint, point);
-            lastPoint = point;
+            if (lastPoint.distance(point) > 10) {
+                renderer.drawLine3d(Color.YELLOW, lastPoint, point);
+                lastPoint = point;
+            }
+
         }
 
         if (this.points.size() > 1) {

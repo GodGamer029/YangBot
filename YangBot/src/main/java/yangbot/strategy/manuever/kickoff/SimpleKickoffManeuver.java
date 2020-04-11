@@ -38,25 +38,32 @@ public class SimpleKickoffManeuver extends Maneuver {
                 controlsOutput.withThrottle(1);
                 controlsOutput.withBoost(true);
 
-                dodgeManeuver = new DodgeManeuver();
-                dodgeManeuver.target = ball.position;
-                dodgeManeuver.duration = 0.08f;
-                dodgeManeuver.delay = 0.3f;
-                dodgeManeuver.enablePreorient = true;
-                dodgeManeuver.preorientOrientation = Matrix3x3.lookAt(new Vector3(0, -1 * (car.team * 2 - 1), 0).normalized(), new Vector3(0, 0, 1));
+                this.dodgeManeuver = new DodgeManeuver();
+                this.dodgeManeuver.target = ball.position;
+                this.dodgeManeuver.duration = 0.08f;
+                this.dodgeManeuver.delay = 0.3f;
+                this.dodgeManeuver.enablePreorient = true;
+                this.dodgeManeuver.preorientOrientation = Matrix3x3.lookAt(new Vector3(0, -1 * (car.team * 2 - 1), 0).normalized(), new Vector3(0, 0, 1));
 
-                followPathManeuver = new FollowPathManeuver();
+                this.followPathManeuver = new FollowPathManeuver();
 
-                followPathManeuver.path = new EpicPathPlanner()
-                        .withStart(car.position, car.forward())
-                        .withEnd(ball.position, ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * (car.team * 2 - 1), 0).mul(0.5f)).normalized())
-                        .plan().get();
+                this.kickOffLocation = KickoffTester.getKickoffLocation(car);
 
-                followPathManeuver.arrivalSpeed = CarData.MAX_VELOCITY;
+                var planner = new EpicPathPlanner()
+                        .withStart(car)
+                        .withEnd(ball.position, ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * (car.team * 2 - 1), 0).mul(0.5f)).normalized());
 
-                kickOffLocation = KickoffTester.getKickoffLocation(car);
+                System.out.println(this.kickOffLocation);
 
-                kickOffState = KickOffState.DRIVE;
+                if (this.kickOffLocation == KickoffTester.KickOffLocation.OFF_CENTER) {
+                    Vector3 padLoc = new Vector3(Math.signum(car.position.x) * 120f, 2816.0f * car.getTeamSign(), RLConstants.carElevation);
+                    planner.addPoint(padLoc, padLoc.sub(car.position).withZ(0).normalized());
+                }
+
+                this.followPathManeuver.path = planner.plan().get();
+                this.followPathManeuver.arrivalSpeed = CarData.MAX_VELOCITY;
+
+                this.kickOffState = KickOffState.DRIVE;
 
                 if (kickOffLocation == KickoffTester.KickOffLocation.UNKNOWN)
                     this.setDone();

@@ -33,6 +33,10 @@ public abstract class Abstraction {
 
     protected abstract RunState stepInternal(float dt, ControlsOutput controlsOutput);
 
+    public boolean canInterrupt() {
+        return true;
+    }
+
     public enum RunState {
         CONTINUE,
         DONE

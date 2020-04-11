@@ -1,5 +1,6 @@
 package yangbot.path;
 
+import javafx.util.Pair;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.CarData;
 import yangbot.optimizers.path.AvoidObstacleInPathUtil;
@@ -17,11 +18,28 @@ public class EpicPathPlanner {
     private boolean ballAvoidanceNecessary = false;
     private CarData carSim = null;
     private float arrivalTime;
-    private PathCreationStrategy pathCreationStrategy = PathCreationStrategy.SIMPLE;
+    private PathCreationStrategy pathCreationStrategy;
+    private List<Pair<Vector3, Vector3>> additionalPoints;
+
+    public EpicPathPlanner() {
+        this.additionalPoints = new ArrayList<>();
+        this.pathCreationStrategy = PathCreationStrategy.SIMPLE;
+    }
 
     public EpicPathPlanner withStart(Vector3 pos, Vector3 tangent) {
         this.startPos = pos;
         this.startTangent = tangent;
+        return this;
+    }
+
+    public EpicPathPlanner withStart(CarData car) {
+        return this.withStart(car, 0);
+    }
+
+    public EpicPathPlanner withStart(CarData car, float offset) {
+        assert offset < 50 && offset >= 0 : offset; // Don't be stupid
+        this.startTangent = car.getPathStartTangent();
+        this.startPos = car.position.add(this.startTangent.mul(offset));
         return this;
     }
 
@@ -31,12 +49,21 @@ public class EpicPathPlanner {
         return this;
     }
 
+    public EpicPathPlanner addPoint(Vector3 pos, Vector3 tangent) {
+        this.additionalPoints.add(new Pair<>(pos, tangent));
+        return this;
+    }
+
     public EpicPathPlanner withBallAvoidance(boolean enable, CarData car, float arrivalTime, boolean isRequired) {
         this.avoidBall = enable;
         this.carSim = car;
         this.arrivalTime = arrivalTime;
         this.ballAvoidanceNecessary = isRequired;
         return this;
+    }
+
+    public boolean isUsingBallAvoidance() {
+        return this.avoidBall;
     }
 
     public EpicPathPlanner withCreationStrategy(PathCreationStrategy creationStrategy) {
@@ -55,6 +82,8 @@ public class EpicPathPlanner {
                 // Construct Path
                 {
                     controlPoints.add(new Curve.ControlPoint(this.startPos, this.startTangent));
+                    for (var p : this.additionalPoints)
+                        controlPoints.add(new Curve.ControlPoint(p.getKey(), p.getValue()));
                     controlPoints.add(new Curve.ControlPoint(this.endPos, this.endTangent));
 
                     currentPath = Optional.of(new Curve(controlPoints));
@@ -62,9 +91,17 @@ public class EpicPathPlanner {
                 break;
             }
             case NAVMESH: {
+                assert this.additionalPoints.size() == 0;
                 currentPath = YangBotJNAInterop.findPath(this.startPos, this.startTangent, this.endPos, this.endTangent, 20);
                 if (currentPath.isPresent() && currentPath.get().length <= 0)
                     currentPath = Optional.empty();
+                break;
+            }
+            case JAVA_NAVMESH: {
+                assert this.additionalPoints.size() == 0;
+                var nav = new Navigator(Navigator.PathAlgorithm.BELLMANN_FORD);
+                nav.analyzeSurroundings(this.startPos, this.startTangent);
+                currentPath = Optional.ofNullable(nav.pathTo(this.startTangent, this.endPos, this.endTangent, 20));
                 break;
             }
             default:
@@ -87,6 +124,7 @@ public class EpicPathPlanner {
 
     public enum PathCreationStrategy {
         SIMPLE,
-        NAVMESH
+        NAVMESH,
+        JAVA_NAVMESH
     }
 }

@@ -1,5 +1,6 @@
 package yangbot.util.math;
 
+import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 public class MathUtils {
@@ -68,5 +69,14 @@ public class MathUtils {
 
     public static boolean doublesAreEqual(double value1, double value2, double delta) {
         return doublesAreEqual(value1, value2) || Math.abs(value1 - value2) <= delta;
+    }
+
+    // In radians
+    public static double findAngle(Vector2 p1, Vector2 p2, Vector2 pivot) {
+        // Normalize
+        p1 = p1.sub(pivot).normalized();
+        p2 = p2.sub(pivot).normalized();
+
+        return Math.acos(p1.dot(p2));
     }
 }

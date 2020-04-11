@@ -8,6 +8,7 @@ public class BallTouchInterrupt extends Interrupt {
 
     public BallTouchInterrupt(int carHideIndex) {
         this.carHideIndex = carHideIndex;
+        this.activate();
     }
 
     public void interrupt(BallTouch ballTouch) {

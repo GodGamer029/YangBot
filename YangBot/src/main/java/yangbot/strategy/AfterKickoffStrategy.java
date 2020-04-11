@@ -8,7 +8,7 @@ import yangbot.util.math.vector.Vector3;
 
 public class AfterKickoffStrategy extends StrategyPlanner {
 
-    private KickoffQuality kickoffQuality = KickoffQuality.NEUTRAL;
+    private KickoffQuality kickoffQuality = KickoffQuality.GOOD;
 
     @Override
     public void planStrategyInternal() {
@@ -36,7 +36,7 @@ public class AfterKickoffStrategy extends StrategyPlanner {
             else
                 kickoffQuality = KickoffQuality.BAD;
         } else
-            kickoffQuality = KickoffQuality.NEUTRAL;
+            kickoffQuality = KickoffQuality.GOOD;
 
         switch (kickoffQuality) {
             case GOOD:
@@ -44,9 +44,6 @@ public class AfterKickoffStrategy extends StrategyPlanner {
                 break;
             case BAD:
                 newDecidedStrategy = new DefendStrategy();
-                break;
-            case NEUTRAL:
-                newDecidedStrategy = new NeutralStrategy();
                 break;
             default:
                 assert false;
@@ -56,7 +53,6 @@ public class AfterKickoffStrategy extends StrategyPlanner {
 
     enum KickoffQuality {
         BAD,
-        GOOD,
-        NEUTRAL
+        GOOD
     }
 }

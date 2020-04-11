@@ -150,7 +150,7 @@ public class Graph {
             bellman_ford_iteration(frontier, bestParents, bestWeights);
             hop++;
         }
-        System.out.println("Hop: " + hop);
+        //System.out.println("Hop: " + hop);
 
         //System.out.println("analyze: bellman_ford_iteration took "+((System.nanoTime() - ms) * 0.000001f)+"ms");
         lastBestWeights = bestWeights;

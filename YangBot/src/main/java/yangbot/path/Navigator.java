@@ -167,7 +167,7 @@ public class Navigator {
         return new LutComp(x, y, theta, v);
     }
 
-    private Curve navmeshPathTo(CarData car, Vector3 destination, Vector3 tangent, float offset) {
+    private Curve navmeshPathTo(Vector3 startTangent, Vector3 destination, Vector3 tangent, float offset) {
         Vector3 unitTangent = tangent.normalized();
 
         int destinationNode = -1;
@@ -228,15 +228,16 @@ public class Navigator {
 
                 // otherwise, the path is unreachable
             } else {
-                return new Curve();
+                System.out.println("Could not reach! " + i);
+                return null;
             }
 
         }
 
         Collections.reverse(ctrl_pts);
 
-        Vector3 dx1 = source.add(car.forward().mul(offset)).sub(ctrl_pts.get(0).point);
-        Vector3 dt1 = car.forward().sub(ctrl_pts.get(0).tangent);
+        Vector3 dx1 = source.add(startTangent.mul(offset)).sub(ctrl_pts.get(0).point);
+        Vector3 dt1 = startTangent.sub(ctrl_pts.get(0).tangent);
 
         Vector3 dx2 = destination.sub(unitTangent.mul(offset)).sub(ctrl_pts.get(ctrl_pts.size() - 1).point);
         Vector3 dt2 = unitTangent.sub(ctrl_pts.get(ctrl_pts.size() - 1).tangent);
@@ -244,7 +245,7 @@ public class Navigator {
         return new Curve(ctrl_pts, dx1, dt1, dx2, dt2, source, destination);
     }
 
-    public Curve pathTo(CarData car, Vector3 destination, Vector3 tangent, float offset) {
+    public Curve pathTo(Vector3 startTangent, Vector3 destination, Vector3 tangent, float offset) {
         while (!loadedStatics.get()) {
             try {
                 Thread.sleep(1);
@@ -256,7 +257,7 @@ public class Navigator {
         //if (Math.max(car.position.z, destination.z) < 50) {
         //return lutPathTo(car, destination, tangent, offset);
         //} else
-        return navmeshPathTo(car, destination, tangent, offset);
+        return navmeshPathTo(startTangent, destination, tangent, offset);
     }
 
     public Pair<Integer, Vector3> findClosestNode(Vector3 pos, Vector3 direction) {
@@ -313,7 +314,7 @@ public class Navigator {
                 .collect(Collectors.toList());
     }
 
-    public void analyzeSurroundings(CarData car) {
+    public void analyzeSurroundings(Vector3 pos, Vector3 dir) {
         while (!loadedStatics.get()) {
             try {
                 Thread.sleep(1);
@@ -322,7 +323,7 @@ public class Navigator {
             }
         }
 
-        this.source = car.position;
+        this.source = pos;
 
         this.source_node = -1;
         float minimum = 1000000.0f;
@@ -338,7 +339,7 @@ public class Navigator {
         Vector3 n = navigationNormals[this.source_node];
         this.source = this.source.sub(n.mul(this.source.sub(p).dot(n)));
 
-        Vector3 f = car.forward();
+        Vector3 f = dir;
         this.source_direction = -1;
         float maximum_alignment = -2.0f;
         for (int j = 0; j < numDirectionDistinctions; j++) {
@@ -364,7 +365,10 @@ public class Navigator {
                 System.out.println("Navigator: astar_sssp took " + ((System.nanoTime() - ms) * 0.000001f) + "ms");*/
             }
         }
+    }
 
+    public void analyzeSurroundings(CarData car) {
+        this.analyzeSurroundings(car.position, car.forward());
     }
 
     public enum PathAlgorithm {

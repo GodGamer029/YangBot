@@ -182,6 +182,14 @@ public class CarData {
         return this.orientation.left();
     }
 
+    // https://www.wolframalpha.com/input/?i=solve+291.66+%2B+1458.33+d+-+g+x+%3D+0+for+x
+    public static float getTimeForMaxJumpHeight(float duration, float gravity) {
+        assert gravity < 0;
+        assert duration > 0 && duration <= 0.2f;
+
+        return (3 * (9722 + 48611 * duration)) / (-100 * gravity);
+    }
+
     public static float driveForceForward(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
         final float driving_speed = 1450.0f;
         final float braking_force = -3500.0f;
@@ -275,22 +283,15 @@ public class CarData {
         // TODO
     }
 
-    private void jump(ControlsOutput in, float dt) {
-        this.velocity = this.velocity.add(
-                GameData.current().getGravity()
-                        .mul(dt)
-                        .add(this.up().mul(DodgeManeuver.speed))
-        );
-        this.position = this.position.add(this.velocity.mul(dt));
-
-        this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt))
-                .matrixMul(this.orientation);
-
-        this.jumpTimer = 0.0f;
-        this.jumped = true;
-        this.doubleJumped = false;
-        this.enableJumpAcceleration = true;
-        this.hasWheelContact = false;
+    // From L0laapk3
+    // assumes jump duration
+    public static float getJumpTimeForHeight(float heightIncrease, float gravity) {
+        assert gravity == -650; // This code only works for default gravity
+        if (heightIncrease <= 74.48f) { // During acceleration part
+            return (float) Math.max(0, Math.sqrt(10100 * heightIncrease + 531441) - 729) / 2020f;
+        } else {
+            return (float) (DodgeManeuver.acceleration - Math.sqrt(1888839f - 8125f * heightIncrease)) / 1625f;
+        }
     }
 
     private void air_dodge(ControlsOutput in, float dt) {
@@ -450,6 +451,28 @@ public class CarData {
 
         this.hitbox.setOrientation(this.orientation);
         this.lastControllerInputs = in;
+    }
+
+    public Vector3 getPathStartTangent() {
+        return Matrix3x3.axisToRotation(this.angularVelocity.mul(0.1f)).matrixMul(this.orientation)
+                .forward();
+    }
+
+    private void jump(ControlsOutput in, float dt) {
+        this.velocity = this.velocity.add(
+                GameData.current().getGravity().mul(dt)
+                        .add(this.up().mul(DodgeManeuver.speed))
+        );
+        this.position = this.position.add(this.velocity.mul(dt));
+
+        this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt))
+                .matrixMul(this.orientation);
+
+        this.jumpTimer = 0.0f;
+        this.jumped = true;
+        this.doubleJumped = false;
+        this.enableJumpAcceleration = true;
+        this.hasWheelContact = false;
     }
 
     @Override

@@ -6,6 +6,7 @@ import yangbot.util.math.vector.Vector2;
 import java.awt.*;
 import java.awt.geom.Area;
 import java.awt.geom.Path2D;
+import java.util.Iterator;
 import java.util.List;
 
 public class Area2 {
@@ -16,9 +17,9 @@ public class Area2 {
         assert points.size() > 2 : "An area needs more than 2 points otherwise space-time will collapse";
         this.points = points;
 
-        var path = new Path2D.Float();
-        var it = points.iterator();
-        var first = it.next();
+        Path2D.Float path = new Path2D.Float();
+        Iterator<Vector2> it = points.iterator();
+        Vector2 first = it.next();
         path.moveTo(first.x, first.y);
         while (it.hasNext()) {
             var next = it.next();

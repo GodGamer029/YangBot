@@ -85,10 +85,11 @@ public class StrikeAbstraction extends Abstraction {
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
+        if (this.ballTouchInterrupt == null)
+            this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt(-1);
+
         switch (this.state) {
             case DRIVE:
-                if (this.ballTouchInterrupt == null)
-                    this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt(-1);
 
                 if (this.ballTouchInterrupt.hasInterrupted())
                     return RunState.DONE;
@@ -103,6 +104,9 @@ public class StrikeAbstraction extends Abstraction {
                         System.out.println("Quitting strike because distanceOffPath: " + distanceOffPath);
                     return RunState.DONE;
                 }
+
+                if (!car.hasWheelContact)
+                    return RunState.DONE;
 
                 if (this.followPath.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.followPath.isDone()) {
                     this.state = State.STRIKE;

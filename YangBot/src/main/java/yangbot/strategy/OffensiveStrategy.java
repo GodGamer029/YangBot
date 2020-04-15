@@ -1,10 +1,11 @@
 package yangbot.strategy;
 
-import javafx.util.Pair;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
+import yangbot.input.interrupt.BallTouchInterrupt;
+import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.OffensiveGrader;
 import yangbot.path.Curve;
 import yangbot.path.EpicPathPlanner;
@@ -14,7 +15,6 @@ import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
-import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.util.math.Line2;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
@@ -23,6 +23,7 @@ import yangbot.util.math.vector.Vector3;
 import java.awt.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class OffensiveStrategy extends Strategy {
@@ -30,17 +31,9 @@ public class OffensiveStrategy extends Strategy {
     private StrikeAbstraction strikeAbstraction = new StrikeAbstraction(new OffensiveGrader());
     private FollowPathManeuver followPathManeuver = new FollowPathManeuver();
     private State state = State.INVALID;
-    private YangBallPrediction hitPrediction = null;
-    private CarData hitCar = null;
-    private Vector3 contactPoint = null;
-    private Vector3 contactNormal = null;
-    private BallData hitBall = null;
-    private YangCarHitbox hitboxAtBallHit;
-    private Vector3 positionAtBallHit;
-    private float lastBallHit = 0;
-    private Strategy suggestedStrat = null;
-    private int idleDirection = 0;
     private RotationAdvisor.Advice lastAdvice = RotationAdvisor.Advice.NO_ADVICE;
+    private BallTouchInterrupt ballTouchInterrupt;
+    private Vector3 drivePosition;
 
     private boolean planGoForBoost() {
         final GameData gameData = GameData.current();
@@ -165,7 +158,7 @@ public class OffensiveStrategy extends Strategy {
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
                 .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * frame.relativeTime * 0.6f)) == -teamSign) // Ball is closer to enemy goal than to own
-                .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 80 /*|| (allowWallHits && RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))*/)
+                .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 120 /*|| (allowWallHits && RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))*/)
                         && !frame.ballData.makeMutable().isInAnyGoal())
                 .collect(Collectors.toList());
 
@@ -259,7 +252,7 @@ public class OffensiveStrategy extends Strategy {
         }
 
         if (validPath == null) {
-            this.state = State.BALLCHASE;
+            this.state = State.IDLE;
             return;
         }
 
@@ -284,7 +277,7 @@ public class OffensiveStrategy extends Strategy {
                 .add(ball.velocity.normalized())
                 .normalized();
 
-        Optional<Curve> optionalCurve = new EpicPathPlanner()
+        /*Optional<Curve> optionalCurve = new EpicPathPlanner()
                 .withStart(car)
                 .withEnd(endPos, endTangent)
                 //.withBallAvoidance(true, car, -1, false)
@@ -298,6 +291,11 @@ public class OffensiveStrategy extends Strategy {
             this.followPathManeuver.path = optionalCurve.get();
         } else
             this.state = State.GO_BACK_SOMEHOW; // Possible if navmesh hasn't loaded yet
+
+         */
+
+        this.state = State.DRIVE_AT_POINT;
+        this.drivePosition = endPos;
     }
 
     @Override
@@ -308,7 +306,7 @@ public class OffensiveStrategy extends Strategy {
         final ImmutableBallData ball = gameData.getBallData();
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         this.state = State.INVALID;
-        this.idleDirection = 0;
+        this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt();
 
         // Check if ball will go in our goal
         if (Math.signum(ball.position.y) == teamSign) { // our half
@@ -363,14 +361,199 @@ public class OffensiveStrategy extends Strategy {
                 Math.signum((ball.position.y + ball.velocity.y * 0.4f) - (car.position.y + car.velocity.y * 0.2f) + teamSign * 100) == teamSign) {
 
             this.planStrategyRetreat();
-            return;
         }
+    }
+
+    private Vector2 findIdlePosition(CarData localCar, List<CarData> teammates, Vector2 futureBallPos) {
+        assert teammates.size() > 0;
+
+        final int teamSign = localCar.getTeamSign();
+        final AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
+        final Vector2 ownGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
+
+        // Distances will be scaled back if they exceed this value
+        final float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 120;
+        final float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 100;
+
+        final Line2 goalToBall = new Line2(
+                ownGoal,
+                (Math.abs(futureBallPos.y) > maxAbsoluteIdleY - 10) ?
+                        futureBallPos.withY((maxAbsoluteIdleY - 10) * Math.signum(futureBallPos.y)) : futureBallPos);
+
+        // Predict teammate in future in x seconds
+        final float teammatePredictionDelay = 0.5f;
+
+        // Y-Distance from ball when idle
+        // These may be scaled down, if too close to own goal
+        float minIdleDistance = 1500;
+        float maxIdleDistance = 4000;
+
+        // Scale back idling distances (Too close to own goal for example)
+        {
+            float effectiveIdlingDistance = futureBallPos.y + maxIdleDistance * teamSign;
+            if (Math.signum(effectiveIdlingDistance) == teamSign && Math.abs(effectiveIdlingDistance) > maxAbsoluteIdleY) {
+
+                float diff = Math.abs(effectiveIdlingDistance) - maxAbsoluteIdleY;
+                float proportion = 1 - (diff / maxIdleDistance);
+                maxIdleDistance *= proportion;
+                minIdleDistance *= proportion;
+            }
+        }
+
+        final float effectiveMinIdleDistance = minIdleDistance;
+        final float effectiveMaxIdleDistance = maxIdleDistance;
+
+        // Grids: higher resolution if we have more teammates
+        float[] yGrid = new float[Math.max(15, teammates.size() * 3)];
+
+        // These functions return the absolute position values on the field
+        final Function<Integer, Float> yIndexToAbs = ind -> {
+            assert ind >= 0 && ind < yGrid.length : ind;
+
+            float gridSpot = MathUtils.remap(ind, 0, yGrid.length - 1, effectiveMinIdleDistance, effectiveMaxIdleDistance);
+            return teamSign * gridSpot + futureBallPos.y;
+        };
+
+        // Fill grid with distances from teammates
+        for (var mate : teammates) {
+            // Y-Distances
+            for (int i = 0; i < yGrid.length; i++) {
+                float posY = yIndexToAbs.apply(i);
+                float futureMateYPos = mate.position.y + mate.velocity.y * teammatePredictionDelay;
+
+                float distance = MathUtils.distance(posY, futureMateYPos);
+                yGrid[i] += 1 / Math.max(distance, 10);
+            }
+        }
+
+        int lowestYSpot = 0;
+
+        // Y
+        {
+            float lowestYDist = 9999999;
+            float highestYDist = 0;
+            for (int i = 0; i < yGrid.length; i++) {
+                if (localCar.boost < 10 && i < yGrid.length / 2)
+                    continue; // When on low boost: go back farther
+
+                if (yGrid[i] < lowestYDist) {
+                    lowestYDist = yGrid[i];
+                    lowestYSpot = i;
+                }
+                if (yGrid[i] > highestYDist) {
+                    highestYDist = yGrid[i];
+                }
+            }
+
+            // Draw
+            if (false) {
+                for (int i = 0; i < yGrid.length; i++) {
+                    float yPos = yIndexToAbs.apply(i);
+                    float val = 1 - MathUtils.clip(MathUtils.remap(yGrid[i], lowestYDist, highestYDist, 0, 1), 0, 1);
+                    var col = new Color(val, val, val);
+
+                    if (i == lowestYSpot)
+                        col = Color.GREEN;
+
+                    float ySize = (effectiveMaxIdleDistance - effectiveMinIdleDistance) / (yGrid.length - 1);
+
+                    renderer.drawCentered3dCube(col, new Vector3(localCar.position.x, yPos, 50), new Vector3(10, ySize, 200));
+                    //renderer.drawString3d(String.format("%.5f", yGrid[i]), Color.WHITE, new Vector3(localCar.position.x, yPos, 200), 1, 1);
+                }
+            }
+        }
+
+        float[] xGrid = new float[Math.max(6, teammates.size() * 2)];
+        final float decidedYPos = yIndexToAbs.apply(lowestYSpot);
+        final float xChannelHalfWidth = RLConstants.goalCenterToPost * 1.2f;
+
+        assert maxAbsoluteIdleX > xChannelHalfWidth;
+
+        final Function<Integer, Float> xIndexToAbs = ind -> {
+            float relativeX = MathUtils.remap(ind, 0, xGrid.length - 1, -xChannelHalfWidth, xChannelHalfWidth);
+            var intersectionOpt = goalToBall.getIntersectionPointWithInfOtherLine(new Line2(new Vector2(-1, decidedYPos), new Vector2(1, decidedYPos)));
+            assert intersectionOpt.isPresent() : goalToBall.toString() + " " + decidedYPos;
+            float intersectedX = intersectionOpt.get().x;
+            if (Math.abs(intersectedX) + xChannelHalfWidth > maxAbsoluteIdleX)
+                intersectedX = (maxAbsoluteIdleX - xChannelHalfWidth) * Math.signum(intersectedX);
+
+            return relativeX + intersectedX;
+        };
+
+        // Pretend like there are teammates at the edges of the xGrid
+        // Prevents cluttering of bots at unnecessary positions
+        for (int i = 0; i < xGrid.length; i++) {
+            // Negative x
+            {
+                float posX = xIndexToAbs.apply(i);
+                float distance = MathUtils.distance(posX, -xChannelHalfWidth);
+
+                xGrid[i] += 1 / Math.max(distance, 10);
+            }
+            // Positive x
+            {
+                float posX = xIndexToAbs.apply(i);
+                float distance = MathUtils.distance(posX, xChannelHalfWidth);
+
+                xGrid[i] += 1 / Math.max(distance, 10);
+            }
+        }
+
+        for (var mate : teammates) {
+            // X-Distances
+            for (int i = 0; i < xGrid.length; i++) {
+                float posX = xIndexToAbs.apply(i);
+                float futureMateXPos = mate.position.x + mate.velocity.x * teammatePredictionDelay;
+
+                float distance = MathUtils.distance(posX, futureMateXPos);
+                xGrid[i] += 1 / Math.max(distance, 10);
+            }
+        }
+
+        int lowestXSpot = 0;
+        // X
+        {
+            float highestXDist = 0;
+            float lowestXDist = 9999999;
+            for (int i = 0; i < xGrid.length; i++) {
+                if (xGrid[i] < lowestXDist) {
+                    lowestXSpot = i;
+                    lowestXDist = xGrid[i];
+                }
+                if (xGrid[i] > highestXDist) {
+                    highestXDist = xGrid[i];
+                }
+            }
+
+            // Draw
+            {
+                float yPos = yIndexToAbs.apply(lowestYSpot);
+                for (int i = 0; i < xGrid.length; i++) {
+                    float xPos = xIndexToAbs.apply(i);
+                    float val = 1 - MathUtils.clip(MathUtils.remap(xGrid[i], lowestXDist, highestXDist, 0, 1), 0, 1);
+                    var col = new Color(val, val, val);
+
+                    if (i == lowestXSpot)
+                        col = Color.GREEN;
+
+                    float xSize = (xChannelHalfWidth * 2) / (xGrid.length - 1);
+
+                    renderer.drawCentered3dCube(col, new Vector3(xPos, yPos, 50), new Vector3(xSize, 150, 100));
+                    //renderer.drawString3d(String.format("%.5f", xGrid[i]), Color.WHITE, new Vector3(xPos, yPos, 200), 1, 1);
+                }
+            }
+        }
+
+        return new Vector2(xIndexToAbs.apply(lowestXSpot), yIndexToAbs.apply(lowestYSpot));
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-        if (this.reevaluateStrategy(this.strikeAbstraction.canInterrupt() ? 1f : 1.4f))
-            return;
+
+        var oldState = state;
+        if (this.reevaluateStrategy(4f)) {
+            assert false : "States/Abstractions didn't finish automatically! (" + oldState.getClass().getSimpleName() + ")";
+        }
         assert this.state != State.INVALID : "Invalid state! Last advice: " + this.lastAdvice;
 
         final GameData gameData = GameData.current();
@@ -382,244 +565,172 @@ public class OffensiveStrategy extends Strategy {
         final int teamSign = car.team * 2 - 1;
         final Vector2 ownGoal = new Vector2(0, teamSign * (RLConstants.goalDistance + 100));
 
-        if (this.hitPrediction != null) {
-            this.hitPrediction.draw(renderer, Color.MAGENTA, 0);
-            this.hitCar.hitbox.draw(renderer, this.hitCar.position, 1, Color.GREEN);
-            renderer.drawCentered3dCube(Color.GREEN, this.contactPoint, 10);
-            renderer.drawLine3d(Color.MAGENTA, this.contactPoint, this.contactPoint.add(this.contactNormal.mul(100)));
-
-            if (ball.hasBeenTouched()) {
-                BallTouch latestTouch = ball.getLatestTouch();
-                if (latestTouch.gameSeconds > this.lastBallHit) {
-                    this.lastBallHit = latestTouch.gameSeconds;
-                    this.hitboxAtBallHit = car.hitbox;
-                    this.positionAtBallHit = car.position;
-                }
-                if (this.lastBallHit > 0) {
-                    this.hitboxAtBallHit.draw(renderer, this.positionAtBallHit, 1, Color.BLUE);
-                }
-                renderer.drawCentered3dCube(Color.BLUE, latestTouch.position, 10);
-                renderer.drawLine3d(Color.RED, latestTouch.position, latestTouch.position.add(latestTouch.normal.mul(100)));
-            }
-
-            renderer.drawCentered3dCube(Color.BLUE, this.hitBall.position, BallData.RADIUS * 2);
-            renderer.drawCentered3dCube(Color.CYAN, ball.position, BallData.RADIUS * 2);
-            car.hitbox.draw(renderer, car.position, 1, Color.BLUE);
-        }
-
         switch (this.state) {
             case GO_BACK_SOMEHOW: {
                 DriveManeuver.steerController(controlsOutput, car, ownGoal.withZ(0));
-                break;
-            }
-            case BALLCHASE: {
-                DefaultStrategy.smartBallChaser(dt, controlsOutput);
+                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), DriveManeuver.max_throttle_speed * 0.9f, CarData.MAX_VELOCITY, 0.4f);
+
+                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                    return;
+                if (this.reevaluateStrategy(0.2f) || this.reevaluateStrategy(ballTouchInterrupt, 0.05f))
+                    return;
                 break;
             }
             case GET_BOOST: {
                 this.followPathManeuver.step(dt, controlsOutput);
                 //this.followPathManeuver.draw(renderer, car);
                 this.followPathManeuver.path.draw(renderer);
-                if (this.followPathManeuver.isDone())
+                if (this.followPathManeuver.isDone()) {
                     this.reevaluateStrategy(0);
+                    return;
+                }
+
+                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                    return;
+
+                if (this.reevaluateStrategy(ballTouchInterrupt, 0.05f) || this.reevaluateStrategy(2f))
+                    return;
+
                 break;
             }
             case IDLE: {
+
+                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                    return;
+
                 // Go back to ball if we are completely out of the play (demolished probably)
                 if (car.position.flatten().distance(ball.position.flatten()) > RLConstants.arenaLength * 0.8f) {
                     DefaultStrategy.smartBallChaser(dt, controlsOutput);
                     break;
                 }
 
-                if (this.idleDirection == 0) {
-                    this.idleDirection = (int) -Math.signum(car.position.x);
-                }
+                if (this.reevaluateStrategy(ballTouchInterrupt, 0.05f) || this.reevaluateStrategy(1f))
+                    return;
 
-                final float halfWidthFactor = 0.15f;
+                // Use position of the ball in x seconds
+                final float futureBallPosDelay = 0.3f;
 
-                // Move left and right on the field, always keeping a bit of distance to the ball
-                if (Math.abs(car.position.x) > RLConstants.arenaHalfWidth * halfWidthFactor && Math.signum(car.position.x) == this.idleDirection)
-                    this.idleDirection *= -1;
+                // Clips idlingTarget
+                final float maxX = RLConstants.arenaHalfWidth * 0.9f;
+                final float maxY = RLConstants.arenaHalfLength;
 
-                Vector2 futureBallPosTemp = ball.position.flatten().add(ball.velocity.flatten().mul(0.3f));
-                var frameOpt = ballPrediction.getFrameAtRelativeTime(0.3f);
-                if (frameOpt.isPresent())
-                    futureBallPosTemp = frameOpt.get().ballData.position.flatten();
-
-                if (Math.signum(futureBallPosTemp.y - ball.position.y) == -teamSign)
-                    futureBallPosTemp = ball.position.flatten();
-
-                final Vector2 futureBallPos = futureBallPosTemp;
-
-                float preferredIdlingDistance = 1800;
+                // Actual Idling distances the bot will follow (Changed when not alone on team)
+                float preferredIdlingY = 1800;
                 float preferredIdlingX = 0;
 
+                final Vector2 futureBallPos;
+
+                // Calculate where the ball will go in the future
+                // TODO: estimate where the ball will be shot for preemptive rotation
+                {
+                    Vector2 futureBallPosTemp;
+
+                    var frameOpt = ballPrediction.getFrameAtRelativeTime(futureBallPosDelay);
+                    if (frameOpt.isPresent())
+                        futureBallPosTemp = frameOpt.get().ballData.position.flatten();
+                    else
+                        futureBallPosTemp = ball.position.flatten().add(ball.velocity.flatten().mul(futureBallPosDelay));
+
+                    // Don't over-commit if the ball is rolling towards opponents
+                    if (Math.signum(futureBallPosTemp.y - ball.position.y) == -teamSign)
+                        futureBallPosTemp = ball.position.flatten();
+
+                    futureBallPos = futureBallPosTemp;
+                }
+
                 // find out where my teammates are idling
-                List<Pair<CarData, /* idling distance */Float>> teammates = gameData.getAllCars().stream()
+                List<CarData> teammates = gameData.getAllCars().stream()
                         .filter(c -> c.team == car.team && c.playerIndex != car.playerIndex)
-                        .filter(c -> RotationAdvisor.isInfrontOfBall(c, ball))
-                        .map(c -> new Pair<>(c, Math.abs((c.position.y + car.velocity.y * 0.3f) - futureBallPos.y)))
+                        //.filter(c -> RotationAdvisor.isInfrontOfBall(c, ball))
                         .collect(Collectors.toList());
 
-                final float maxX = RLConstants.arenaHalfWidth * 0.9f;
-
                 if (teammates.size() > 0) {
-                    float minIdleDistance = 1500;
-                    float maxIdleDistance = 4500;
+                    var idlePos = this.findIdlePosition(car, teammates, futureBallPos);
+                    preferredIdlingX = idlePos.x;
+                    preferredIdlingY = idlePos.y;
 
-                    {
-                        float temp = futureBallPos.y + maxIdleDistance * teamSign;
-                        if (Math.signum(temp) == teamSign && Math.abs(temp) > RLConstants.arenaHalfLength - 100) {
-                            // scale it back
-                            float diff = Math.abs(temp) - RLConstants.arenaHalfLength - 100;
-                            float range = maxIdleDistance - minIdleDistance;
-                            float rangeOld = range;
-                            float proportion = 1 - (diff / range);
-                            proportion = MathUtils.clip(proportion, 0, 1);
-
-                            float tempIdleDist = minIdleDistance;
-
-                            minIdleDistance *= proportion;
-                            minIdleDistance = MathUtils.remap(minIdleDistance, 0, tempIdleDist, 200, tempIdleDist);
-                            range *= proportion;
-                            range = MathUtils.remap(range, 0, rangeOld, 200, rangeOld);
-
-                            maxIdleDistance = tempIdleDist + range;
-                            maxIdleDistance = Math.max(minIdleDistance + 100, maxIdleDistance);
-                        }
-                    }
-
-                    final int gridSize = Math.max(15, teammates.size() * 3);
-
-                    final float xHalfWidth = RLConstants.arenaHalfWidth * 0.6f;
-
-                    float[] yGrid = new float[gridSize];
-                    float[] xGrid = new float[Math.max(8, teammates.size() * 2)];
-
-                    // Pretend like there are teammates at the edges of the xGrid
-                    for (int i = 0; i < xGrid.length; i++) {
-                        // negative x
-                        {
-                            float gridSpotX = MathUtils.remap(i, 0, xGrid.length - 1, -xHalfWidth, xHalfWidth);
-                            float distance = Math.abs(gridSpotX - -xHalfWidth);
-                            if (distance >= 0)
-                                xGrid[i] += 1 / Math.max(distance, 10);
-                        }
-                        // positive x
-                        {
-                            float gridSpotX = MathUtils.remap(i, 0, xGrid.length - 1, -xHalfWidth, xHalfWidth);
-                            float distance = Math.abs(gridSpotX - xHalfWidth);
-                            if (distance >= 0)
-                                xGrid[i] += 1 / Math.max(distance, 10);
-                        }
-                    }
-
-                    for (var p : teammates) {
-                        for (int i = 0; i < gridSize; i++) {
-                            float gridSpotY = MathUtils.remap(i, 0, gridSize - 1, minIdleDistance, maxIdleDistance);
-                            final Vector2 gridSpot = new Vector2(0, gridSpotY);
-                            float idlePosY = MathUtils.clip(p.getValue(), minIdleDistance, maxIdleDistance);
-                            final Vector2 idlePos = new Vector2(0, idlePosY);
-                            float distance = (float) idlePos.distance(gridSpot);
-                            if (distance >= 0)
-                                yGrid[i] += 1 / Math.max(distance, 10);
-                        }
-
-                        for (int i = 0; i < xGrid.length; i++) {
-                            float gridSpotX = MathUtils.remap(i, 0, xGrid.length - 1, -xHalfWidth, xHalfWidth);
-                            float distance = Math.abs(gridSpotX - p.getKey().position.x + p.getKey().velocity.x * 0.4f);
-                            if (distance >= 0)
-                                xGrid[i] += 1 / Math.max(distance, 10);
-                        }
-                    }
-
-                    int lowestYSpot = 0;
-                    int lowestXSpot = 0;
-
-                    // y
-                    {
-                        float lowestYDist = 9999999;
-                        float highestYDist = 0;
-                        for (int i = 0; i < gridSize; i++) {
-                            if (yGrid[i] < lowestYDist) {
-                                lowestYDist = yGrid[i];
-                                lowestYSpot = i;
-                            }
-                            if (yGrid[i] > highestYDist) {
-                                highestYDist = yGrid[i];
-                            }
-                        }
-
-                        // Draw
-                        {
-                            for (int i = 0; i < gridSize; i++) {
-                                float gridSpot = MathUtils.remap(i, 0, gridSize - 1, minIdleDistance, maxIdleDistance);
-                                float val = 1 - MathUtils.clip(MathUtils.remap(yGrid[i], lowestYDist, highestYDist, 0, 1), 0, 1);
-                                var col = new Color(val, val, val);
-
-                                if (i == lowestYSpot)
-                                    col = Color.GREEN;
-                                float ySize = (maxIdleDistance - minIdleDistance) / (gridSize - 1);
-                                renderer.drawCentered3dCube(col, new Vector3(car.position.x, teamSign * gridSpot + futureBallPos.y, 50), new Vector3(10, ySize, 200));
-                                //renderer.drawString3d(String.format("%.5f", grid[i]), Color.WHITE, new Vector3(car.position.x, teamSign * gridSpot + ball.position.y, 200), 1, 1);
-                            }
-                        }
-                    }
-                    // x
-                    {
-                        float lowestXDist = 9999999;
-                        for (int i = 0; i < xGrid.length; i++) {
-                            if (xGrid[i] < lowestXDist) {
-                                lowestXSpot = i;
-                                lowestXDist = xGrid[i];
-                            }
-                        }
-                    }
-
-                    preferredIdlingDistance = MathUtils.remap(lowestYSpot, 0, yGrid.length - 1, minIdleDistance, maxIdleDistance);
-                    preferredIdlingX = MathUtils.remap(lowestXSpot, 0, xGrid.length - 1, -xHalfWidth, xHalfWidth);
+                    assert Math.abs(preferredIdlingY) < RLConstants.arenaHalfLength : idlePos.toString();
+                } else {
+                    // Convert relative to absolute
+                    preferredIdlingY = futureBallPos.y + teamSign * preferredIdlingY;
                 }
 
                 // Hover around the middle area
-                Vector3 idleTarget = new Vector3(MathUtils.clip(preferredIdlingX, -maxX, maxX), MathUtils.clip(futureBallPos.y + teamSign * preferredIdlingDistance, -RLConstants.arenaLength, RLConstants.arenaLength), 0);
+                Vector3 idleTarget = new Vector3(
+                        MathUtils.clip(preferredIdlingX, -maxX, maxX),
+                        MathUtils.clip(preferredIdlingY, -maxY, maxY),
+                        0);
 
-                renderer.drawCentered3dCube(Color.YELLOW, idleTarget, 150);
+                renderer.drawCentered3dCube(Color.YELLOW, idleTarget, 100);
                 renderer.drawLine3d(Color.YELLOW, car.position, idleTarget.withZ(50));
 
-                if (Math.abs(idleTarget.y) > RLConstants.goalDistance * 0.95f) {
-                    idleTarget = idleTarget.withY(MathUtils.lerp(futureBallPos.y, ownGoal.y, 0.3f));
-                }
+                assert Math.abs(idleTarget.y) < RLConstants.goalDistance : idleTarget.toString();
 
-                float minSpeed = DriveManeuver.max_throttle_speed * 0.7f;
-                if (Math.abs(car.position.y - idleTarget.y) > 500)
-                    minSpeed = MathUtils.remap(Math.min(2000, Math.abs(car.position.y - idleTarget.y) - 500), 0, 2000, minSpeed, CarData.MAX_VELOCITY * 0.95f);
+                // Speed "controller"
+                float carToIdleDist = (float) Math.abs(car.position.y - idleTarget.y);
+                if (Math.signum(car.position.y - idleTarget.y) == teamSign)
+                    carToIdleDist = 0;
+
+                float minSpeed = DriveManeuver.max_throttle_speed * 0.9f;
+                if (carToIdleDist > 800)
+                    minSpeed = MathUtils.remapClip(carToIdleDist - 800, 0, 3000, minSpeed, CarData.MAX_VELOCITY * 0.95f);
 
                 DriveManeuver.steerController(controlsOutput, car, idleTarget);
-                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), minSpeed, CarData.MAX_VELOCITY, 0.6f);
+                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), minSpeed, CarData.MAX_VELOCITY, 0.5f);
 
                 break;
             }
-            case ROTATE: {
+            case ROTATE: { // Basically deprecated at this point
+
+                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                    return;
+
+                if (this.reevaluateStrategy(0.5f))
+                    return;
+
                 if (car.position.z > 300) {
+                    // Get back to ground level
                     DefaultStrategy.smartBallChaser(dt, controlsOutput);
                 } else {
                     this.followPathManeuver.step(dt, controlsOutput);
                     //this.followPathManeuver.draw(renderer, car);
                     this.followPathManeuver.path.draw(renderer);
-                    if (this.followPathManeuver.isDone())
-                        this.reevaluateStrategy(0);
+                    if (this.followPathManeuver.isDone() && this.reevaluateStrategy(0))
+                        return;
                 }
 
                 break;
             }
             case FOLLOW_PATH_STRIKE: {
                 this.strikeAbstraction.step(dt, controlsOutput);
-                if (this.strikeAbstraction.isDone())
-                    this.reevaluateStrategy(0);
+                if (this.strikeAbstraction.isDone() && this.reevaluateStrategy(0))
+                    return;
 
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(1.8f))
+                    return;
+                break;
+            }
+            case DRIVE_AT_POINT: {
+                if (car.position.distance(this.drivePosition) < 200 && this.reevaluateStrategy(0.1f))
+                    return;
+
+                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                    return;
+
+                if (this.reevaluateStrategy(0.5f))
+                    return;
+
+
+                DriveManeuver.steerController(controlsOutput, car, this.drivePosition);
+                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), DriveManeuver.max_throttle_speed * 0.9f, CarData.MAX_VELOCITY, 0.4f);
                 break;
             }
         }
+    }
+
+    @Override
+    public Optional<Strategy> suggestStrategy() {
+        return Optional.empty();
     }
 
     @Override
@@ -627,18 +738,13 @@ public class OffensiveStrategy extends Strategy {
         return "State: " + this.state;
     }
 
-    @Override
-    public Optional<Strategy> suggestStrategy() {
-        return Optional.ofNullable(suggestedStrat);
-    }
-
     enum State {
         IDLE,
         FOLLOW_PATH_STRIKE,
         ROTATE,
         GO_BACK_SOMEHOW,
-        BALLCHASE,
         GET_BOOST,
+        DRIVE_AT_POINT,
         INVALID
     }
 }

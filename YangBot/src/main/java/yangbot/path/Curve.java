@@ -31,10 +31,11 @@ public class Curve {
     public float[] curvatures;
     public float[] distances;
 
-    private static int ndiv = 20;
+    public static final int TANGENT_SMOOTHING = 1 << 0;
 
     private List<ControlPoint> controlPoints;
     private PathCheckStatus pathCheckStatus = new PathCheckStatus(PathStatus.UNKNOWN);
+    private static int ndiv = 16;
 
     public Curve() {
         this.length = -1f;
@@ -47,6 +48,10 @@ public class Curve {
     }
 
     public Curve(List<ControlPoint> info) {
+        this(info, ndiv);
+    }
+
+    public Curve(List<ControlPoint> info, int numSubSegments) {
         this.controlPoints = info;
         this.points = new ArrayList<>();
         this.tangents = new ArrayList<>();
@@ -55,9 +60,9 @@ public class Curve {
 
         int num_segments = info.size() - 1;
 
-        this.points.ensureCapacity(ndiv * num_segments + 2);
-        this.tangents.ensureCapacity(ndiv * num_segments + 2);
-        ArrayList<Float> tempCurvature = new ArrayList<>(ndiv * num_segments + 2);
+        this.points.ensureCapacity(numSubSegments * num_segments + 2);
+        this.tangents.ensureCapacity(numSubSegments * num_segments + 2);
+        this.curvatures = new float[numSubSegments * num_segments + 2];
 
         for (int i = 1; i < num_segments - 1; i++) {
             Vector3 delta_before = info.get(i).point.sub(info.get(i - 1).point).normalized();
@@ -97,8 +102,8 @@ public class Curve {
 
             int is_last = (i == num_segments - 1) ? 1 : 0;
 
-            for (int j = 0; j < (ndiv + is_last); j++) {
-                float t = ((float) j) / ((float) ndiv);
+            for (int j = 0; j < (numSubSegments + is_last); j++) {
+                float t = ((float) j) / ((float) numSubSegments);
 
                 Vector3 g = piece.evaluate(t);
                 Vector3 dg = piece.tangent(t);
@@ -117,13 +122,9 @@ public class Curve {
 
                 this.points.add(g);
                 this.tangents.add(dg.normalized());
-                tempCurvature.add((float) kappa);
+                this.curvatures[this.points.size() - 1] = (float) kappa;
             }
         }
-
-        this.curvatures = new float[tempCurvature.size()];
-        for (int i = 0; i < curvatures.length; i++)
-            this.curvatures[i] = tempCurvature.get(i);
 
         calculateDistances();
     }

@@ -76,6 +76,8 @@ public abstract class Strategy {
         if (currentSeconds < lastStrategyPlan)
             lastStrategyPlan = -10; // Something wierd is going on, replan strat
 
+        assert currentSeconds - lastStrategyPlan >= 0 : "Strategy was possibly planned twice in the same frame";
+
         if (currentSeconds - lastStrategyPlan > timeout)
             planStrategy(true);
 

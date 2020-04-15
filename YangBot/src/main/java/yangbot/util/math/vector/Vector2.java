@@ -1,12 +1,16 @@
 package yangbot.util.math.vector;
 
+import java.io.Serializable;
+
 /**
  * A vector that only knows about x and y components.
  * <p>
  * This class is here for your convenience, it is NOT part of the framework. You can add to it as much
  * as you want, or delete it.
  */
-public class Vector2 {
+public class Vector2 implements Serializable {
+
+    private static final long serialVersionUID = 4025217084999536712L;
 
     public final float x;
     public final float y;
@@ -26,11 +30,8 @@ public class Vector2 {
         this.y = (float) y;
     }
 
-    /**
-     * Will always return a positive value <= Math.PI
-     */
-    public static double angle(Vector2 a, Vector2 b) {
-        return Math.abs(a.correctionAngle(b));
+    public static Vector2 fromAngle(float angle) {
+        return new Vector2(Math.cos(angle), Math.sin(angle));
     }
 
     public float get(int index) {
@@ -72,8 +73,16 @@ public class Vector2 {
         return new Vector2(x * scale, y * scale);
     }
 
+    public Vector2 mul(Vector2 o) {
+        return new Vector2(x * o.x, y * o.y);
+    }
+
     public Vector2 mul(double sx, double sy) {
         return new Vector2(x * sx, y * sy);
+    }
+
+    public Vector2 complexMul(Vector2 o) {
+        return new Vector2(x * o.x - y * o.y, x * o.y + y * o.x);
     }
 
     @SuppressWarnings("SuspiciousNameCombination")
@@ -81,9 +90,17 @@ public class Vector2 {
         return new Vector2(-y, x);
     }
 
-    /**
-     * If magnitude is negative, we will return a vector facing the opposite direction.
-     */
+    // The smallest rotation needed to make `this` and `o` collinear and point toward the same
+    public Vector2 rotationBetween(Vector2 other) {
+        var v1 = this.normalized();
+        var v2 = other.normalized();
+
+        var s = v1.perp(v2);
+        var c = v1.dot(v2);
+
+        return Vector2.fromAngle((float) Math.atan2(s, c));
+    }
+
     public Vector2 scaledToMagnitude(double magnitude) {
         if (isZero()) {
             throw new IllegalStateException("Cannot scale up a vector with length zero!");
@@ -98,9 +115,6 @@ public class Vector2 {
         return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
     }
 
-    /**
-     * This is the length of the vector.
-     */
     public double magnitude() {
         return Math.sqrt(magnitudeSquared());
     }
@@ -114,6 +128,10 @@ public class Vector2 {
             return new Vector2();
         }
         return this.mul(1.f / magnitude());
+    }
+
+    public float perp(Vector2 o) {
+        return x * o.y - y * o.x;
     }
 
     public Vector2 dot(Matrix2x2 mat) {
@@ -135,10 +153,6 @@ public class Vector2 {
         return x == 0 && y == 0;
     }
 
-    /**
-     * The correction angle is how many radians you need to rotate this vector to make it line up with the "ideal"
-     * vector. This is very useful for deciding which direction to steer.
-     */
     public double correctionAngle(Vector2 ideal) {
         double currentRad = Math.atan2(y, x);
         double idealRad = Math.atan2(ideal.y, ideal.x);

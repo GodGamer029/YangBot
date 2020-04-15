@@ -4,21 +4,20 @@ import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.MatchSettings;
 import rlbot.manager.BotManager;
 import yangbot.cpp.YangBotCppInterop;
-import yangbot.path.Graph;
-import yangbot.path.Navigator;
+import yangbot.path.navmesh.Graph;
+import yangbot.path.navmesh.Navigator;
 import yangbot.util.io.LEDataInputStream;
 import yangbot.util.io.PortReader;
 import yangbot.util.math.vector.Vector3;
 
+import javax.swing.Timer;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class MainClass {
@@ -118,7 +117,7 @@ public class MainClass {
             int[] parameters = new int[4];
             int[] paths = new int[13707632];
             float[] times = new float[13707632]; // 129791
-            List<Graph.Edge> edges = new ArrayList<>();
+            List<Graph.Edge> edges = new ArrayList<>(2331576);
             List<Vector3> nav_nodes = new ArrayList<>();
             List<Vector3> nav_normals = new ArrayList<>();
             String navmeshPrefix = "soccar";
@@ -151,11 +150,16 @@ public class MainClass {
             Thread.sleep(0);
             ns = System.currentTimeMillis();
             {
-                LEDataInputStream para = new LEDataInputStream(cl.getResourceAsStream(navmeshPrefix + "_navigation_edges.bin"));
-                while (para.available() > 0) {
-                    edges.add(new Graph.Edge(para.readIntLE(),
-                            para.readIntLE(),
-                            para.readFloatLE()));
+
+                var para = Objects.requireNonNull(cl.getResourceAsStream(navmeshPrefix + "_navigation_edges.bin"));
+                byte[] allData = para.readNBytes(para.available());
+                assert para.available() <= 0 : "This java version broke or sum";
+                assert allData.length % 12 == 0;
+                for (int i = 0; i < allData.length; i += 12) { // This is terrible code, but at least it loads the navmesh within 200ms
+                    // Basically the code pasted from LEDataInputStream
+                    edges.add(new Graph.Edge(((allData[i] & 255) + ((allData[i + 1] & 255) << 8) + ((allData[i + 2] & 255) << 16) + ((allData[i + 3] & 255) << 24)),
+                            ((allData[i + 4] & 255) + ((allData[i + 5] & 255) << 8) + ((allData[i + 6] & 255) << 16) + ((allData[i + 7] & 255) << 24)),
+                            Float.intBitsToFloat((allData[i + 8] & 255)) + ((allData[i + 9] & 255) << 8) + ((allData[i + 10] & 255) << 16) + ((allData[i + 11] & 255) << 24)));
                 }
             }
             System.out.println("Read NAV_GRAPH(" + edges.size() + ") " + (System.currentTimeMillis() - ns) + "ms");

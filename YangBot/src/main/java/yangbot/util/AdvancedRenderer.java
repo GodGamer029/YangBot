@@ -5,6 +5,7 @@ import rlbot.Bot;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.render.RenderPacket;
 import rlbot.render.Renderer;
+import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
@@ -62,5 +63,16 @@ public class AdvancedRenderer extends Renderer {
         this.drawLine3d(c, startPos.add(0, 0, endPos.z), startPos.add(endPos.x, 0, endPos.z));
         this.drawLine3d(c, startPos.add(0, endPos.y, endPos.z), startPos.add(endPos.x, endPos.y, endPos.z));
         this.drawLine3d(c, startPos.add(endPos.x, 0, endPos.z), startPos.add(endPos.x, endPos.y, endPos.z));
+    }
+
+    public void drawCircle(Color c, Vector3 center, float radius) {
+        final Vector2 start = new Vector2(1, 0);
+
+        final float resolution = 20;
+        for (int i = 0; i < resolution; i++) {
+            final var thisPos = start.rotateBy((Math.PI * 2 * i) / resolution);
+            final var nextPos = start.rotateBy((Math.PI * 2 * (i + 1)) / resolution);
+            this.drawLine3d(c, thisPos.mul(radius).withZ(0).add(center), nextPos.mul(radius).withZ(0).add(center));
+        }
     }
 }

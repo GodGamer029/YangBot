@@ -76,7 +76,7 @@ public class RecoverStrategy extends Strategy {
 
         Matrix3x3 targetOrientationMatrix = Matrix3x3.roofTo(impactNormal, targetDirection);
         if (speedflipPossible) {
-            Vector3 left = targetOrientationMatrix.left();
+            Vector3 left = targetOrientationMatrix.right();
             targetOrientationMatrix = Matrix3x3.axisToRotation(left.mul(Math.PI * -0.175)).matrixMul(targetOrientationMatrix);
             groundTurnManeuver.maxErrorAngularVelocity = 0.15f;
         } else

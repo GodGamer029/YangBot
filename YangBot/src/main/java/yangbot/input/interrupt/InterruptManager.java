@@ -29,11 +29,11 @@ public class InterruptManager {
             InterruptManager.lastBallTouchUpdate = ballTouch.gameSeconds;
         else
             return;
-        for (var entry : interruptManagerMap.entrySet()) {
-            var mgr = entry.getValue();
+        for (Map.Entry<Long, InterruptManager> entry : interruptManagerMap.entrySet()) {
+            InterruptManager mgr = entry.getValue();
 
             mgr.getInterrupts().forEach((inter) -> {
-                var boi = inter.get();
+                Interrupt boi = inter.get();
                 if (boi != null && boi.getClass() == BallTouchInterrupt.class) {
                     ((BallTouchInterrupt) boi).interrupt(ballTouch);
                 }
@@ -42,11 +42,17 @@ public class InterruptManager {
     }
 
     public List<WeakReference<Interrupt>> getInterrupts() {
+        // cleanup bad refs
+        interrupts.removeIf(r -> r.get() == null);
         return interrupts;
     }
 
     public void registerInterrupt(Interrupt interrupt) {
         this.interrupts.add(new WeakReference<>(interrupt));
+    }
+
+    public BallTouchInterrupt getBallTouchInterrupt() {
+        return getBallTouchInterrupt(-1);
     }
 
     public BallTouchInterrupt getBallTouchInterrupt(int carIgnoreIndex) {

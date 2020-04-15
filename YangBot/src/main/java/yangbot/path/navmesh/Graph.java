@@ -1,7 +1,7 @@
-package yangbot.path;
+package yangbot.path.navmesh;
 
-import javafx.util.Pair;
 import yangbot.util.IntArrayList;
+import yangbot.util.Tuple;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.Arrays;
@@ -73,9 +73,9 @@ public class Graph {
         float[] bestWeights = new float[numVertices];
         Arrays.fill(bestWeights, maximum_weight);
 
-        PriorityQueue<Pair</*id*/Integer, /*total weight*/Float>> openSet = new PriorityQueue<>((x, y) -> Float.compare(x.getValue() + predictedWeights[x.getKey()], y.getValue() + predictedWeights[y.getKey()]));
+        PriorityQueue<Tuple</*id*/Integer, /*total weight*/Float>> openSet = new PriorityQueue<>((x, y) -> Float.compare(x.getValue() + predictedWeights[x.getKey()], y.getValue() + predictedWeights[y.getKey()]));
 
-        openSet.add(new Pair<>(start, 0f));
+        openSet.add(new Tuple<>(start, 0f));
         int i = 0;
         while (!openSet.isEmpty()) {
             i++;
@@ -118,7 +118,7 @@ public class Graph {
                             bestWeights[neighbourId] = totalWeight;
                             bestParents[neighbourId] = currentId;
 
-                            openSet.add(new Pair<>(neighbourId, totalWeight));
+                            openSet.add(new Tuple<>(neighbourId, totalWeight));
                         }
                     }
                 }

@@ -54,7 +54,7 @@ public class YangCarHitbox extends YangHitbox {
         this.orientation = orientation;
 
         this.permF = this.orientation.forward().mul(this.hitboxLengths.x / 2);
-        this.permL = this.orientation.left().mul(this.hitboxLengths.y / 2);
+        this.permL = this.orientation.right().mul(this.hitboxLengths.y / 2);
         this.permU = this.orientation.up().mul(this.hitboxLengths.z / 2);
     }
 
@@ -64,11 +64,11 @@ public class YangCarHitbox extends YangHitbox {
     }
 
     public Vector3 applyOffset(Vector3 p) {
-        return p.add(orientation.forward().mul(hitboxOffset.x)).add(orientation.left().mul(hitboxOffset.y)).add(orientation.up().mul(hitboxOffset.z));
+        return p.add(orientation.forward().mul(hitboxOffset.x)).add(orientation.right().mul(hitboxOffset.y)).add(orientation.up().mul(hitboxOffset.z));
     }
 
     public Vector3 removeOffset(Vector3 permutated) {
-        return permutated.sub(orientation.forward().mul(hitboxOffset.x)).sub(orientation.left().mul(hitboxOffset.y)).sub(orientation.up().mul(hitboxOffset.z));
+        return permutated.sub(orientation.forward().mul(hitboxOffset.x)).sub(orientation.right().mul(hitboxOffset.y)).sub(orientation.up().mul(hitboxOffset.z));
     }
 
     public Vector3 permutatePoint(Vector3 point, float frontDir, float leftDir, float upDir, float scale) {

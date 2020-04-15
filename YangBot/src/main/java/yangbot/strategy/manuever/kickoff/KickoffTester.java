@@ -1,10 +1,10 @@
 package yangbot.strategy.manuever.kickoff;
 
-import javafx.util.Pair;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.input.ImmutableBallData;
+import yangbot.util.Tuple;
 import yangbot.util.math.MathUtils;
 
 import java.util.ArrayList;
@@ -41,15 +41,15 @@ public class KickoffTester {
 
         assert teammates.contains(localCar);
 
-        List<Pair<CarData, /*distance to ball*/Double>> temp = new ArrayList<>(teammates)
+        List<Tuple<CarData, /*distance to ball*/Double>> temp = new ArrayList<>(teammates)
                 .stream()
-                .map((c) -> new Pair<>(c, c.position.distance(ballData.position)))
-                .sorted(Comparator.comparingDouble(Pair::getValue)) // Least distance to ball goes
+                .map((c) -> new Tuple<>(c, c.position.distance(ballData.position)))
+                .sorted(Comparator.comparingDouble(Tuple::getValue)) // Least distance to ball goes
                 .limit(2)
                 .collect(Collectors.toList());
 
-        Pair<CarData, Double> first = temp.get(0);
-        Pair<CarData, Double> second = temp.get(1);
+        Tuple<CarData, Double> first = temp.get(0);
+        Tuple<CarData, Double> second = temp.get(1);
 
         if (first.getKey().playerIndex != localCar.playerIndex && second.getKey().playerIndex != localCar.playerIndex)
             return false; // We are not any of the closest 2 cars

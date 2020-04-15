@@ -104,6 +104,7 @@ public class Matrix3x3 {
         float SR = (float) Math.sin(pyr.z);
 
         mat.assign(0, 0, CP * CY);
+        mat.assign(0, 0, CP * CY);
         mat.assign(1, 0, CP * SY);
         mat.assign(2, 0, SP);
 
@@ -161,14 +162,6 @@ public class Matrix3x3 {
         return mat;
     }
 
-    public float[][] getFloatMatrix() {
-        return new float[][]{
-                {get(0, 0), get(0, 1), get(0, 2)},
-                {get(1, 0), get(1, 1), get(1, 2)},
-                {get(2, 0), get(2, 1), get(2, 2)}
-        };
-    }
-
     @NotNull
     public static Matrix3x3 roofTo(Vector3 up, Vector3 generalDirection) {
         Vector3 f = new Vector3();
@@ -201,6 +194,14 @@ public class Matrix3x3 {
         return mat;
     }
 
+    public float[][] getFloatMatrix() {
+        return new float[][]{
+                {get(0, 0), get(0, 1), get(0, 2)},
+                {get(1, 0), get(1, 1), get(1, 2)},
+                {get(2, 0), get(2, 1), get(2, 2)}
+        };
+    }
+
     public Vector3 toEuler() {
         return new Vector3(
                 (float) Math.atan2(this.get(2, 0), new Vector2(this.get(0, 0), this.get(1, 0)).magnitude()),
@@ -217,7 +218,7 @@ public class Matrix3x3 {
         return new Vector3(this.get(0, 0), this.get(1, 0), this.get(2, 0));
     }
 
-    public Vector3 left() {
+    public Vector3 right() {
         return new Vector3(this.get(0, 1), this.get(1, 1), this.get(2, 1));
     }
 
@@ -227,6 +228,10 @@ public class Matrix3x3 {
 
     public float get(int row, int column) {
         return this.data[row + column * 3];
+    }
+
+    public Matrix2x2 flatten() {
+        return new Matrix2x2(this.forward().flatten(), this.right().flatten());
     }
 
     public float det() {

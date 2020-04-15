@@ -159,6 +159,7 @@ public class DefendStrategy extends Strategy {
                     .filter((f) -> f.ballData.position.z < 1000 && defendArea.contains(f.ballData.position.flatten()))
                     .findFirst();
 
+
             if (ballInDefendAreaFrame.isPresent()) { // We getting scored on
                 final YangBallPrediction.YangPredictionFrame frameAreaEnter = ballInDefendAreaFrame.get();
 
@@ -255,7 +256,7 @@ public class DefendStrategy extends Strategy {
             case ROTATE: {
                 Optional<Curve> pathOpt = new EpicPathPlanner()
                         .withStart(car)
-                        .withEnd(new Vector3(0, RLConstants.goalDistance * 0.9f * teamSign, car.position.z), new Vector3(0, teamSign, 0))
+                        .withEnd(new Vector3(0, RLConstants.goalDistance * 0.9f * teamSign, RLConstants.carElevation), new Vector3(0, teamSign, 0))
                         .withBallAvoidance(true, car, -1, false)
                         .plan();
 
@@ -263,6 +264,7 @@ public class DefendStrategy extends Strategy {
 
                 this.followPathManeuver.path = pathOpt.get();
                 this.followPathManeuver.arrivalTime = -1;
+                this.followPathManeuver.arrivalSpeed = -1;
                 this.state = State.FOLLOW_PATH;
             }
             case BALLCHASE: {

@@ -1,9 +1,11 @@
 package yangbot.path;
 
-import javafx.util.Pair;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.CarData;
 import yangbot.optimizers.path.AvoidObstacleInPathUtil;
+import yangbot.path.navmesh.Navigator;
+import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
@@ -13,13 +15,14 @@ import java.util.Optional;
 
 public class EpicPathPlanner {
     private Vector3 startPos = null, startTangent;
+    private float startVelocity = DriveManeuver.max_throttle_speed * 0.9f;
     private Vector3 endPos = null, endTangent;
     private boolean avoidBall = false;
     private boolean ballAvoidanceNecessary = false;
     private CarData carSim = null;
-    private float arrivalTime;
+    private float arrivalTime, arrivalSpeed = -1;
     private PathCreationStrategy pathCreationStrategy;
-    private List<Pair<Vector3, Vector3>> additionalPoints;
+    private List<Tuple<Vector3, Vector3>> additionalPoints;
 
     public EpicPathPlanner() {
         this.additionalPoints = new ArrayList<>();
@@ -27,30 +30,46 @@ public class EpicPathPlanner {
     }
 
     public EpicPathPlanner withStart(Vector3 pos, Vector3 tangent) {
-        this.startPos = pos;
+        return this.withStart(pos, tangent, 0);
+    }
+
+    public EpicPathPlanner withStart(Vector3 pos, Vector3 tangent, float offset) {
+        assert offset < 50 && offset >= 0 : offset; // Don't be stupid
+
         this.startTangent = tangent;
+        this.startPos = pos.add(this.startTangent.mul(offset));
         return this;
+    }
+
+    public EpicPathPlanner withStart(CarData car, float offset) {
+        this.startVelocity = (float) car.forward().dot(car.velocity);
+        return this.withStart(car.position, car.getPathStartTangent(), offset);
     }
 
     public EpicPathPlanner withStart(CarData car) {
         return this.withStart(car, 0);
     }
 
-    public EpicPathPlanner withStart(CarData car, float offset) {
-        assert offset < 50 && offset >= 0 : offset; // Don't be stupid
-        this.startTangent = car.getPathStartTangent();
-        this.startPos = car.position.add(this.startTangent.mul(offset));
-        return this;
+    public EpicPathPlanner withEnd(Vector3 pos, Vector3 tangent) {
+        return this.withEnd(pos, tangent, 0);
     }
 
-    public EpicPathPlanner withEnd(Vector3 pos, Vector3 tangent) {
-        this.endPos = pos;
+    public EpicPathPlanner withEnd(Vector3 pos, Vector3 tangent, float offset) {
+        assert offset < 50 && offset >= 0 : offset; // Don't be stupid
+
         this.endTangent = tangent;
+        this.endPos = pos.sub(this.endTangent.mul(offset));
         return this;
     }
 
     public EpicPathPlanner addPoint(Vector3 pos, Vector3 tangent) {
-        this.additionalPoints.add(new Pair<>(pos, tangent));
+        this.additionalPoints.add(new Tuple<>(pos, tangent));
+        return this;
+    }
+
+    public EpicPathPlanner withArrivalSpeed(float speed) {
+        assert speed > 0 && speed <= CarData.MAX_VELOCITY;
+        this.arrivalSpeed = speed;
         return this;
     }
 
@@ -125,6 +144,7 @@ public class EpicPathPlanner {
     public enum PathCreationStrategy {
         SIMPLE,
         NAVMESH,
-        JAVA_NAVMESH
+        JAVA_NAVMESH,
+        CIRCLE_ARC
     }
 }

@@ -1,7 +1,8 @@
-package yangbot.path;
+package yangbot.path.navmesh;
 
-import javafx.util.Pair;
 import yangbot.input.CarData;
+import yangbot.path.Curve;
+import yangbot.util.Tuple;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
@@ -260,11 +261,11 @@ public class Navigator {
         return navmeshPathTo(startTangent, destination, tangent, offset);
     }
 
-    public Pair<Integer, Vector3> findClosestNode(Vector3 pos, Vector3 direction) {
+    public Tuple<Integer, Vector3> findClosestNode(Vector3 pos, Vector3 direction) {
         if (!loadedStatics.get())
             throw new IllegalStateException("Navigator didn't load yet");
 
-        var closestNode = this.findClosestNode(pos);
+        Tuple<Integer, Vector3> closestNode = this.findClosestNode(pos);
         if (closestNode == null)
             return null;
 
@@ -278,10 +279,10 @@ public class Navigator {
             }
         }
 
-        return new Pair<>(closestNode.getKey() * numDirectionDistinctions + dir, closestNode.getValue());
+        return new Tuple<>(closestNode.getKey() * numDirectionDistinctions + dir, closestNode.getValue());
     }
 
-    public Pair<Integer, Vector3> findClosestNode(Vector3 pos) {
+    public Tuple<Integer, Vector3> findClosestNode(Vector3 pos) {
         if (!loadedStatics.get())
             throw new IllegalStateException("Navigator didn't load yet");
         int closest = -1;
@@ -296,10 +297,10 @@ public class Navigator {
         if (closest == -1)
             return null;
         else
-            return new Pair<>(closest, navigationNodes[closest]);
+            return new Tuple<>(closest, navigationNodes[closest]);
     }
 
-    public List<Pair<Integer, Vector3>> findClosestNodes(Vector3 pos, int num) {
+    public List<Tuple<Integer, Vector3>> findClosestNodes(Vector3 pos, int num) {
         if (!loadedStatics.get()) {
             System.err.println("Navigator didn't load yet");
             return new ArrayList<>();
@@ -307,10 +308,10 @@ public class Navigator {
 
         return IntStream.range(0, navigationNodes.length)
                 .boxed()
-                .map(node -> new Pair<>(node, pos.sub(navigationNodes[node]).magnitude()))
-                .sorted(Comparator.comparingDouble(Pair::getValue))
+                .map(node -> new Tuple<>(node, pos.sub(navigationNodes[node]).magnitude()))
+                .sorted(Comparator.comparingDouble(Tuple::getValue))
                 .limit(num)
-                .map(p -> new Pair<>(p.getKey(), navigationNodes[p.getKey()]))
+                .map(p -> new Tuple<>(p.getKey(), navigationNodes[p.getKey()]))
                 .collect(Collectors.toList());
     }
 

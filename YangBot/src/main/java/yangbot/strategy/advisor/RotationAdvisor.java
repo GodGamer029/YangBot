@@ -1,7 +1,7 @@
 package yangbot.strategy.advisor;
 
-import javafx.util.Pair;
 import yangbot.input.*;
+import yangbot.util.Tuple;
 import yangbot.util.math.vector.Vector2;
 
 import java.util.Comparator;
@@ -57,10 +57,10 @@ public class RotationAdvisor {
                 .filter(c -> c.position.distance(ballData.position) > 300)
                 .count();
 
-        float medianBoost = (float) teammates.stream()
+        /*float medianBoost = (float) teammates.stream()
                 .sorted(Comparator.comparingDouble(c -> c.boost))
                 .collect(Collectors.toList())
-                .get((teammates.size() - 1) / 2).boost;
+                .get((teammates.size() - 1) / 2).boost;*/
 
         // Find car with least time to ball
         Optional<CarData> attackingCarOptional = teammates.stream()
@@ -78,11 +78,11 @@ public class RotationAdvisor {
 
                     return yDist > xDist * 0.75f; // Attack from middle, not side
                 })
-                .map(c -> new Pair<>(c, c.position.distance(ballData.position) / (c.forward().flatten().dot(c.velocity.flatten()) + 50)))
-                .min(Comparator.comparingDouble(Pair::getValue))
-                .map(Pair::getKey); // Convert back to CarData
+                .map(c -> new Tuple<>(c, c.position.distance(ballData.position) / (c.forward().flatten().dot(c.velocity.flatten()) + 50)))
+                .min(Comparator.comparingDouble(Tuple::getValue))
+                .map(Tuple::getKey); // Convert back to CarData
 
-        if (attackingCarOptional.isEmpty())
+        if (!attackingCarOptional.isPresent())
             return Advice.IDLE;
 
         final CarData attackingCar = attackingCarOptional.get();

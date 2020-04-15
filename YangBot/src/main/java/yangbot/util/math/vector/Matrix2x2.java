@@ -11,7 +11,14 @@ public class Matrix2x2 {
 
     @SuppressWarnings("CopyConstructorMissesField")
     public Matrix2x2(Matrix2x2 o) {
-        System.arraycopy(o.data, 0, this.data, 0, this.data.length);
+        System.arraycopy(o.data, 0, this.data, 0, o.data.length);
+    }
+
+    public Matrix2x2(Vector2 forward, Vector2 right) {
+        this.assign(0, 0, forward.x);
+        this.assign(1, 0, forward.y);
+        this.assign(0, 1, right.x);
+        this.assign(1, 1, right.y);
     }
 
     public static Matrix2x2 fromRotation(float theta) {
@@ -44,5 +51,30 @@ public class Matrix2x2 {
         }
 
         return new Vector2(Av[0], Av[1]);
+    }
+
+    public Vector2 forward() {
+        return new Vector2(get(0, 0), get(1, 0));
+    }
+
+    public Vector2 right() {
+        return new Vector2(get(0, 1), get(1, 1));
+    }
+
+    public float[][] getFloatMatrix() {
+        return new float[][]{
+                {get(0, 0), get(0, 1)},
+                {get(1, 0), get(1, 1)}
+        };
+    }
+
+    @Override
+    public String toString() {
+        float[][] dat = getFloatMatrix();
+        final StringBuilder sb = new StringBuilder("Matrix2x2[\n");
+        sb.append(Arrays.toString(dat[0])).append(",\n");
+        sb.append(Arrays.toString(dat[1])).append(",\n");
+        sb.append(']');
+        return sb.toString();
     }
 }

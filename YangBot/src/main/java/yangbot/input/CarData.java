@@ -136,6 +136,17 @@ public class CarData {
         return this.team * 2 - 1;
     }
 
+    // From L0laapk3
+    // assumes jump duration = 0.2
+    public static float getJumpTimeForHeight(float heightIncrease, float gravity) {
+        assert gravity == -650; // This code only works for default gravity
+        if (heightIncrease <= 74.48f) { // During acceleration part
+            return (float) Math.max(0, Math.sqrt(10100 * heightIncrease + 531441) - 729) / 2020f;
+        } else {
+            return (float) (DodgeManeuver.acceleration - Math.sqrt(1888839f - 8125f * heightIncrease)) / 1625f;
+        }
+    }
+
     public boolean isGrounded() {
         if (RLConstants.isPosNearWall(this.position.flatten(), 20) || this.position.z >= RLConstants.arenaHeight - 100)
             return this.hasWheelContact;
@@ -178,8 +189,8 @@ public class CarData {
         return this.orientation.forward();
     }
 
-    public Vector3 left() {
-        return this.orientation.left();
+    public Physics2D toPhysics2d() {
+        return new Physics2D(this.position.flatten(), this.velocity.flatten(), this.orientation.flatten());
     }
 
     // https://www.wolframalpha.com/input/?i=solve+291.66+%2B+1458.33+d+-+g+x+%3D+0+for+x
@@ -263,12 +274,20 @@ public class CarData {
         return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
     }
 
+    public Vector3 right() {
+        return this.orientation.right();
+    }
+
+    private void driving_handbrake(ControlsOutput in, float dt) {
+        // TODO
+    }
+
     private void driving(ControlsOutput in, float dt) {
         final float v_f = (float) velocity.dot(forward());
-        final float v_l = (float) velocity.dot(left());
+        final float v_l = (float) velocity.dot(right());
         final float w_u = (float) angularVelocity.dot(up());
 
-        Vector3 force = forward().mul(driveForceForward(in, v_f, v_l, w_u)).add(left().mul(driveForceLeft(in, v_f, v_l, w_u)));
+        Vector3 force = forward().mul(driveForceForward(in, v_f, v_l, w_u)).add(right().mul(driveForceLeft(in, v_f, v_l, w_u)));
 
         Vector3 torque = up().mul(driveTorqueUp(in));
 
@@ -277,21 +296,6 @@ public class CarData {
 
         angularVelocity = angularVelocity.add(torque.mul(dt));
         orientation = Matrix3x3.axisToRotation(angularVelocity.mul(dt)).matrixMul(orientation);
-    }
-
-    private void driving_handbrake(ControlsOutput in, float dt) {
-        // TODO
-    }
-
-    // From L0laapk3
-    // assumes jump duration
-    public static float getJumpTimeForHeight(float heightIncrease, float gravity) {
-        assert gravity == -650; // This code only works for default gravity
-        if (heightIncrease <= 74.48f) { // During acceleration part
-            return (float) Math.max(0, Math.sqrt(10100 * heightIncrease + 531441) - 729) / 2020f;
-        } else {
-            return (float) (DodgeManeuver.acceleration - Math.sqrt(1888839f - 8125f * heightIncrease)) / 1625f;
-        }
     }
 
     private void air_dodge(ControlsOutput in, float dt) {

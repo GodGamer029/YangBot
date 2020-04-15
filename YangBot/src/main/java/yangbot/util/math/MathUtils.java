@@ -47,12 +47,20 @@ public class MathUtils {
         return value;
     }
 
+    public static float remapClip(float value, float rangeStart, float rangeEnd, float newRangeStart, float newRangeEnd) {
+        return remap(MathUtils.clip(value, rangeStart, rangeEnd), rangeStart, rangeEnd, newRangeStart, newRangeEnd);
+    }
+
     public static float remap(float value, float rangeStart, float rangeEnd, float newRangeStart, float newRangeEnd) {
         value -= rangeStart;
         value /= rangeEnd - rangeStart; // now mapped between 0 - 1
         value *= newRangeEnd - newRangeStart;
         value += newRangeStart;
         return value;
+    }
+
+    public static float distance(float v1, float v2) {
+        return Math.abs(v1 - v2);
     }
 
     public static boolean floatsAreEqual(float value1, float value2) {

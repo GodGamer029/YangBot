@@ -91,6 +91,13 @@ run {
 // You can run gradew.bat distZip to generate a zip file suitable for tournament submissions.
 // It will be generated in build/distributions
 distZip {
+    if(new File('customJre').exists() && new File('customJre').listFiles().length > 0){
+        into ('jre') {
+            from fileTree('customJre') {
+
+            }
+        }
+    }
     into ('python') {
         from fileTree('src/main/python') {
             exclude '__pycache__'

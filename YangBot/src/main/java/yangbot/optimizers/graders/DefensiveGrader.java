@@ -27,7 +27,7 @@ public class DefensiveGrader extends Grader {
         float minDistToGoal = 9999999;
         for (float time = 0; time < Math.min(3, simBallPred.relativeTimeOfLastFrame()); time += RLConstants.simulationTickFrequency * 2) {
             Optional<YangBallPrediction.YangPredictionFrame> dataAtFrame = simBallPred.getFrameAtRelativeTime(time);
-            if (dataAtFrame.isEmpty())
+            if (!dataAtFrame.isPresent())
                 break;
 
             ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;

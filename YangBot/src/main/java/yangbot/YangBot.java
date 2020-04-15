@@ -7,6 +7,7 @@ import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.strategy.AfterKickoffStrategy;
 import yangbot.strategy.DefaultStrategy;
+import yangbot.strategy.RecoverStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.strategy.manuever.kickoff.KickoffTester;
@@ -116,14 +117,16 @@ public class YangBot implements Bot {
             GameData.current().getBallPrediction().draw(renderer, Color.BLUE, 2);
             renderer.drawString2d("Dt: " + dt, Color.WHITE, new Point(10, 240), 1, 1);
 
-            /*renderer.drawString2d("State: " + state.name(), Color.WHITE, new Point(10, 270), 2, 2);
+            renderer.drawString2d("State: " + state.name(), Color.WHITE, new Point(10, 270), 2, 2);
             if (state != State.KICKOFF)
                 renderer.drawString2d("Strategy: " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, new Point(10, 310), 2, 2);
 
-            renderer.drawString3d(this.playerIndex + ": " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 50), 1, 1);
+            String text = this.playerIndex + ": " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName());
             if (currentPlan != null)
-                renderer.drawString3d(currentPlan.getAdditionalInformation(), Color.WHITE, car.position.add(0, 0, 100), 1, 1);
-*/
+                text += "\n" + currentPlan.getAdditionalInformation();
+            renderer.drawString3d(text, (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
+
+
             if (false) {
                 renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 350), 1, 1);
                 renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 370), 1, 1);
@@ -196,7 +199,7 @@ public class YangBot implements Bot {
         //long ms = System.nanoTime();
         try {
             controlsOutput = processInput(dataPacket);
-        } catch (Exception e) {
+        } catch (Exception | AssertionError e) {
             e.printStackTrace();
         }
         /*realCount++;

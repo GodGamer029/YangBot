@@ -2,7 +2,7 @@ package yangbot.strategy.abstraction;
 
 import yangbot.input.*;
 import yangbot.path.Curve;
-import yangbot.path.EpicPathPlanner;
+import yangbot.path.EpicMeshPlanner;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
@@ -152,7 +152,7 @@ public class DribbleAbstraction extends Abstraction {
                 if (followPathManeuver == null || Math.abs(followPathManeuver.arrivalTime - frame.absoluteTime) > 0.1f || followPathManeuver.arrivalTime - car.elapsedSeconds <= 0 || followPathManeuver.getDistanceOffPath(car) > 50) {
                     followPathManeuver = new FollowPathManeuver();
 
-                    Curve currentPath = new EpicPathPlanner()
+                    Curve currentPath = new EpicMeshPlanner()
                             .withStart(car, 10)
                             .withEnd(driveTarget, car.forward())
                             .plan().get();
@@ -172,7 +172,7 @@ public class DribbleAbstraction extends Abstraction {
                 }
                 followPathManeuver.step(dt, controlsOutput);
                 //followPathManeuver.draw(renderer, car);
-                followPathManeuver.path.draw(renderer);
+                followPathManeuver.path.draw(renderer, Color.YELLOW);
             }
         }
         return RunState.CONTINUE;

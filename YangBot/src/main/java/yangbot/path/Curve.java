@@ -36,6 +36,7 @@ public class Curve {
     private List<ControlPoint> controlPoints;
     private PathCheckStatus pathCheckStatus = new PathCheckStatus(PathStatus.UNKNOWN);
     private static int ndiv = 16;
+    private final int numSubDivisions;
 
     public Curve() {
         this.length = -1f;
@@ -45,6 +46,7 @@ public class Curve {
         this.distances = new float[0];
         this.maxSpeeds = new float[0];
         this.controlPoints = new ArrayList<>();
+        this.numSubDivisions = ndiv;
     }
 
     public Curve(List<ControlPoint> info) {
@@ -52,6 +54,7 @@ public class Curve {
     }
 
     public Curve(List<ControlPoint> info, int numSubSegments) {
+        this.numSubDivisions = numSubSegments;
         this.controlPoints = info;
         this.points = new ArrayList<>();
         this.tangents = new ArrayList<>();
@@ -60,9 +63,9 @@ public class Curve {
 
         int num_segments = info.size() - 1;
 
-        this.points.ensureCapacity(numSubSegments * num_segments + 2);
-        this.tangents.ensureCapacity(numSubSegments * num_segments + 2);
-        this.curvatures = new float[numSubSegments * num_segments + 2];
+        this.points.ensureCapacity(numSubSegments * num_segments + 1);
+        this.tangents.ensureCapacity(numSubSegments * num_segments + 1);
+        this.curvatures = new float[numSubSegments * num_segments + 1];
 
         for (int i = 1; i < num_segments - 1; i++) {
             Vector3 delta_before = info.get(i).point.sub(info.get(i - 1).point).normalized();
@@ -125,12 +128,14 @@ public class Curve {
                 this.curvatures[this.points.size() - 1] = (float) kappa;
             }
         }
+        assert this.points.size() == this.tangents.size() && this.tangents.size() == this.curvatures.length : this.points.size() + " " + this.tangents.size() + " " + this.curvatures.length + " " + this.numSubDivisions;
 
         calculateDistances();
     }
 
     public Curve(List<ControlPoint> info, Vector3 dx0, Vector3 dt0, Vector3 dx1, Vector3 dt1, Vector3 start, Vector3 end) {
         this.controlPoints = info;
+        this.numSubDivisions = ndiv;
         int num_segments = info.size() - 1;
 
         this.points = new ArrayList<>();
@@ -138,14 +143,14 @@ public class Curve {
         this.curvatures = new float[0];
         this.maxSpeeds = new float[0];
 
-        this.points.ensureCapacity(ndiv * num_segments + 2);
-        this.tangents.ensureCapacity(ndiv * num_segments + 2);
+        this.points.ensureCapacity(numSubDivisions * num_segments + 2);
+        this.tangents.ensureCapacity(numSubDivisions * num_segments + 2);
 
         ArrayList<Vector3> normals = new ArrayList<>();
         ArrayList<Integer> segment_ids = new ArrayList<>();
 
-        normals.ensureCapacity(ndiv * num_segments + 2);
-        segment_ids.ensureCapacity(ndiv * num_segments + 2);
+        normals.ensureCapacity(numSubDivisions * num_segments + 2);
+        segment_ids.ensureCapacity(numSubDivisions * num_segments + 2);
 
         for (int i = 0; i < num_segments; i++) {
             ControlPoint our = info.get(i);
@@ -164,8 +169,8 @@ public class Curve {
 
             int is_last = (i == num_segments - 1) ? 1 : 0;
 
-            for (int j = 0; j < (ndiv + is_last); j++) {
-                float t = ((float) j) / ((float) ndiv);
+            for (int j = 0; j < (numSubDivisions + is_last); j++) {
+                float t = ((float) j) / ((float) numSubDivisions);
 
                 Vector3 p = piece.evaluate(t);
                 Vector3 n = N0.mul(1f - t).add(N1.mul(t)).normalized();
@@ -350,7 +355,7 @@ public class Curve {
         return this.pathCheckStatus;
     }
 
-    public void draw(AdvancedRenderer renderer) {
+    public void draw(AdvancedRenderer renderer, Color color) {
         Vector3 lastPoint = null;
         for (Vector3 point : this.points) {
             if (lastPoint == null) {
@@ -358,15 +363,15 @@ public class Curve {
                 continue;
             }
             if (lastPoint.distance(point) > 10) {
-                renderer.drawLine3d(Color.YELLOW, lastPoint, point);
+                renderer.drawLine3d(color, lastPoint, point);
                 lastPoint = point;
             }
 
         }
 
         if (this.points.size() > 1) {
-            renderer.drawCentered3dCube(Color.YELLOW, this.points.get(0), 50);
-            renderer.drawCentered3dCube(Color.YELLOW, this.points.get(this.points.size() - 1), 50);
+            renderer.drawCentered3dCube(Color.GREEN, this.points.get(0), 50);
+            renderer.drawCentered3dCube(Color.RED, this.points.get(this.points.size() - 1), 50);
         }
     }
 
@@ -412,6 +417,9 @@ public class Curve {
     public float maxSpeedAt(float s) {
         s = MathUtils.clip(s, 0, distances[0]);
 
+        if (maxSpeeds.length == 0)
+            this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
                 float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
@@ -432,7 +440,7 @@ public class Curve {
                 return MathUtils.lerp(maxSpeeds[i + 1], maxSpeeds[i], u);
             }
         }
-        return (points.size() - 2f) / ndiv;
+        return (points.size() - 2f) / numSubDivisions;
     }
 
     public float findNearest(Vector3 c) {
@@ -504,6 +512,8 @@ public class Curve {
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
         maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);
+
+        assert curvatures.length == distances.length : curvatures.length + " " + distances.length;
 
         for (int i = 1; i < curvatures.length; i++) {
             float ds = distances[i - 1] - distances[i];

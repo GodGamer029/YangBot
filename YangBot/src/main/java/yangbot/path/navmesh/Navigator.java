@@ -61,7 +61,7 @@ public class Navigator {
         directions = new Vector3[numDirectionDistinctions];
 
         final float k = numDirectionDistinctions / 6.28318530f;
-        System.out.println("Direction-Init with " + numDirectionDistinctions + " elements");
+
         for (int i = 0; i < numDirectionDistinctions; i++) {
             directions[i] = new Vector3(Math.cos(((float) i) / k), Math.sin(((float) i) / k), 0f);
         }

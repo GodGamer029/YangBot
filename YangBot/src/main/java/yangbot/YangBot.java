@@ -2,7 +2,10 @@ package yangbot;
 
 import rlbot.Bot;
 import rlbot.ControllerState;
+import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
+import rlbot.gamestate.GameInfoState;
+import rlbot.gamestate.GameState;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.strategy.AfterKickoffStrategy;
@@ -60,6 +63,7 @@ public class YangBot implements Bot {
 
         switch (state) {
             case RESET: {
+                RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
                 timer = 0.0f;
                 if (KickoffTester.isKickoff() && KickoffTester.shouldGoForKickoff(car, gameData.getAllCars().stream().filter((c) -> c.team == car.team).collect(Collectors.toList()), ball)) {
                     kickoffManeuver = new SimpleKickoffManeuver();
@@ -95,8 +99,8 @@ public class YangBot implements Bot {
 
                     i++;
                     if (i == 5) {
-                        /*System.err.println("Circular Strategy: Defaulting to DefaultStrategy ("+circularPlanExplainer.toString()+")");
-                        System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");*/
+                        System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer.toString() + ")");
+                        System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         currentPlan = new DefaultStrategy();
                     }
                 }

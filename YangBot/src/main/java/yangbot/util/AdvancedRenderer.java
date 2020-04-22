@@ -75,4 +75,30 @@ public class AdvancedRenderer extends Renderer {
             this.drawLine3d(c, thisPos.mul(radius).withZ(0).add(center), nextPos.mul(radius).withZ(0).add(center));
         }
     }
+
+    public void drawCircle(Color c, Vector3 center, float radius, float startAngle, float endAngle) {
+        final float resolution = 8;
+
+        if (startAngle > endAngle) {
+            float temp = startAngle;
+            startAngle = endAngle;
+            endAngle = temp;
+        }
+
+        float angleDiv = (endAngle - startAngle) / resolution;
+        assert angleDiv > 0 : angleDiv;
+
+        for (float currentAngle = startAngle; currentAngle < endAngle; currentAngle += angleDiv) {
+            final var thisPos = Vector2.fromAngle(currentAngle);
+
+            var nextPos = Vector2.fromAngle(currentAngle + angleDiv);
+            if (currentAngle + angleDiv >= endAngle) {
+                angleDiv = endAngle - currentAngle;
+                nextPos = Vector2.fromAngle(currentAngle + angleDiv);
+                currentAngle = endAngle; // Exit condition
+            }
+
+            this.drawLine3d(c, thisPos.mul(radius).withZ(0).add(center), nextPos.mul(radius).withZ(0).add(center));
+        }
+    }
 }

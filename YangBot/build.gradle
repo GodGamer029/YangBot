@@ -22,7 +22,7 @@ dependencies {
     // Fetch the framework jar file
     compile('org.jetbrains:annotations:17.0.0')
     compile('org.rlbot.commons:framework:1.11.0')
-    compile('org.knowm.xchart:xchart:3.6.1')
+    //compile('org.knowm.xchart:xchart:3.6.1')
     testCompile('org.junit.jupiter:junit-jupiter:5.4.2')
     // This is makes it easy to find the dll when running in intellij, where JVM args don't get passed from gradle.
     runtime files(dllDirectory)
@@ -91,13 +91,6 @@ run {
 // You can run gradew.bat distZip to generate a zip file suitable for tournament submissions.
 // It will be generated in build/distributions
 distZip {
-    if(new File('customJre').exists() && new File('customJre').listFiles().length > 0){
-        into ('jre') {
-            from fileTree('customJre') {
-
-            }
-        }
-    }
     into ('python') {
         from fileTree('src/main/python') {
             exclude '__pycache__'

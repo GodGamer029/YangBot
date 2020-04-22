@@ -1,12 +1,14 @@
 package yangbot.strategy.manuever.kickoff;
 
 import yangbot.input.*;
-import yangbot.path.EpicPathPlanner;
+import yangbot.path.EpicMeshPlanner;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
+
+import java.awt.*;
 
 public class SimpleKickoffManeuver extends Maneuver {
 
@@ -49,11 +51,9 @@ public class SimpleKickoffManeuver extends Maneuver {
 
                 this.kickOffLocation = KickoffTester.getKickoffLocation(car);
 
-                var planner = new EpicPathPlanner()
+                var planner = new EpicMeshPlanner()
                         .withStart(car)
                         .withEnd(ball.position, ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * (car.team * 2 - 1), 0).mul(0.5f)).normalized());
-
-                System.out.println(this.kickOffLocation);
 
                 if (this.kickOffLocation == KickoffTester.KickOffLocation.OFF_CENTER) {
                     Vector3 padLoc = new Vector3(Math.signum(car.position.x) * 120f, 2816.0f * car.getTeamSign(), RLConstants.carElevation);
@@ -75,7 +75,7 @@ public class SimpleKickoffManeuver extends Maneuver {
                     kickOffState = KickOffState.FLIP;
                 }
 
-                followPathManeuver.path.draw(gameData.getAdvancedRenderer());
+                followPathManeuver.path.draw(gameData.getAdvancedRenderer(), Color.BLUE.darker());
                 break;
             }
             case FLIP: {

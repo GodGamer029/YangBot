@@ -169,6 +169,10 @@ public class Vector2 implements Serializable {
         return idealRad - currentRad;
     }
 
+    public double angleBetween(Vector2 o) {
+        return Math.atan2(o.y, o.x) - Math.atan2(y, x);
+    }
+
     public Vector2 rotateBy(double angle) {
         if (angle == 0)
             return this;

@@ -1,19 +1,32 @@
 package yangbot.path.builders;
 
-import yangbot.path.Curve;
+import yangbot.input.ControlsOutput;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.math.vector.Vector3;
+
+import java.awt.*;
 
 public abstract class PathSegment {
 
-    protected PathSegment() {
+    protected float timer = 0;
 
+    public boolean step(float dt, ControlsOutput output) {
+        this.timer += dt;
+        return true;
     }
 
-    public Curve bake(int maxSamples) {
-        throw new IllegalStateException("Not implemented in class: " + this.getClass().getSimpleName());
+    public abstract Vector3 getEndPos();
+
+    public abstract Vector3 getEndTangent();
+
+    public abstract float getEndSpeed();
+
+    public abstract float getTimeEstimate();
+
+    public boolean canInterrupt() {
+        return true;
     }
 
-    public void draw(AdvancedRenderer renderer) {
-        throw new IllegalStateException("Not implemented in class: " + this.getClass().getSimpleName());
+    public void draw(AdvancedRenderer renderer, Color color) {
     }
 }

@@ -4,13 +4,13 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.function.ToIntFunction;
 
-public class ArrayLutTable<K extends Serializable, V extends Serializable> implements Serializable {
+public class ArrayLutTable<K extends Serializable, V extends Serializable, F extends Serializable & ToIntFunction<K>> implements Serializable {
 
     private static final long serialVersionUID = 8537331592114560519L;
     public V[] table = null;
-    private transient ToIntFunction<K> keyToIndex;
+    private F keyToIndex;
 
-    public ArrayLutTable(ToIntFunction<K> keyToIndexFunc) {
+    public ArrayLutTable(F keyToIndexFunc) {
         this.keyToIndex = keyToIndexFunc;
     }
 
@@ -26,12 +26,24 @@ public class ArrayLutTable<K extends Serializable, V extends Serializable> imple
         }
     }
 
-    public void setKeyToIndexFunction(ToIntFunction<K> keyToIndex) {
+    public F getKeyToIndexFunction() {
+        return this.keyToIndex;
+    }
+
+    public void setKeyToIndexFunction(F keyToIndex) {
         this.keyToIndex = keyToIndex;
     }
 
     public V get(K key) {
-        return table[this.keyToIndex.applyAsInt(key)];
+        var val = table[this.keyToIndex.applyAsInt(key)];
+        assert val != null : key;
+        return val;
+    }
+
+    public V getWithIndex(int index) {
+        var val = table[index];
+        //assert val != null : index;
+        return val;
     }
 
     public void setWithIndex(int index, V value) {

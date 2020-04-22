@@ -1,13 +1,15 @@
-package yangbot.path.builders;
+package yangbot.path.builders.segments;
 
+import org.jetbrains.annotations.NotNull;
 import yangbot.path.Curve;
+import yangbot.path.builders.BakeablePathSegment;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.util.List;
 
-public class StraightLineSegment extends PathSegment {
+public class StraightLineSegment extends BakeablePathSegment {
 
     private final Vector3 startPos, endPos, normal;
 
@@ -29,30 +31,28 @@ public class StraightLineSegment extends PathSegment {
         return this.endPos.sub(this.startPos).normalized();
     }
 
+    @Override
     public Vector3 getEndPos() {
         return this.endPos;
     }
 
+    @Override
     public Vector3 getEndTangent() {
         return this.getStartTangent();
     }
 
-    public Vector3 getNormal() {
-        return this.normal;
-    }
-
     @Override
-    public Curve bake(int maxSamples) {
+    protected @NotNull Curve bakeInternal(int maxSamples) {
         return new Curve(List.of(
                 new Curve.ControlPoint(startPos, getStartTangent(), normal),
                 new Curve.ControlPoint(endPos, getEndTangent(), normal)),
-                1);
+                maxSamples / 2);
     }
 
     @Override
-    public void draw(AdvancedRenderer renderer) {
+    public void draw(AdvancedRenderer renderer, Color color) {
         renderer.drawCentered3dCube(Color.GREEN, this.startPos, 20);
         renderer.drawCentered3dCube(Color.RED, this.endPos, 20);
-        renderer.drawLine3d(Color.YELLOW, this.startPos, this.endPos);
+        renderer.drawLine3d(color, this.startPos, this.endPos);
     }
 }

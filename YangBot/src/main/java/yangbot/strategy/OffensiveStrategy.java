@@ -8,7 +8,14 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.OffensiveGrader;
 import yangbot.path.Curve;
-import yangbot.path.EpicPathPlanner;
+import yangbot.path.EpicMeshPlanner;
+import yangbot.path.builders.PathBuilder;
+import yangbot.path.builders.SegmentedPath;
+import yangbot.path.builders.segments.AtbaSegment;
+import yangbot.path.builders.segments.DriftSegment;
+import yangbot.path.builders.segments.StraightLineSegment;
+import yangbot.path.builders.segments.TurnCircleSegment;
+import yangbot.strategy.abstraction.IdleAbstraction;
 import yangbot.strategy.abstraction.StrikeAbstraction;
 import yangbot.strategy.advisor.RotationAdvisor;
 import yangbot.strategy.manuever.DriveManeuver;
@@ -23,7 +30,6 @@ import yangbot.util.math.vector.Vector3;
 import java.awt.*;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class OffensiveStrategy extends Strategy {
@@ -33,7 +39,8 @@ public class OffensiveStrategy extends Strategy {
     private State state = State.INVALID;
     private RotationAdvisor.Advice lastAdvice = RotationAdvisor.Advice.NO_ADVICE;
     private BallTouchInterrupt ballTouchInterrupt;
-    private Vector3 drivePosition;
+    private SegmentedPath drivePath;
+    private IdleAbstraction idleAbstraction;
 
     private boolean planGoForBoost() {
         final GameData gameData = GameData.current();
@@ -110,7 +117,7 @@ public class OffensiveStrategy extends Strategy {
                             );
                     Vector3 offsetPos = padLocation.add(car.position.sub(padLocation).normalized().mul(30));
 
-                    Curve path = new EpicPathPlanner()
+                    Curve path = new EpicMeshPlanner()
                             .withStart(car)
                             .addPoint(offsetPos, car.position.sub(padLocation).normalized())
                             .withEnd(padLocation, car.position.sub(padLocation).normalized()/*offToBallLocation.sub(padLocation).normalized()*/)
@@ -226,7 +233,7 @@ public class OffensiveStrategy extends Strategy {
             if (curveOptional.isPresent())
                 currentPath = curveOptional.get();
             else {
-                currentPath = new EpicPathPlanner()
+                currentPath = new EpicMeshPlanner()
                         .withStart(startPosition, startTangent)
                         .withEnd(ballHitTarget, endTangent.mul(-1))
                         .plan().get();
@@ -294,8 +301,25 @@ public class OffensiveStrategy extends Strategy {
 
          */
 
-        this.state = State.DRIVE_AT_POINT;
-        this.drivePosition = endPos;
+        this.state = State.DRIVE_AT_POINT_WITHPATH;
+        var builder = new PathBuilder(car)
+                .optimize();
+
+        if (car.position.z > 50) {
+            var atba = new AtbaSegment(builder.getCurrentPosition(), endPos);
+            builder.add(atba);
+        } else if (car.velocity.magnitude() > 200) {
+            var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), endPos.sub(car.position).normalized(), builder.getCurrentSpeed());
+            builder.add(drift);
+        } else {
+            var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(1400, builder.getCurrentSpeed())), endPos.flatten());
+            builder.add(turn);
+        }
+
+        if (builder.getCurrentPosition().distance(endPos) > 50)
+            builder.add(new StraightLineSegment(builder.getCurrentPosition(), endPos));
+
+        this.drivePath = builder.build();
     }
 
     @Override
@@ -307,6 +331,7 @@ public class OffensiveStrategy extends Strategy {
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         this.state = State.INVALID;
         this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt();
+        this.idleAbstraction = new IdleAbstraction();
 
         // Check if ball will go in our goal
         if (Math.signum(ball.position.y) == teamSign) { // our half
@@ -341,7 +366,7 @@ public class OffensiveStrategy extends Strategy {
             case PREPARE_FOR_PASS:
             case IDLE:
                 this.state = State.IDLE;
-                if (car.position.flatten().distance(ball.position.flatten()) > 1000) {
+                if (car.position.flatten().distance(ball.position.flatten()) > 2000) {
                     if (this.planGoForBoost())
                         return;
                 }
@@ -364,195 +389,12 @@ public class OffensiveStrategy extends Strategy {
         }
     }
 
-    private Vector2 findIdlePosition(CarData localCar, List<CarData> teammates, Vector2 futureBallPos) {
-        assert teammates.size() > 0;
-
-        final int teamSign = localCar.getTeamSign();
-        final AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
-        final Vector2 ownGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
-
-        // Distances will be scaled back if they exceed this value
-        final float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 120;
-        final float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 100;
-
-        final Line2 goalToBall = new Line2(
-                ownGoal,
-                (Math.abs(futureBallPos.y) > maxAbsoluteIdleY - 10) ?
-                        futureBallPos.withY((maxAbsoluteIdleY - 10) * Math.signum(futureBallPos.y)) : futureBallPos);
-
-        // Predict teammate in future in x seconds
-        final float teammatePredictionDelay = 0.5f;
-
-        // Y-Distance from ball when idle
-        // These may be scaled down, if too close to own goal
-        float minIdleDistance = 1500;
-        float maxIdleDistance = 4000;
-
-        // Scale back idling distances (Too close to own goal for example)
-        {
-            float effectiveIdlingDistance = futureBallPos.y + maxIdleDistance * teamSign;
-            if (Math.signum(effectiveIdlingDistance) == teamSign && Math.abs(effectiveIdlingDistance) > maxAbsoluteIdleY) {
-
-                float diff = Math.abs(effectiveIdlingDistance) - maxAbsoluteIdleY;
-                float proportion = 1 - (diff / maxIdleDistance);
-                maxIdleDistance *= proportion;
-                minIdleDistance *= proportion;
-            }
-        }
-
-        final float effectiveMinIdleDistance = minIdleDistance;
-        final float effectiveMaxIdleDistance = maxIdleDistance;
-
-        // Grids: higher resolution if we have more teammates
-        float[] yGrid = new float[Math.max(15, teammates.size() * 3)];
-
-        // These functions return the absolute position values on the field
-        final Function<Integer, Float> yIndexToAbs = ind -> {
-            assert ind >= 0 && ind < yGrid.length : ind;
-
-            float gridSpot = MathUtils.remap(ind, 0, yGrid.length - 1, effectiveMinIdleDistance, effectiveMaxIdleDistance);
-            return teamSign * gridSpot + futureBallPos.y;
-        };
-
-        // Fill grid with distances from teammates
-        for (var mate : teammates) {
-            // Y-Distances
-            for (int i = 0; i < yGrid.length; i++) {
-                float posY = yIndexToAbs.apply(i);
-                float futureMateYPos = mate.position.y + mate.velocity.y * teammatePredictionDelay;
-
-                float distance = MathUtils.distance(posY, futureMateYPos);
-                yGrid[i] += 1 / Math.max(distance, 10);
-            }
-        }
-
-        int lowestYSpot = 0;
-
-        // Y
-        {
-            float lowestYDist = 9999999;
-            float highestYDist = 0;
-            for (int i = 0; i < yGrid.length; i++) {
-                if (localCar.boost < 10 && i < yGrid.length / 2)
-                    continue; // When on low boost: go back farther
-
-                if (yGrid[i] < lowestYDist) {
-                    lowestYDist = yGrid[i];
-                    lowestYSpot = i;
-                }
-                if (yGrid[i] > highestYDist) {
-                    highestYDist = yGrid[i];
-                }
-            }
-
-            // Draw
-            if (false) {
-                for (int i = 0; i < yGrid.length; i++) {
-                    float yPos = yIndexToAbs.apply(i);
-                    float val = 1 - MathUtils.clip(MathUtils.remap(yGrid[i], lowestYDist, highestYDist, 0, 1), 0, 1);
-                    var col = new Color(val, val, val);
-
-                    if (i == lowestYSpot)
-                        col = Color.GREEN;
-
-                    float ySize = (effectiveMaxIdleDistance - effectiveMinIdleDistance) / (yGrid.length - 1);
-
-                    renderer.drawCentered3dCube(col, new Vector3(localCar.position.x, yPos, 50), new Vector3(10, ySize, 200));
-                    //renderer.drawString3d(String.format("%.5f", yGrid[i]), Color.WHITE, new Vector3(localCar.position.x, yPos, 200), 1, 1);
-                }
-            }
-        }
-
-        float[] xGrid = new float[Math.max(6, teammates.size() * 2)];
-        final float decidedYPos = yIndexToAbs.apply(lowestYSpot);
-        final float xChannelHalfWidth = RLConstants.goalCenterToPost * 1.2f;
-
-        assert maxAbsoluteIdleX > xChannelHalfWidth;
-
-        final Function<Integer, Float> xIndexToAbs = ind -> {
-            float relativeX = MathUtils.remap(ind, 0, xGrid.length - 1, -xChannelHalfWidth, xChannelHalfWidth);
-            var intersectionOpt = goalToBall.getIntersectionPointWithInfOtherLine(new Line2(new Vector2(-1, decidedYPos), new Vector2(1, decidedYPos)));
-            assert intersectionOpt.isPresent() : goalToBall.toString() + " " + decidedYPos;
-            float intersectedX = intersectionOpt.get().x;
-            if (Math.abs(intersectedX) + xChannelHalfWidth > maxAbsoluteIdleX)
-                intersectedX = (maxAbsoluteIdleX - xChannelHalfWidth) * Math.signum(intersectedX);
-
-            return relativeX + intersectedX;
-        };
-
-        // Pretend like there are teammates at the edges of the xGrid
-        // Prevents cluttering of bots at unnecessary positions
-        for (int i = 0; i < xGrid.length; i++) {
-            // Negative x
-            {
-                float posX = xIndexToAbs.apply(i);
-                float distance = MathUtils.distance(posX, -xChannelHalfWidth);
-
-                xGrid[i] += 1 / Math.max(distance, 10);
-            }
-            // Positive x
-            {
-                float posX = xIndexToAbs.apply(i);
-                float distance = MathUtils.distance(posX, xChannelHalfWidth);
-
-                xGrid[i] += 1 / Math.max(distance, 10);
-            }
-        }
-
-        for (var mate : teammates) {
-            // X-Distances
-            for (int i = 0; i < xGrid.length; i++) {
-                float posX = xIndexToAbs.apply(i);
-                float futureMateXPos = mate.position.x + mate.velocity.x * teammatePredictionDelay;
-
-                float distance = MathUtils.distance(posX, futureMateXPos);
-                xGrid[i] += 1 / Math.max(distance, 10);
-            }
-        }
-
-        int lowestXSpot = 0;
-        // X
-        {
-            float highestXDist = 0;
-            float lowestXDist = 9999999;
-            for (int i = 0; i < xGrid.length; i++) {
-                if (xGrid[i] < lowestXDist) {
-                    lowestXSpot = i;
-                    lowestXDist = xGrid[i];
-                }
-                if (xGrid[i] > highestXDist) {
-                    highestXDist = xGrid[i];
-                }
-            }
-
-            // Draw
-            {
-                float yPos = yIndexToAbs.apply(lowestYSpot);
-                for (int i = 0; i < xGrid.length; i++) {
-                    float xPos = xIndexToAbs.apply(i);
-                    float val = 1 - MathUtils.clip(MathUtils.remap(xGrid[i], lowestXDist, highestXDist, 0, 1), 0, 1);
-                    var col = new Color(val, val, val);
-
-                    if (i == lowestXSpot)
-                        col = Color.GREEN;
-
-                    float xSize = (xChannelHalfWidth * 2) / (xGrid.length - 1);
-
-                    renderer.drawCentered3dCube(col, new Vector3(xPos, yPos, 50), new Vector3(xSize, 150, 100));
-                    //renderer.drawString3d(String.format("%.5f", xGrid[i]), Color.WHITE, new Vector3(xPos, yPos, 200), 1, 1);
-                }
-            }
-        }
-
-        return new Vector2(xIndexToAbs.apply(lowestXSpot), yIndexToAbs.apply(lowestYSpot));
-    }
-
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
 
         var oldState = state;
         if (this.reevaluateStrategy(4f)) {
-            assert false : "States/Abstractions didn't finish automatically! (" + oldState.getClass().getSimpleName() + ")";
+            assert false : "States/Abstractions didn't finish automatically! (" + oldState.name() + ")";
         }
         assert this.state != State.INVALID : "Invalid state! Last advice: " + this.lastAdvice;
 
@@ -577,13 +419,6 @@ public class OffensiveStrategy extends Strategy {
                 break;
             }
             case GET_BOOST: {
-                this.followPathManeuver.step(dt, controlsOutput);
-                //this.followPathManeuver.draw(renderer, car);
-                this.followPathManeuver.path.draw(renderer);
-                if (this.followPathManeuver.isDone()) {
-                    this.reevaluateStrategy(0);
-                    return;
-                }
 
                 if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
                     return;
@@ -591,93 +426,22 @@ public class OffensiveStrategy extends Strategy {
                 if (this.reevaluateStrategy(ballTouchInterrupt, 0.05f) || this.reevaluateStrategy(2f))
                     return;
 
+                this.followPathManeuver.step(dt, controlsOutput);
+                //this.followPathManeuver.draw(renderer, car);
+                this.followPathManeuver.path.draw(renderer, Color.YELLOW.brighter());
+                if (this.followPathManeuver.isDone()) {
+                    this.reevaluateStrategy(0);
+                    return;
+                }
+
                 break;
             }
             case IDLE: {
-
-                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.3f : 1.5f))
                     return;
-
-                // Go back to ball if we are completely out of the play (demolished probably)
-                if (car.position.flatten().distance(ball.position.flatten()) > RLConstants.arenaLength * 0.8f) {
-                    DefaultStrategy.smartBallChaser(dt, controlsOutput);
-                    break;
-                }
-
-                if (this.reevaluateStrategy(ballTouchInterrupt, 0.05f) || this.reevaluateStrategy(1f))
+                this.idleAbstraction.step(dt, controlsOutput);
+                if (this.idleAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
-
-                // Use position of the ball in x seconds
-                final float futureBallPosDelay = 0.3f;
-
-                // Clips idlingTarget
-                final float maxX = RLConstants.arenaHalfWidth * 0.9f;
-                final float maxY = RLConstants.arenaHalfLength;
-
-                // Actual Idling distances the bot will follow (Changed when not alone on team)
-                float preferredIdlingY = 1800;
-                float preferredIdlingX = 0;
-
-                final Vector2 futureBallPos;
-
-                // Calculate where the ball will go in the future
-                // TODO: estimate where the ball will be shot for preemptive rotation
-                {
-                    Vector2 futureBallPosTemp;
-
-                    var frameOpt = ballPrediction.getFrameAtRelativeTime(futureBallPosDelay);
-                    if (frameOpt.isPresent())
-                        futureBallPosTemp = frameOpt.get().ballData.position.flatten();
-                    else
-                        futureBallPosTemp = ball.position.flatten().add(ball.velocity.flatten().mul(futureBallPosDelay));
-
-                    // Don't over-commit if the ball is rolling towards opponents
-                    if (Math.signum(futureBallPosTemp.y - ball.position.y) == -teamSign)
-                        futureBallPosTemp = ball.position.flatten();
-
-                    futureBallPos = futureBallPosTemp;
-                }
-
-                // find out where my teammates are idling
-                List<CarData> teammates = gameData.getAllCars().stream()
-                        .filter(c -> c.team == car.team && c.playerIndex != car.playerIndex)
-                        //.filter(c -> RotationAdvisor.isInfrontOfBall(c, ball))
-                        .collect(Collectors.toList());
-
-                if (teammates.size() > 0) {
-                    var idlePos = this.findIdlePosition(car, teammates, futureBallPos);
-                    preferredIdlingX = idlePos.x;
-                    preferredIdlingY = idlePos.y;
-
-                    assert Math.abs(preferredIdlingY) < RLConstants.arenaHalfLength : idlePos.toString();
-                } else {
-                    // Convert relative to absolute
-                    preferredIdlingY = futureBallPos.y + teamSign * preferredIdlingY;
-                }
-
-                // Hover around the middle area
-                Vector3 idleTarget = new Vector3(
-                        MathUtils.clip(preferredIdlingX, -maxX, maxX),
-                        MathUtils.clip(preferredIdlingY, -maxY, maxY),
-                        0);
-
-                renderer.drawCentered3dCube(Color.YELLOW, idleTarget, 100);
-                renderer.drawLine3d(Color.YELLOW, car.position, idleTarget.withZ(50));
-
-                assert Math.abs(idleTarget.y) < RLConstants.goalDistance : idleTarget.toString();
-
-                // Speed "controller"
-                float carToIdleDist = (float) Math.abs(car.position.y - idleTarget.y);
-                if (Math.signum(car.position.y - idleTarget.y) == teamSign)
-                    carToIdleDist = 0;
-
-                float minSpeed = DriveManeuver.max_throttle_speed * 0.9f;
-                if (carToIdleDist > 800)
-                    minSpeed = MathUtils.remapClip(carToIdleDist - 800, 0, 3000, minSpeed, CarData.MAX_VELOCITY * 0.95f);
-
-                DriveManeuver.steerController(controlsOutput, car, idleTarget);
-                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), minSpeed, CarData.MAX_VELOCITY, 0.5f);
-
                 break;
             }
             case ROTATE: { // Basically deprecated at this point
@@ -694,7 +458,7 @@ public class OffensiveStrategy extends Strategy {
                 } else {
                     this.followPathManeuver.step(dt, controlsOutput);
                     //this.followPathManeuver.draw(renderer, car);
-                    this.followPathManeuver.path.draw(renderer);
+                    this.followPathManeuver.path.draw(renderer, Color.YELLOW.darker());
                     if (this.followPathManeuver.isDone() && this.reevaluateStrategy(0))
                         return;
                 }
@@ -703,6 +467,7 @@ public class OffensiveStrategy extends Strategy {
             }
             case FOLLOW_PATH_STRIKE: {
                 this.strikeAbstraction.step(dt, controlsOutput);
+
                 if (this.strikeAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
 
@@ -710,19 +475,20 @@ public class OffensiveStrategy extends Strategy {
                     return;
                 break;
             }
-            case DRIVE_AT_POINT: {
-                if (car.position.distance(this.drivePosition) < 200 && this.reevaluateStrategy(0.1f))
+            case DRIVE_AT_POINT_WITHPATH: {
+                if (!car.hasWheelContact && this.drivePath.canInterrupt() && this.reevaluateStrategy(0.05f))
                     return;
 
-                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                if (this.reevaluateStrategy(this.drivePath.canInterrupt() ? 0.4f : 1f))
                     return;
 
-                if (this.reevaluateStrategy(0.5f))
+                if (this.drivePath == null && this.reevaluateStrategy(0))
                     return;
 
+                this.drivePath.draw(renderer);
+                if (this.drivePath.step(dt, controlsOutput) && this.reevaluateStrategy(0))
+                    return;
 
-                DriveManeuver.steerController(controlsOutput, car, this.drivePosition);
-                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), DriveManeuver.max_throttle_speed * 0.9f, CarData.MAX_VELOCITY, 0.4f);
                 break;
             }
         }
@@ -744,7 +510,7 @@ public class OffensiveStrategy extends Strategy {
         ROTATE,
         GO_BACK_SOMEHOW,
         GET_BOOST,
-        DRIVE_AT_POINT,
+        DRIVE_AT_POINT_WITHPATH,
         INVALID
     }
 }

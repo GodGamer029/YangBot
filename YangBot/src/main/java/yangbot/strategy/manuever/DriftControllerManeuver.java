@@ -20,10 +20,11 @@ public class DriftControllerManeuver extends Maneuver {
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
         Vector3 angularLocal = car.angularVelocity.dot(car.orientation).div(CarData.MAX_ANGULAR_VELOCITY);
-        Vector3 targetLocal = targetDirection.dot(car.orientation);
+        Vector3 targetLocal = this.targetDirection.dot(car.orientation);
 
-        if (targetDirection.dot(car.forward()) > 0.97f && Math.abs(angularLocal.z) < 0.03f && car.velocity.normalized().dot(this.targetDirection) > 0.95f)
+        if (this.targetDirection.dot(car.forward()) > 0.98f && Math.abs(angularLocal.z) < 0.01f && car.velocity.normalized().dot(this.targetDirection) > 0.97f) {
             this.setDone();
+        }
 
         // Steer
         {
@@ -42,7 +43,7 @@ public class DriftControllerManeuver extends Maneuver {
                     controlsOutput.withSlide(true);
             } else {
                 disableSlide = true;
-                if (car.forward().dot(car.velocity.normalized()) > 0.9f)
+                if (car.forward().dot(car.velocity.normalized()) > 0.97f)
                     controlsOutput.withSteer(pComp * 3);
             }
 
@@ -50,7 +51,7 @@ public class DriftControllerManeuver extends Maneuver {
 
         renderer.drawLine3d(this.isDone() ? Color.GREEN : Color.RED, car.position, car.position.add(this.targetDirection.mul(300)));
 
-        controlsOutput.withThrottle(1);
+        controlsOutput.withThrottle(1f);
     }
 
 }

@@ -303,7 +303,7 @@ public class CarData {
             // directional dodge
 
             float vf = (float) this.velocity.dot(this.forward());
-            float s = Math.abs(vf) / CarData.MAX_VELOCITY;
+            float scalar = Math.abs(vf) / CarData.MAX_VELOCITY;
 
             Vector2 dodgeDir = new Vector2(-in.getPitch(), in.getYaw()).normalized();
 
@@ -323,9 +323,9 @@ public class CarData {
             Vector2 dv = dodgeDir.mul(500.0f);
 
             if (backward_dodge) {
-                dv = dv.mul((16.0f / 15.0f) * (1.0f + 1.5f * s), 1);
+                dv = dv.mul((16f / 15f) * (1f + 1.5f * scalar), 1);
             }
-            dv = dv.mul(1, (1.0f + 0.9f * s));
+            dv = dv.mul(1, (1.0f + 0.9f * scalar));
 
             this.velocity = this.velocity.add(GameData.current().getGravity().mul(dt)).add(new Vector3(getDodgeOrientation().dot(dv)));
             this.position = this.position.add(this.velocity.mul(dt));

@@ -1,6 +1,10 @@
 package yangbot.util;
 
-public class Range {
+import java.io.Serializable;
+
+public class Range implements Serializable {
+
+    private static final long serialVersionUID = -6171006590187830450L;
 
     public final float start; // inclusive
     public final float end; // exclusive
@@ -18,5 +22,10 @@ public class Range {
 
     public boolean contains(float val) {
         return val >= start && val < end;
+    }
+
+    @Override
+    public String toString() {
+        return "Range(" + start + " - " + end + ")";
     }
 }

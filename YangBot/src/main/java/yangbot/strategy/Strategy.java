@@ -29,7 +29,7 @@ public abstract class Strategy {
     public final void setDone(boolean isDone) {
         this.isDone = isDone;
         if (isDone)
-            plannedStrategy = false;
+            this.plannedStrategy = false;
     }
 
     protected abstract void planStrategyInternal();
@@ -42,11 +42,11 @@ public abstract class Strategy {
     public final void planStrategy(boolean force) {
         final GameData gameData = GameData.current();
         float currentGameTime = gameData.getCarData().elapsedSeconds;
-        if (lastResetCheck < 0)
+        if (this.lastResetCheck < 0)
             lastResetCheck = currentGameTime;
-        if (plannedStrategy && !force)
+        if (this.plannedStrategy && !force)
             return;
-        lastStrategyPlan = currentGameTime;
+        this.lastStrategyPlan = currentGameTime;
 
         long ms = System.currentTimeMillis();
         planStrategyInternal();
@@ -58,28 +58,34 @@ public abstract class Strategy {
     }
 
     protected final boolean reevaluateStrategy(Interrupt interrupt, float timeout) {
-        if (interrupt.hasInterrupted())
+        if (interrupt.hasInterrupted()) {
             reevaluateStrategy(timeout);
+            return true;
+        }
 
         return this.isDone();
     }
 
     protected final boolean reevaluateStrategy(Interrupt interrupt) {
-        if (interrupt.hasInterrupted())
+        if (interrupt.hasInterrupted()) {
             planStrategy(true);
+            return true;
+        }
 
         return this.isDone();
     }
 
     protected final boolean reevaluateStrategy(float timeout) {
         float currentSeconds = GameData.current().getCarData().elapsedSeconds;
-        if (currentSeconds < lastStrategyPlan)
-            lastStrategyPlan = -10; // Something wierd is going on, replan strat
+        if (currentSeconds < this.lastStrategyPlan)
+            this.lastStrategyPlan = -10; // Something wierd is going on, replan strat
 
-        assert currentSeconds - lastStrategyPlan >= 0 : "Strategy was possibly planned twice in the same frame";
+        assert currentSeconds - this.lastStrategyPlan >= 0 : "Strategy was possibly planned twice in the same frame";
 
-        if (currentSeconds - lastStrategyPlan > timeout)
+        if (currentSeconds - this.lastStrategyPlan > timeout || timeout == 0) {
             planStrategy(true);
+            return true;
+        }
 
         return this.isDone();
     }

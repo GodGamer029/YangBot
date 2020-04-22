@@ -60,10 +60,10 @@ public class RecoverStrategy extends Strategy {
         Vector3 carPositionAtImpact = new Vector3(carCollisionInfo.carData().physics().position());
         float simulationTime = carCollisionInfo.carData().physics().elapsedSeconds();
 
-        recoverEndTime = car.elapsedSeconds + simulationTime;
+        this.recoverEndTime = car.elapsedSeconds + simulationTime;
 
         final boolean isCarNearWall = RLConstants.isPosNearWall(car.position.flatten(), 30);
-        final boolean speedflipPossible = recoverEndTime - recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
+        final boolean speedflipPossible = this.recoverEndTime - this.recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && this.recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
         if (carPositionAtImpact.z > 500) {
@@ -77,28 +77,28 @@ public class RecoverStrategy extends Strategy {
         Matrix3x3 targetOrientationMatrix = Matrix3x3.roofTo(impactNormal, targetDirection);
         if (speedflipPossible) {
             Vector3 left = targetOrientationMatrix.right();
-            targetOrientationMatrix = Matrix3x3.axisToRotation(left.mul(Math.PI * -0.175)).matrixMul(targetOrientationMatrix);
-            groundTurnManeuver.maxErrorAngularVelocity = 0.15f;
+            targetOrientationMatrix = Matrix3x3.axisToRotation(left.mul(Math.PI * -0.125)).matrixMul(targetOrientationMatrix);
+            this.groundTurnManeuver.maxErrorAngularVelocity = 0.15f;
         } else
-            groundTurnManeuver.maxErrorAngularVelocity = 1f;
-        groundTurnManeuver.target = targetOrientationMatrix;
+            this.groundTurnManeuver.maxErrorAngularVelocity = 1f;
+        this.groundTurnManeuver.target = targetOrientationMatrix;
 
-        if (car.boost > 60 && groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
+        if (car.boost > 60 && this.groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
             Vector3 boostDirection = targetDirection
                     .flatten()
                     .unitVectorWithZ(targetZModifier);
 
-            boostTurnManeuver.target = Matrix3x3.lookAt(boostDirection, groundTurnManeuver.target.up());
-            boostTurnManeuver.step(dt, controlsOutput);
+            this.boostTurnManeuver.target = Matrix3x3.lookAt(boostDirection, this.groundTurnManeuver.target.up());
+            this.boostTurnManeuver.step(dt, controlsOutput);
 
             Vector3 forward = car.forward();
-            if (boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.3f))
+            if (this.boostTurnManeuver.isDone() || (forward.z <= boostZModifier && forward.angle(boostDirection) < Math.PI * 0.3f))
                 controlsOutput.withBoost(true);
         } else {
-            groundTurnManeuver.step(dt, controlsOutput);
+            this.groundTurnManeuver.step(dt, controlsOutput);
         }
 
-        Vector3 impactPosition = new Vector3(carCollisionInfo.impact().start());
+        final Vector3 impactPosition = new Vector3(carCollisionInfo.impact().start());
 
         renderer.drawCentered3dCube(Color.RED, car.position, 50);
         renderer.drawLine3d(Color.YELLOW, impactPosition, impactPosition.add(impactNormal.mul(150)));

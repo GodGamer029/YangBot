@@ -17,13 +17,13 @@ public abstract class Abstraction {
     }
 
     public final RunState step(float dt, ControlsOutput controlsOutput) {
-        if (isDone)
+        if (this.isDone)
             throw new IllegalStateException(getClass().getSimpleName() + ".step() was called even though it is done already");
 
         final RunState runState = stepInternal(dt, controlsOutput);
 
         if (runState == RunState.DONE)
-            isDone = true;
+            this.isDone = true;
         return runState;
     }
 

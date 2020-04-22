@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Maneuver {
-    private boolean isDone;
+    private boolean isDone = false;
     private boolean isFooling = false;
     private GameData foolGameData = null;
 
@@ -38,7 +38,7 @@ public abstract class Maneuver {
     }
 
     public boolean isDone() {
-        return isDone;
+        return this.isDone;
     }
 
     public void fool(GameData g) {

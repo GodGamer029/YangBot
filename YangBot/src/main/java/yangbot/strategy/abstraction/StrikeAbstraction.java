@@ -18,6 +18,7 @@ import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -94,7 +95,7 @@ public class StrikeAbstraction extends Abstraction {
                 if (this.ballTouchInterrupt.hasInterrupted())
                     return RunState.DONE;
 
-                this.followPath.path.draw(renderer);
+                this.followPath.path.draw(renderer, Color.YELLOW);
                 //this.followPath.draw(renderer, car);
                 this.followPath.step(dt, controlsOutput);
 
@@ -110,6 +111,10 @@ public class StrikeAbstraction extends Abstraction {
 
                 if (this.followPath.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.followPath.isDone()) {
                     this.state = State.STRIKE;
+
+                    float dist = (float) car.position.flatten().add(car.velocity.flatten().mul(this.jumpBeforeStrikeDelay)).distance(ball.position.flatten()) - BallData.COLLISION_RADIUS - car.hitbox.getAverageHitboxExtent();
+                    if (dist > 300)
+                        return RunState.DONE;
                 }
                 break;
             case STRIKE:

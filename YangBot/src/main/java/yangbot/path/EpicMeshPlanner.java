@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class EpicPathPlanner {
+public class EpicMeshPlanner {
     private Vector3 startPos = null, startTangent;
     private float startVelocity = DriveManeuver.max_throttle_speed * 0.9f;
     private Vector3 endPos = null, endTangent;
@@ -24,16 +24,16 @@ public class EpicPathPlanner {
     private PathCreationStrategy pathCreationStrategy;
     private List<Tuple<Vector3, Vector3>> additionalPoints;
 
-    public EpicPathPlanner() {
+    public EpicMeshPlanner() {
         this.additionalPoints = new ArrayList<>();
         this.pathCreationStrategy = PathCreationStrategy.SIMPLE;
     }
 
-    public EpicPathPlanner withStart(Vector3 pos, Vector3 tangent) {
+    public EpicMeshPlanner withStart(Vector3 pos, Vector3 tangent) {
         return this.withStart(pos, tangent, 0);
     }
 
-    public EpicPathPlanner withStart(Vector3 pos, Vector3 tangent, float offset) {
+    public EpicMeshPlanner withStart(Vector3 pos, Vector3 tangent, float offset) {
         assert offset < 50 && offset >= 0 : offset; // Don't be stupid
 
         this.startTangent = tangent;
@@ -41,20 +41,20 @@ public class EpicPathPlanner {
         return this;
     }
 
-    public EpicPathPlanner withStart(CarData car, float offset) {
+    public EpicMeshPlanner withStart(CarData car, float offset) {
         this.startVelocity = (float) car.forward().dot(car.velocity);
         return this.withStart(car.position, car.getPathStartTangent(), offset);
     }
 
-    public EpicPathPlanner withStart(CarData car) {
+    public EpicMeshPlanner withStart(CarData car) {
         return this.withStart(car, 0);
     }
 
-    public EpicPathPlanner withEnd(Vector3 pos, Vector3 tangent) {
+    public EpicMeshPlanner withEnd(Vector3 pos, Vector3 tangent) {
         return this.withEnd(pos, tangent, 0);
     }
 
-    public EpicPathPlanner withEnd(Vector3 pos, Vector3 tangent, float offset) {
+    public EpicMeshPlanner withEnd(Vector3 pos, Vector3 tangent, float offset) {
         assert offset < 50 && offset >= 0 : offset; // Don't be stupid
 
         this.endTangent = tangent;
@@ -62,18 +62,18 @@ public class EpicPathPlanner {
         return this;
     }
 
-    public EpicPathPlanner addPoint(Vector3 pos, Vector3 tangent) {
+    public EpicMeshPlanner addPoint(Vector3 pos, Vector3 tangent) {
         this.additionalPoints.add(new Tuple<>(pos, tangent));
         return this;
     }
 
-    public EpicPathPlanner withArrivalSpeed(float speed) {
+    public EpicMeshPlanner withArrivalSpeed(float speed) {
         assert speed > 0 && speed <= CarData.MAX_VELOCITY;
         this.arrivalSpeed = speed;
         return this;
     }
 
-    public EpicPathPlanner withBallAvoidance(boolean enable, CarData car, float arrivalTime, boolean isRequired) {
+    public EpicMeshPlanner withBallAvoidance(boolean enable, CarData car, float arrivalTime, boolean isRequired) {
         this.avoidBall = enable;
         this.carSim = car;
         this.arrivalTime = arrivalTime;
@@ -85,7 +85,7 @@ public class EpicPathPlanner {
         return this.avoidBall;
     }
 
-    public EpicPathPlanner withCreationStrategy(PathCreationStrategy creationStrategy) {
+    public EpicMeshPlanner withCreationStrategy(PathCreationStrategy creationStrategy) {
         this.pathCreationStrategy = creationStrategy;
         return this;
     }

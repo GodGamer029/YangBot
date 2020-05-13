@@ -21,8 +21,12 @@ public class SegmentedPath {
     }
 
     public void draw(AdvancedRenderer renderer) {
-        for (int i = 0; i < segmentList.size(); i++)
-            segmentList.get(i).draw(renderer, i == currentSegment ? Color.BLUE : Color.YELLOW);
+        for (int i = 0; i < segmentList.size(); i++) {
+            var seg = segmentList.get(i);
+            seg.draw(renderer, i == currentSegment ? Color.BLUE : Color.YELLOW);
+            renderer.drawString3d(seg.getClass().getSimpleName(), Color.WHITE, seg.getEndPos().add(0, 0, 40 + (i % 2) * 30), 1, 1);
+        }
+
     }
 
     public boolean canInterrupt() {
@@ -31,6 +35,14 @@ public class SegmentedPath {
 
         var current = this.segmentList.get(this.currentSegment);
         return current.canInterrupt();
+    }
+
+    public boolean shouldBeInAir() {
+        if (this.currentSegment >= this.segmentList.size())
+            return false; // Already done
+
+        var current = this.segmentList.get(this.currentSegment);
+        return current.shouldBeInAir();
     }
 
     public boolean step(float dt, ControlsOutput output) {

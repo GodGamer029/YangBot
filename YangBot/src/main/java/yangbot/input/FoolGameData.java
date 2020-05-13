@@ -8,4 +8,10 @@ public class FoolGameData extends GameData {
     public void foolCar(CarData car) {
         this.carData = car;
     }
+
+    @Override
+    public boolean isFoolGameDate() {
+        return true;
+    }
+
 }

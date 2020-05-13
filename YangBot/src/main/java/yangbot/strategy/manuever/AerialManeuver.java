@@ -4,6 +4,7 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.FoolGameData;
 import yangbot.input.GameData;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
@@ -19,6 +20,11 @@ public class AerialManeuver extends Maneuver {
     private final DodgeManeuver doubleJump;
     private final TurnManeuver turnManuver;
 
+    private static final float j_speed = DodgeManeuver.speed;
+    private static final float j_acceleration = DodgeManeuver.acceleration;
+    private static final float j_duration = DodgeManeuver.max_duration;
+    private static final float angle_threshold = 0.3f;
+
     public AerialManeuver() {
         this.turnManuver = new TurnManeuver();
         this.doubleJump = new DodgeManeuver();
@@ -26,14 +32,31 @@ public class AerialManeuver extends Maneuver {
         this.doubleJump.delay = 0.25f;
     }
 
+    public static Vector3 getDeltaX(CarData car, Vector3 target, float arrivalTime) {
+        final GameData gameData = GameData.current();
+        final Vector3 gravity = gameData.getGravity();
+
+        float T = arrivalTime - car.elapsedSeconds;
+
+        Vector3 xf = car.position
+                .add(car.velocity.mul(T))
+                .add(gravity.mul(T * T * 0.5f));
+
+        if (car.hasWheelContact) {
+            float tau = j_duration;
+
+            xf = xf.add(car.up().mul(j_speed * T));
+            xf = xf.add(car.up().mul(j_acceleration * tau * (T - 0.5f * tau)));
+            xf = xf.add(car.up().mul(j_speed * (T - tau)));
+        } else if (!car.doubleJumped) {
+            xf = xf.add(car.up().mul(j_speed * (T)));
+        }
+        return target.sub(xf);
+    }
+
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
-        final float j_speed = DodgeManeuver.speed;
-        final float j_acceleration = DodgeManeuver.acceleration;
-        final float j_duration = DodgeManeuver.max_duration;
-
         final float reorient_distance = 50.0f;
-        final float angle_threshold = 0.3f;
         final float throttle_distance = 50.0f;
 
         final GameData gameData = this.getGameData();
@@ -67,7 +90,7 @@ public class AerialManeuver extends Maneuver {
             ControlsOutput output = new ControlsOutput();
             doubleJump.step(dt, output);
             controlsOutput.withJump(output.holdJump());
-
+            //System.out.println(doubleJump.timer+": "+output.holdJump()+" "+car.doubleJumped);
             if (doubleJump.timer >= doubleJump.delay)
                 jumping = false;
         } else
@@ -77,7 +100,7 @@ public class AerialManeuver extends Maneuver {
         Vector3 direction = delta_x.normalized();
 
         if (delta_x.magnitude() > reorient_distance) {
-            this.turnManuver.target = Matrix3x3.lookAt(delta_x, new Vector3(0, 0, 1));
+            this.turnManuver.target = Matrix3x3.lookAt(direction, new Vector3(0, 0, 1));
         } else {
             if (target_orientation == null || Math.abs(target_orientation.det() - 1f) < 0.01f) {
                 this.turnManuver.target = Matrix3x3.lookAt(target.sub(car.position), new Vector3(0, 0, 1));
@@ -85,6 +108,8 @@ public class AerialManeuver extends Maneuver {
                 this.turnManuver.target = target_orientation;
             }
         }
+        if (this.doubleJump.timer < 0.1f && this.arrivalTime - car.elapsedSeconds > 0.5f)
+            this.turnManuver.target = Matrix3x3.roofTo(direction, new Vector3(0, 0, 1));
 
         turnManuver.step(dt, null);
 
@@ -96,9 +121,15 @@ public class AerialManeuver extends Maneuver {
             controlsOutput.withRoll(this.turnManuver.controls.getRoll());
             controlsOutput.withPitch(this.turnManuver.controls.getPitch());
             controlsOutput.withYaw(this.turnManuver.controls.getYaw());
+
+            if (jumping) {
+                //controlsOutput.withRoll(controlsOutput.getRoll() * 0);
+                //controlsOutput.withYaw(controlsOutput.getYaw() * 0);
+                //controlsOutput.withPitch(controlsOutput.getPitch() * 0);
+            }
         }
 
-        if (car.forward().angle(direction) < angle_threshold) {
+        if (car.forward().angle(direction) < ((this.jumping ? 2 : 1) * angle_threshold)) {
             if (delta_x.magnitude() > throttle_distance) {
                 controlsOutput.withBoost(true);
                 controlsOutput.withThrottle(0);
@@ -114,6 +145,62 @@ public class AerialManeuver extends Maneuver {
         this.setIsDone(T <= 0);
     }
 
+    public boolean isViable(CarData car, float maxBoostUse) {
+        var gravity = GameData.current().getGravity();
+        maxBoostUse = Math.min(maxBoostUse, (float) car.boost);
+        float T = this.arrivalTime - car.elapsedSeconds;
+        if (T <= 0)
+            return false;
+
+        Vector3 xf = car.position
+                .add(car.velocity.mul(T))
+                .add(gravity.mul(T * T * 0.5f));
+        Vector3 vf = car.velocity.add(gravity.mul(T));
+
+        if (car.hasWheelContact) {
+            vf = vf.add(car.up().mul(2 * j_speed + j_acceleration * j_duration));
+            xf = xf.add(car.up().mul(j_speed * (2 * T - j_duration) + j_acceleration * (T * j_duration - 0.5f * j_duration * j_duration)));
+        }
+
+        var deltaX = target.sub(xf);
+
+        var dir = deltaX.normalized();
+
+        float turnAngle = (float) dir.angle(car.forward());
+
+        float turnTime; // bad estimate
+        {
+            var simTurn = new TurnManeuver();
+            simTurn.target = Matrix3x3.lookAt(dir, new Vector3(0, 0, 1));
+            simTurn.maxErrorOrientation = 0.3f;
+            simTurn.maxErrorAngularVelocity = 0.5f;
+            turnTime = MathUtils.clip(simTurn.simulate(car).elapsedSeconds, 0.05f, 1.5f);
+        }
+
+        float timeBoostStart = turnTime + 0.1f; // We don't really start orienting at the start
+        if (timeBoostStart > T)
+            return false;
+
+        float reqAccel = (2 * (float) deltaX.magnitude()) / ((T - timeBoostStart) * (T - timeBoostStart));
+        float ratio = reqAccel / boost_acceleration;
+
+        float timeBoostStop = T - (T - timeBoostStart) * (float) Math.sqrt(1 - MathUtils.clip(ratio, 0, 1));
+
+        var velocityEstimate = vf.add(dir.mul(boost_acceleration * (timeBoostStop - timeBoostStart)));
+        float boostEstimate = (timeBoostStop - timeBoostStart) * CarData.BOOST_CONSUMPTION;
+
+        boolean isPossible = velocityEstimate.magnitude() < CarData.MAX_VELOCITY - 100 && // max speed
+                boostEstimate < maxBoostUse * 0.95f &&                      // boost use
+                ratio < 0.975f;                                               // acceleration possible
+
+        if (isPossible) {
+            //System.out.println("Aerial possible: velocityEstimate="+velocityEstimate.magnitude()+" boostEstimate="+boostEstimate+" ratio="+ratio+" reqAccel="+reqAccel+" timeBoostStart="+timeBoostStart+" timeBoostStop="+timeBoostStop);
+        }
+
+        return isPossible;
+
+    }
+
     @Override
     public CarData simulate(CarData car) {
         CarData carCopy = new CarData(car);
@@ -121,18 +208,16 @@ public class AerialManeuver extends Maneuver {
         fakeAerial.target = this.target;
         fakeAerial.arrivalTime = this.arrivalTime;
         fakeAerial.target_orientation = this.target_orientation;
-        fakeAerial.jumping = car.hasWheelContact;
+        fakeAerial.jumping = carCopy.hasWheelContact;
         FoolGameData foolGameData = GameData.current().fool();
 
         float dt = 0.01666f;
-        Vector3 lastPos = null;
         for (float t = dt; t < 5.0f; t += dt) {
             ControlsOutput output = new ControlsOutput();
             foolGameData.foolCar(carCopy);
             fakeAerial.fool(foolGameData);
             fakeAerial.step(dt, output);
             carCopy.step(output, dt);
-
 
             if (fakeAerial.isDone())
                 break;

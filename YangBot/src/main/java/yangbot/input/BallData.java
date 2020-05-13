@@ -80,6 +80,10 @@ public class BallData {
         this.latestTouch = null;
     }
 
+    public ImmutableBallData makeImmutable() {
+        return new ImmutableBallData(this);
+    }
+
     private float psyonixImpulseScale(float dv) {
 
         float[][] values = {
@@ -157,6 +161,19 @@ public class BallData {
         );
 
         this.elapsedSeconds += dt;
+    }
+
+    public void stepHeatseeket(float dt) {
+        int currentState = Math.round(MathUtils.remapClip((float) this.velocity.magnitude(), 3000, 4600, 0, 20));
+        float targetVel = MathUtils.remap(currentState, 0, 20, 3000, 4600);
+
+        Vector3 targetPos = new Vector3(0, RLConstants.goalDistance * Math.signum(this.velocity.y), 100);
+        float horizVal = MathUtils.remap(currentState, 0, 20, 1, 1.5f);
+        float zVal = 1 / 1.5f;
+        this.velocity = this.velocity.add(targetPos.sub(this.position).normalized().mul(targetVel * dt).mul(horizVal, horizVal, zVal));
+        this.velocity = velocity.mul(Math.min(1, targetVel / velocity.magnitude()));
+
+        this.stepWithCollideChip(dt, new CarData(new Vector3(0, 0, 9999999), new Vector3(), new Vector3(), Matrix3x3.identity()));
     }
 
     public boolean collidesWith(YangHitbox obb, Vector3 position) {

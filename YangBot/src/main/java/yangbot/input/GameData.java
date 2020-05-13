@@ -32,6 +32,10 @@ public class GameData {
         return botLoopMap.get(Thread.currentThread().getId());
     }
 
+    public boolean isFoolGameDate() {
+        return false;
+    }
+
     public FoolGameData fool() {
         FoolGameData foo = new FoolGameData(0L);
         foo.update(carData, ballData, allCars, gravityZ, dt, advancedRenderer);
@@ -42,6 +46,7 @@ public class GameData {
         this.carData = carData;
         this.ballData = ballData;
         this.allCars = allCars;
+        this.allCars.forEach((c) -> c.getPlayerInfo().update(c));
         this.gravityZ = gameInfo.worldGravityZ();
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;

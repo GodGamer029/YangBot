@@ -40,6 +40,15 @@ public class ImmutableBallData {
         this.elapsedSeconds = ballPhysics.elapsedSeconds();
     }
 
+    public ImmutableBallData(Vector3 position, Vector3 velocity, Vector3 angularVelocity) {
+        this.position = position;
+        this.velocity = velocity;
+        this.angularVelocity = angularVelocity;
+        this.latestTouch = null;
+        this.hasBeenTouched = false;
+        this.elapsedSeconds = 0;
+    }
+
     public boolean hasBeenTouched() {
         return this.hasBeenTouched && this.latestTouch != null;
     }

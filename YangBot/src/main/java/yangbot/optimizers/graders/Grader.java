@@ -6,4 +6,8 @@ public abstract class Grader {
 
     public abstract boolean isImproved(GameData gameData);
 
+    public String getAdditionalInfo() {
+        return "";
+    }
+
 }

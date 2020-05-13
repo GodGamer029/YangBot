@@ -46,6 +46,10 @@ public class RecoverStrategy extends Strategy {
             return;
         }
 
+        if (car.angularVelocity.magnitude() > 5.2f) {
+            return; // probably flipping
+        }
+
         controlsOutput.withThrottle(1);
 
         Optional<FlatCarCollisionInfo> carCollisionInfoOptional = YangBotJNAInterop.simulateCarWallCollision(car);

@@ -1,6 +1,7 @@
 package yangbot.path.builders;
 
 import org.jetbrains.annotations.NotNull;
+import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.path.Curve;
 import yangbot.strategy.manuever.DriveManeuver;
@@ -57,7 +58,7 @@ public abstract class BakeablePathSegment extends PathSegment {
     public final @NotNull Curve bake(int maxSamples) {
         if (this.bakedPath == null) {
             this.bakedPath = this.bakeInternal(maxSamples);
-            this.bakedPath.calculateMaxSpeeds(DriveManeuver.max_throttle_speed, DriveManeuver.max_throttle_speed);
+            this.bakedPath.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
         }
 
         return this.bakedPath;

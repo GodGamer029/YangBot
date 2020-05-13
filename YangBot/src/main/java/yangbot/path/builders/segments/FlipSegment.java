@@ -89,10 +89,17 @@ public class FlipSegment extends PathSegment {
             return this.timer >= this.getTimeEstimate();
         }
 
-        this.dodgeManeuver.duration = 0.09f;
-        this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.03f;
-        this.dodgeManeuver.target = this.endPos;
-        this.dodgeManeuver.step(dt, output);
+        if (this.timer > 0.1f || !car.hasWheelContact || (car.forward().dot(this.getEndTangent()) > 0.95f && Math.abs(car.forwardVelocity() - car.velocity.magnitude()) < 50f)) {
+            this.dodgeManeuver.duration = 0.09f;
+            this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.05f;
+            this.dodgeManeuver.target = this.endPos;
+
+            this.dodgeManeuver.step(dt, output);
+        } else {
+            // Align with tangent
+            var tang = this.getEndTangent();
+            DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()));
+        }
 
         // Timeout
         return this.dodgeManeuver.timer > 0.1f + this.getTimeEstimate();
@@ -134,5 +141,10 @@ public class FlipSegment extends PathSegment {
     @Override
     public float getTimeEstimate() {
         return 1.35f;
+    }
+
+    @Override
+    public boolean shouldBeInAir() {
+        return true;
     }
 }

@@ -11,7 +11,7 @@ from gold_goalie import GoldBallRollingToGoalie
 from custom_shot import CustomHookShot
 def make_default_playlist():
     exercises =  [
-        CustomHookShot('Try')
+        GoldBallRollingToGoalie('Try')
     ]
     
 

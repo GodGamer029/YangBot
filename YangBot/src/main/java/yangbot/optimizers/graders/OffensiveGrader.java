@@ -14,7 +14,7 @@ public class OffensiveGrader extends Grader {
     private final float maximumTimeForGoal = 2.5f;
 
     private float timeToGoal = maximumTimeForGoal;
-    private float minDistanceToGoal = 5000;
+    private float minDistToGoal = 100000;
     private boolean didLandInGoal = false;
 
     @Override
@@ -23,16 +23,13 @@ public class OffensiveGrader extends Grader {
         final YangBallPrediction simBallPred = gameData.getBallPrediction();
 
         final int teamSign = car.team * 2 - 1;
-        final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 1000));
-
-        boolean result = false;
 
         for (float time = 0; time < Math.min(3, simBallPred.relativeTimeOfLastFrame()); time += RLConstants.simulationTickFrequency * 2) {
             Optional<YangBallPrediction.YangPredictionFrame> dataAtFrame = simBallPred.getFrameAtRelativeTime(time);
-            if (!dataAtFrame.isPresent())
+            if (dataAtFrame.isEmpty())
                 break;
             ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
-            float dist = (float) ballAtFrame.position.distance(enemyGoal.withZ(RLConstants.goalHeight / 2));
+
             boolean landsInGoal = time <= maximumTimeForGoal && ballAtFrame.makeMutable().isInEnemyGoal(teamSign);
 
             if (didLandInGoal) { // The ball has to at least land in the goal to be better than the last simulation
@@ -48,12 +45,34 @@ public class OffensiveGrader extends Grader {
                     didLandInGoal = true;
                     timeToGoal = time;
                     return true;
-                } else if (dist < minDistanceToGoal && time > 0.2f) { // Check if it's better than the last sim which also didn't score
-                    minDistanceToGoal = dist;
-                    result = true;
                 }
             }
         }
-        return result;
+
+        if (didLandInGoal)
+            return false;
+
+        float dist = 0;
+        int distSamples = 0;
+        final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 100));
+        // Take some samples for avg. dist to goal
+        for (float time = 0; time < Math.min(1.80f, simBallPred.relativeTimeOfLastFrame()); time += 0.25f) {
+            Optional<YangBallPrediction.YangPredictionFrame> dataAtFrame = simBallPred.getFrameAtRelativeTime(time);
+            if (dataAtFrame.isEmpty())
+                break;
+
+            ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
+            dist += ballAtFrame.position.flatten().distance(enemyGoal);
+            distSamples++;
+        }
+
+        if (distSamples > 0) {
+            dist /= distSamples;
+            if (dist < this.minDistToGoal) {
+                this.minDistToGoal = dist;
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -44,14 +44,7 @@ public class TurnManeuver extends Maneuver {
         Vector3 alpha_world = theta.dot(alpha_local);
         Vector3 omega_prediction = omega.add(alpha_world.mul(dt));
         Vector3 phi_prediction = phi
-                .add(Z0
-                        .dot(omega
-                                .add(alpha_world
-                                        .mul(0.5f * dt)
-                                )
-                        )
-                        .mul(dt)
-                );
+                .add(Z0.dot(omega.add(alpha_world.mul(0.5f * dt))).mul(dt));
         Vector3 dphi_dt_prediction = Z0.dot(omega_prediction);
         return phi_prediction.mul(-1).sub(G(phi_prediction, dphi_dt_prediction));
     }
@@ -206,6 +199,7 @@ public class TurnManeuver extends Maneuver {
     public CarData simulate(CarData car) {
         CarData carCopy = new CarData(car);
         carCopy.elapsedSeconds = 0;
+        carCopy.hasWheelContact = false;
         TurnManeuver fakeTurn = new TurnManeuver();
         fakeTurn.target = this.target;
         fakeTurn.maxErrorAngularVelocity = this.maxErrorAngularVelocity;
@@ -215,7 +209,7 @@ public class TurnManeuver extends Maneuver {
         FoolGameData foolGameData = GameData.current().fool();
 
         float dt = RLConstants.simulationTickFrequency;
-        for (float t = dt; t < 3.0f; t += dt) {
+        for (float t = dt; t < 3f; t += dt) {
             ControlsOutput output = new ControlsOutput();
             foolGameData.foolCar(carCopy);
             fakeTurn.fool(foolGameData);

@@ -29,4 +29,8 @@ public abstract class PathSegment {
 
     public void draw(AdvancedRenderer renderer, Color color) {
     }
+
+    public boolean shouldBeInAir() {
+        return false;
+    }
 }

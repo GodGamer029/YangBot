@@ -14,8 +14,9 @@ class CustomHookShot(GoalieExercise):
     """A shot where you have to hook it to score"""
 
     def make_game_state(self, rng: SeededRandomNumberGenerator) -> GameState:
-        self.grader.graders[1].max_duration_seconds = 5
+        self.grader.graders[1].max_duration_seconds = 3
         return GameState(
+            game_info=GameInfoState(game_speed=1),
             ball=BallState(physics=Physics(
                 location=Vector3(-3000, -4000, 93),
                 velocity=Vector3(1300, -200, rng.uniform(500, 650)),

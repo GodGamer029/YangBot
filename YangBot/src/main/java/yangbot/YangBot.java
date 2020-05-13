@@ -4,29 +4,30 @@ import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
-import rlbot.gamestate.GameInfoState;
-import rlbot.gamestate.GameState;
+import rlbot.flat.QuickChat;
+import rlbot.flat.QuickChatMessages;
+import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.strategy.AfterKickoffStrategy;
-import yangbot.strategy.DefaultStrategy;
-import yangbot.strategy.RecoverStrategy;
-import yangbot.strategy.Strategy;
+import yangbot.input.playerinfo.PlayerInfoManager;
+import yangbot.strategy.*;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.strategy.manuever.kickoff.KickoffTester;
 import yangbot.strategy.manuever.kickoff.SimpleKickoffManeuver;
 import yangbot.util.AdvancedRenderer;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class YangBot implements Bot {
 
     private final int playerIndex;
-
+    private int lastMessageId = -1;
 
     private State state = State.RESET;
-    private float timer = -1.0f;
     private float lastTick = -1;
     private Maneuver kickoffManeuver = null;
     private Strategy currentPlan = null;
@@ -39,15 +40,14 @@ public class YangBot implements Bot {
     private ControlsOutput processInput(DataPacket input) {
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
 
-        if (lastTick > 0)
-            timer += Math.min(dt, 0.5f);
-
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
+        if (this.playerIndex != 0)
+            renderer = new DummyRenderer(this.playerIndex);
+
         final GameData gameData = GameData.current();
         CarData car = input.car;
         BallData ball = input.ball;
         {
-
             float det = RLConstants.tickFrequency;
             for (float time = 0; time < RLConstants.gameLatencyCompensation; time += det) {
                 car.step(new ControlsOutput(), det);
@@ -58,62 +58,56 @@ public class YangBot implements Bot {
         }
 
         drawDebugLines(input, gameData.getCarData());
-
         ControlsOutput output = new ControlsOutput();
 
         switch (state) {
             case RESET: {
-                RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
-                timer = 0.0f;
                 if (KickoffTester.isKickoff() && KickoffTester.shouldGoForKickoff(car, gameData.getAllCars().stream().filter((c) -> c.team == car.team).collect(Collectors.toList()), ball)) {
-                    kickoffManeuver = new SimpleKickoffManeuver();
-                    state = State.KICKOFF;
+                    this.kickoffManeuver = new SimpleKickoffManeuver();
+                    this.state = State.KICKOFF;
                     output.withThrottle(1);
                     output.withBoost(true);
                 } else {
-                    currentPlan = new DefaultStrategy();
-                    currentPlan.planStrategy();
-                    state = State.RUN;
+                    this.currentPlan = new DefaultStrategy();
+                    this.currentPlan.planStrategy();
+                    this.state = State.RUN;
                 }
                 break;
             }
             case KICKOFF: {
-                kickoffManeuver.step(dt, output);
-                if (kickoffManeuver.isDone()) {
-                    state = State.RUN;
-                    currentPlan = new AfterKickoffStrategy();
-                    currentPlan.planStrategy();
+                this.kickoffManeuver.step(dt, output);
+                if (this.kickoffManeuver.isDone()) {
+                    this.state = State.RUN;
+                    this.currentPlan = new AfterKickoffStrategy();
+                    this.currentPlan.planStrategy();
                 }
                 break;
             }
             case RUN: {
                 int i = 0;
                 StringBuilder circularPlanExplainer = new StringBuilder();
-                circularPlanExplainer.append(currentPlan.getClass().getSimpleName());
-                while (currentPlan.isDone()) {
-                    currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
-                    circularPlanExplainer.append(" -> " + currentPlan.getClass().getSimpleName());
-                    long ms = System.currentTimeMillis();
-                    currentPlan.planStrategy();
-                    long duration = System.currentTimeMillis() - ms;
+                circularPlanExplainer.append(this.currentPlan.getClass().getSimpleName());
+                while (this.currentPlan.isDone()) {
+                    this.currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
+                    circularPlanExplainer.append(" -> " + this.currentPlan.getClass().getSimpleName());
+                    this.currentPlan.planStrategy();
 
                     i++;
                     if (i == 5) {
                         System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer.toString() + ")");
                         System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                        currentPlan = new DefaultStrategy();
+                        this.currentPlan = new DefaultStrategy();
                     }
                 }
 
-                currentPlan.step(dt, output);
-
+                this.currentPlan.step(dt, output);
                 break;
             }
         }
 
         car.hitbox.draw(renderer, car.position, 1, Color.GREEN);
 
-        if (car.hasWheelContact && output.holdBoost() && car.velocity.magnitude() >= CarData.MAX_VELOCITY - 20)
+        if (car.hasWheelContact && output.holdBoost() && car.forward().dot(car.velocity) >= CarData.MAX_VELOCITY - 20)
             output.withBoost(false);
 
         // Print Throttle info
@@ -121,16 +115,15 @@ public class YangBot implements Bot {
             GameData.current().getBallPrediction().draw(renderer, Color.BLUE, 2);
             renderer.drawString2d("Dt: " + dt, Color.WHITE, new Point(10, 240), 1, 1);
 
-            renderer.drawString2d("State: " + state.name(), Color.WHITE, new Point(10, 270), 2, 2);
-            if (state != State.KICKOFF)
-                renderer.drawString2d("Strategy: " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName()), (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, new Point(10, 310), 2, 2);
+            renderer.drawString2d("State: " + this.state.name(), Color.WHITE, new Point(10, 270), 2, 2);
+            if (this.state != State.KICKOFF) {
+                renderer.drawString2d("Strategy: " + (this.currentPlan == null ? "null" : this.currentPlan.getClass().getSimpleName()), (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, new Point(10, 310), 2, 2);
 
-            String text = this.playerIndex + ": " + (currentPlan == null ? "null" : currentPlan.getClass().getSimpleName());
-            if (currentPlan != null)
-                text += "\n" + currentPlan.getAdditionalInformation();
-            renderer.drawString3d(text, (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
-
-
+                String text = this.playerIndex + ": " + (this.currentPlan == null ? "null" : this.currentPlan.getClass().getSimpleName());
+                if (this.currentPlan != null)
+                    text += "\n" + this.currentPlan.getAdditionalInformation();
+                renderer.drawString3d(text, (this.currentPlan != null && this.currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
+            }
             if (false) {
                 renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 350), 1, 1);
                 renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 370), 1, 1);
@@ -145,11 +138,10 @@ public class YangBot implements Bot {
     }
 
     private void drawDebugLines(DataPacket input, CarData myCar) {
-        AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
+        AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
 
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
         if (false) {
-
             renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
         }
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
@@ -184,34 +176,44 @@ public class YangBot implements Bot {
             return new ControlsOutput().withThrottle(1).withBoost(true);
         }
 
-        /*if(state != State.RESET && state != State.KICKOFF && packet.gameInfo().isKickoffPause() && new Vector3(packet.players(this.playerIndex).physics().velocity()).magnitude() < 10){
-            GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
-            state = State.RESET;
-        }*/
-
         if (GameData.timeOfMatchStart < 0)
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
 
-        AdvancedRenderer r = AdvancedRenderer.forBotLoop(this);
+        AdvancedRenderer r;
+        if (playerIndex == 0)
+            r = AdvancedRenderer.forBotLoop(this);
+        else
+            r = new DummyRenderer(this.playerIndex);
         r.startPacket();
 
         BoostManager.loadGameTickPacket(packet);
 
         DataPacket dataPacket = new DataPacket(packet, playerIndex);
 
+        {
+            var quickchats = this.receiveQuickChat(dataPacket.car);
+            var needBoostChatters = quickchats.stream()
+                    .filter((q) -> q.quickChatSelection() == QuickChatSelection.Information_NeedBoost)
+                    // Convert to CarData
+                    .map((c) -> dataPacket.allCars.stream().filter(b -> b.playerIndex == c.playerIndex()).findFirst())
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    //
+                    .filter((q) -> q.team == dataPacket.car.team)
+                    .collect(Collectors.toList());
+
+            for (var needBoost : needBoostChatters) {
+                needBoost.getPlayerInfo().setInactiveRotatorUntil(needBoost.elapsedSeconds + 0.7f);
+            }
+        }
+
         ControlsOutput controlsOutput = new ControlsOutput();
-        //long ms = System.nanoTime();
         try {
             controlsOutput = processInput(dataPacket);
         } catch (Exception | AssertionError e) {
             e.printStackTrace();
         }
-        /*realCount++;
-        if(realCount >= 100){
-            all += ((System.nanoTime() - ms) / 1000000f);
-            count++;
-            System.out.println("It took "+(all / count));
-        }*/
+
 
         lastTick = dataPacket.gameInfo.secondsElapsed();
 
@@ -221,7 +223,27 @@ public class YangBot implements Bot {
 
     @Override
     public void retire() {
-        System.out.println("Retiring sample bot " + playerIndex);
+        PlayerInfoManager.reset();
+        System.out.println("Retiring Yang bot " + playerIndex);
+    }
+
+    protected List<QuickChat> receiveQuickChat(CarData car) {
+        try {
+            QuickChatMessages messages = RLBotDll.receiveQuickChat(this.playerIndex, car.team, lastMessageId);
+
+            if (messages.messagesLength() > 0) {
+                lastMessageId = messages.messages(messages.messagesLength() - 1).messageIndex();
+            }
+
+            var list = new ArrayList<QuickChat>();
+            for (int i = 0; i < messages.messagesLength(); i++)
+                list.add(messages.messages(i));
+
+            return list;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
     }
 
     enum State {

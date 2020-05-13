@@ -7,18 +7,22 @@ import rlbot.flat.GameTickPacket;
 import rlbot.gamestate.*;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
-import yangbot.path.builders.PathBuilder;
+import yangbot.input.playerinfo.PlayerInfoManager;
+import yangbot.path.Curve;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.path.builders.segments.StraightLineSegment;
-import yangbot.path.builders.segments.TurnCircleSegment;
-import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.path.builders.segments.DriftSegment;
+import yangbot.path.builders.segments.FlipSegment;
+import yangbot.strategy.abstraction.AerialAbstraction;
+import yangbot.strategy.manuever.AerialManeuver;
+import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Matrix3x3;
-import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 
 public class TestBot implements Bot {
@@ -32,10 +36,50 @@ public class TestBot implements Bot {
     private final ArrayBlockingQueue<Tuple<CarData, Boolean>> trail = new ArrayBlockingQueue<>(300);
 
     private SegmentedPath path;
+    private Vector3 lastVel = new Vector3();
     private float lastSpeed = 0;
+    private AerialAbstraction aerialAbstraction;
+    private Curve drawCurve;
+    private Curve.PathCheckStatus pathCheckStatus;
+    private DriftSegment driftSegment;
+    private FlipSegment flipSegment;
+    private AerialManeuver aerialManeuver;
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
+    }
+
+    private boolean planAerialIntercept(YangBallPrediction ballPrediction, boolean debug) {
+        final GameData gameData = GameData.current();
+        final CarData car = gameData.getCarData();
+
+        float t = DodgeManeuver.max_duration + 0.15f;
+
+        // Find intercept
+        do {
+            final Optional<YangBallPrediction.YangPredictionFrame> interceptFrameOptional = ballPrediction.getFrameAfterRelativeTime(t);
+            if (interceptFrameOptional.isEmpty())
+                break;
+
+            final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
+            final Vector3 targetPos = interceptFrame.ballData.position;
+
+            // We should arrive at the ball a bit early to catch it
+            boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
+            if (isPossible) {
+                this.aerialAbstraction = new AerialAbstraction();
+                this.aerialAbstraction.targetPos = targetPos;
+                this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
+                return true;
+            }
+
+            t = interceptFrame.relativeTime;
+            t += RLConstants.simulationTickFrequency * 2; // 30 ticks / s
+            //if(t > 1.75f)
+            //    t += RLConstants.simulationTickFrequency * 2; // speed up even more after 2s
+        } while (t < ballPrediction.relativeTimeOfLastFrame());
+
+        return false;
     }
 
     private ControlsOutput processInput(DataPacket input) {
@@ -47,69 +91,77 @@ public class TestBot implements Bot {
         lastTick = input.gameInfo.secondsElapsed();
 
         final CarData carBoi = input.car;
-        final BallData ball = input.ball;
+        final BallData realBall = input.ball;
+        final BallData ball = realBall.makeImmutable().makeMutable();
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != carBoi.team).findFirst().orElse(carBoi);
-        controlCar = carBoi;
 
         final AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         GameData.current().update(controlCar, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
-
-        GameData.current().update(controlCar, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
-        GameData.current().getBallPrediction().draw(renderer, Color.RED, 3);
-
+        //GameData.current().getBallPrediction().draw(renderer, Color.RED, 3);
+        final YangBallPrediction ballPrediction = GameData.current().getBallPrediction();
         drawDebugLines(input, controlCar);
         ControlsOutput output = new ControlsOutput();
 
         switch (state) {
             case YEET:
-                this.state = State.RESET;
+                if (timer > 0.5f)
+                    this.state = State.RESET;
                 break;
             case RESET: {
                 this.trail.clear();
                 this.timer = 0.0f;
                 this.state = State.INIT;
 
+                final Vector3 startPos = new Vector3(0, 100, 17);
+                final Vector3 startTangent = new Vector3(0f, -1f, 0f).normalized(); //
+                final Vector3 endTangent = new Vector3(0.02, 1, 0).normalized();
+                final Vector3 targetPos = new Vector3(600, -RLConstants.goalDistance * 0.9f, 120);
+                final float startSpeed = 0f; // 1260
+
+                float z = 1000;
                 RLBotDll.setGameState(new GameState()
                         .withGameInfoState(new GameInfoState().withGameSpeed(1f))
                         .withCarState(controlCar.playerIndex, new CarState().withPhysics(new PhysicsState()
-                                .withLocation(new Vector3(0, -2000f, 18f).toDesiredVector())
-                                .withVelocity(new Vector3(0, -700, 0).toDesiredVector())
-                                .withRotation(new DesiredRotation(0f, (float) Math.PI / 2f, 0f))
-                        ))
+                                .withLocation(startPos.toDesiredVector())
+                                .withVelocity(startTangent.mul(startSpeed).toDesiredVector())
+                                .withRotation(Matrix3x3.lookAt(startTangent, new Vector3(0, 0, 1)).toEuler().toDesiredRotation())
+                                .withAngularVelocity(new Vector3().toDesiredVector())
+                        ).withBoostAmount(100f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(0f, 0f, 100f))
-                                .withVelocity(new DesiredVector3(0f, 0f, 0f))
+                                .withLocation(new DesiredVector3(0f, 0f, z))
+                                .withVelocity(new DesiredVector3((float) Math.random() * 400 - 200f, (float) Math.random() * 50f, 200f))
                         ))
                         .buildPacket());
+
+                this.aerialManeuver = new AerialManeuver();
+                this.aerialManeuver.arrivalTime = controlCar.elapsedSeconds + 2;
+                this.aerialManeuver.target = new Vector3(0, 0, z);
+
+                System.out.println("############");
                 break;
             }
             case INIT: {
-                if (this.timer > 0.5f) {
+                if (timer > 0.05f) {
                     this.state = State.RUN;
-                    var builder = new PathBuilder(controlCar)
-                            .optimize()
-                            .add(new StraightLineSegment(controlCar.position, new Vector3(0, 2000, controlCar.position.z)));
-
-                    System.out.println("Speed: " + builder.getCurrentSpeed());
-                    var turn = new TurnCircleSegment(new Physics2D(builder.getCurrentPosition().flatten(), builder.getCurrentTangent().mul(builder.getCurrentSpeed()).flatten(), Matrix3x3.lookAt(builder.getCurrentTangent(), new Vector3(0, 0, 1)).flatten()),
-                            1 / DriveManeuver.maxTurningCurvature(builder.getCurrentSpeed() + 50), new Vector2(1000, 0));
-                    builder.add(turn);
-
-                    var str = new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentPosition().add(builder.getCurrentTangent().mul(1000)));
-                    builder.add(str);
-                    this.path = builder.build();
-
-                    this.timer = 0;
+                    if (!this.planAerialIntercept(ballPrediction, false))
+                        this.state = State.YEET;
                 }
-                output.withThrottle(0.02f)
-                        .withSteer(0);
+
                 break;
             }
             case RUN: {
-                this.path.draw(renderer);
-                if (this.path.step(dt, output)) {
+
+
+                //if(timer < 0.1f){
+                //    System.out.println("Is viable: "+AerialAbstraction.isViable(controlCar, this.aerialManeuver.target, this.aerialManeuver.arrivalTime));
+                //}
+
+                this.aerialAbstraction.draw(renderer);
+                this.aerialAbstraction.step(dt, output);
+
+                //renderer.drawString2d("IsValid: " + this.pathCheckStatus.pathStatus, Color.WHITE, new Point(400, 400), 2, 2);
+                if (timer > 5f || this.aerialAbstraction.isDone())
                     this.state = State.RESET;
-                }
                 break;
             }
         }
@@ -134,8 +186,10 @@ public class TestBot implements Bot {
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
 
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
-        renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
-        renderer.drawString2d("CarV: " + myCar.velocity, Color.WHITE, new Point(10, 190), 1, 1);
+        renderer.drawString2d("BallV: " + input.ball.velocity + " m=" + input.ball.velocity.magnitude(), Color.WHITE, new Point(10, 170), 1, 1);
+        //renderer.drawString2d("CarV: " + myCar.velocity, Color.WHITE, new Point(10, 190), 1, 1);
+        renderer.drawString2d("CarX: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
+
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.dot(myCar.forward())), Color.WHITE, new Point(10, 210), 1, 1);
         renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 230), 1, 1);
         //renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
@@ -193,6 +247,7 @@ public class TestBot implements Bot {
 
     @Override
     public void retire() {
+        PlayerInfoManager.reset();
         System.out.println("Retiring Test bot " + playerIndex);
     }
 

@@ -6,6 +6,7 @@ import rlbot.manager.BotManager;
 import yangbot.cpp.YangBotCppInterop;
 import yangbot.path.navmesh.Graph;
 import yangbot.path.navmesh.Navigator;
+import yangbot.strategy.abstraction.DriveStrikeAbstraction;
 import yangbot.util.io.LEDataInputStream;
 import yangbot.util.io.PortReader;
 import yangbot.util.lut.ArrayLutTable;
@@ -153,6 +154,7 @@ public class MainClass {
 
         new Timer(1000, botIndexListener).start();
         new Timer(1000, mapSettingsListener).start();
+        lazyPrepJit();
     }
 
     private static void lazyLoadNavigator() {
@@ -228,6 +230,23 @@ public class MainClass {
 
             System.gc();
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void lazyPrepJit() {
+        new Thread(MainClass::prepJit).start();
+    }
+
+    private static void prepJit() {
+        try {
+            Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+            var log = Logger.getLogger("JitPrep");
+            log.info("Jitting hot code paths...");
+
+            DriveStrikeAbstraction.prepJit();
+            log.info("Jitting done.");
+        } catch (Throwable e) {
             e.printStackTrace();
         }
     }

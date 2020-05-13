@@ -5,10 +5,13 @@ import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
+import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.RecoverStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
+import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
@@ -35,15 +38,17 @@ public class TrainingBot implements Bot {
 
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
+
         BallData ball = input.ball;
         if (ball.position.distance(lastBallPos) > Math.max(700, ball.velocity.mul(0.5f).magnitude())) {
             System.out.println("#################");
             state = State.RESET;
         }
         lastBallPos = ball.position;
-
+        final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * RLConstants.goalDistance);
         GameData.current().update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
-        GameData.current().getBallPrediction().draw(renderer, Color.RED, 2);
+
+        final YangBallPrediction ballPrediction = GameData.current().getBallPrediction();
         drawDebugLines(input, car);
 
         ControlsOutput output = new ControlsOutput();
@@ -51,27 +56,34 @@ public class TrainingBot implements Bot {
         switch (state) {
             case RESET:
                 currentPlan = new DefaultStrategy();
+                currentPlan.planStrategy();
                 state = State.RUN;
                 break;
             case RUN:
                 int i = 0;
-                while (currentPlan.isDone()) {
-                    currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
-                    currentPlan.planStrategy();
+                StringBuilder circularPlanExplainer = new StringBuilder();
+                circularPlanExplainer.append(this.currentPlan.getClass().getSimpleName());
+                while (this.currentPlan.isDone()) {
+                    this.currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
+                    circularPlanExplainer.append(" -> " + this.currentPlan.getClass().getSimpleName());
+                    this.currentPlan.planStrategy();
+
                     i++;
                     if (i == 5) {
-                        //System.err.println("Circular Strategy (" + currentPlan.getClass().getSimpleName() + ")! Defaulting to DefaultStrategy");
-                        //System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                        currentPlan = new DefaultStrategy();
+                        System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer.toString() + ")");
+                        System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        this.currentPlan = new DefaultStrategy();
                     }
                 }
 
-                currentPlan.step(dt, output);
+                this.currentPlan.step(dt, output);
                 break;
         }
 
         // Print Throttle info
         {
+            car.hitbox.draw(renderer, car.position, 1, Color.GREEN);
+            GameData.current().getBallPrediction().draw(renderer, Color.BLUE, 2);
 
             renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 390), 1, 1);
             renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 410), 1, 1);
@@ -128,7 +140,7 @@ public class TrainingBot implements Bot {
         ControlsOutput controlsOutput;
         try {
             controlsOutput = processInput(dataPacket);
-        } catch (Exception e) {
+        } catch (Exception | AssertionError e) {
             controlsOutput = new ControlsOutput();
             e.printStackTrace();
         }
@@ -141,6 +153,7 @@ public class TrainingBot implements Bot {
 
     @Override
     public void retire() {
+        PlayerInfoManager.reset();
         System.out.println("Retiring Training bot " + playerIndex);
     }
 

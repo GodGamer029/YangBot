@@ -1,6 +1,7 @@
 package yangbot.util.math.vector;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import rlbot.gamestate.DesiredRotation;
 import rlbot.gamestate.DesiredVector3;
 import yangbot.cpp.FlatVec3;
 import yangbot.util.math.MathUtils;
@@ -151,6 +152,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return new Vector3(x / scale, y / scale, z / scale);
     }
 
+    public Vector3 div(Vector3 o) {
+        return new Vector3(x / o.x, y / o.y, z / o.z);
+    }
+
     public Vector3 clip(int index, float minimum, float maximum) {
         switch (index) {
             case 0:
@@ -235,6 +240,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
 
     public DesiredVector3 toDesiredVector() {
         return new DesiredVector3(x, y, z);
+    }
+
+    public DesiredRotation toDesiredRotation() {
+        return new DesiredRotation(x, y, z);
     }
 
     public float[] getContents() {

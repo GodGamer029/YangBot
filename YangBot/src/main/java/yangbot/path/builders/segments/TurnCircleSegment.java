@@ -6,11 +6,12 @@ import yangbot.input.RLConstants;
 import yangbot.path.Curve;
 import yangbot.path.builders.BakeablePathSegment;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class TurnCircleSegment extends BakeablePathSegment {
@@ -54,7 +55,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
         float t1_cc = Math.signum(this.circlePos.sub(t1).normalized().withZ(0).crossProduct(endPos.sub(t1).normalized().withZ(0)).z);
         float t2_cc = Math.signum(this.circlePos.sub(t2).normalized().withZ(0).crossProduct(endPos.sub(t2).normalized().withZ(0)).z);
 
-        assert t1_cc != t2_cc : t1_cc + " : " + t2_cc;
+        assert t1_cc != t2_cc : t1_cc + " : " + t2_cc + " alpha=" + alpha;
 
         this.ccw = car_cc;
 
@@ -91,8 +92,11 @@ public class TurnCircleSegment extends BakeablePathSegment {
 
         boolean isReversed = startAngle > endAngle;
 
-        float angleDiv = (endAngle - startAngle) / Math.min(4, maxSamples);
-        assert angleDiv != 0 : angleDiv;
+        float angleDiv = (endAngle - startAngle) / MathUtils.clip(maxSamples, 4, 16);
+        if (Math.abs(angleDiv) < 0.1f) {
+            angleDiv = 0.1f * Math.signum(angleDiv);
+        }
+        assert angleDiv != 0 : angleDiv + " start: " + startAngle + " end: " + endAngle + " start: " + startDir + " end: " + endDir;
 
         List<Curve.ControlPoint> pointList = new ArrayList<>();
         float z = RLConstants.carElevation;
@@ -113,17 +117,30 @@ public class TurnCircleSegment extends BakeablePathSegment {
             var thisPos = thisAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);
             var nextPos = nextAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);
 
-            pointList.add(new Curve.ControlPoint(thisPos, nextPos.sub(thisPos).withZ(0).normalized()));
+            // Calculate tangent
+            Vector3 tangent;
+            {
+                var prevAngle = Vector2.fromAngle(currentAngle - angleDiv * 0.1f);
+                var nexAngle = Vector2.fromAngle(currentAngle + angleDiv * 0.1f);
+                var prev = prevAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);
+                var nex = nexAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);
+                tangent = nex.sub(prev).withZ(0).normalized();
+            }
+
+            pointList.add(new Curve.ControlPoint(thisPos, tangent));
 
             if (shouldExit)
                 break;
         }
 
+        var endTangent = this.endPos.sub(this.tangentPoint).normalized().withZ(0);
+
+        if (pointList.size() == 0) // Add a point, to not confuse the pathing
+            pointList.add(new Curve.ControlPoint(this.tangentPoint.withZ(z).sub(endTangent), endTangent));
         // End point
-        pointList.add(new Curve.ControlPoint(this.tangentPoint.withZ(z), this.endPos.sub(this.tangentPoint).normalized().withZ(0)));
+        pointList.add(new Curve.ControlPoint(this.tangentPoint.withZ(z), endTangent));
 
         var curvyBoi = new Curve(pointList, 6);
-        Arrays.fill(curvyBoi.curvatures, 1 / this.circleRadius);
         return curvyBoi;
     }
 }

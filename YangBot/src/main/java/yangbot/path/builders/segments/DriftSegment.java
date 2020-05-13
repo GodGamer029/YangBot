@@ -21,6 +21,7 @@ public class DriftSegment extends PathSegment {
     private final float endSpeed;
 
     public DriftSegment(Vector3 startPosition, Vector3 startTangent, Vector3 endTangent, float startSpeed) {
+        //System.out.println("Init drift: "+startPosition + " " + startTangent + " " + endTangent + " " + startSpeed);
         this.endTangent = endTangent;
         this.startPos = startPosition;
         this.startTangent = startTangent;
@@ -76,7 +77,8 @@ public class DriftSegment extends PathSegment {
         renderer.drawCentered3dCube(Color.RED, this.startPos, 30);
         renderer.drawLine3d(color, this.startPos, this.startPos.add(this.startTangent.mul(20)));
 
-        renderer.drawLine3d(color.darker().darker(), this.startPos, this.endPos);
+        //renderer.drawString3d("Drift", Color.WHITE, this.startPos.add(0, 0, 20), 1, 1);
+        //renderer.drawLine3d(color.darker().darker(), this.startPos, this.endPos);
 
         renderer.drawCentered3dCube(Color.GREEN, this.endPos, 30);
         renderer.drawLine3d(color, this.endPos, this.endPos.add(this.endTangent.mul(20)));

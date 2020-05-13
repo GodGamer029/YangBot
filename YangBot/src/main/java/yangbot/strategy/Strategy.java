@@ -11,7 +11,7 @@ public abstract class Strategy {
 
     private boolean isDone = false;
     private boolean plannedStrategy = false;
-    private float lastStrategyPlan = 0;
+    protected float lastStrategyPlan = 0;
     private float lastResetCheck = -1;
 
     public final boolean didPlanStrategy() {
@@ -59,8 +59,7 @@ public abstract class Strategy {
 
     protected final boolean reevaluateStrategy(Interrupt interrupt, float timeout) {
         if (interrupt.hasInterrupted()) {
-            reevaluateStrategy(timeout);
-            return true;
+            return reevaluateStrategy(timeout);
         }
 
         return this.isDone();

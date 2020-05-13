@@ -105,7 +105,7 @@ public class EpicMeshPlanner {
                         controlPoints.add(new Curve.ControlPoint(p.getKey(), p.getValue()));
                     controlPoints.add(new Curve.ControlPoint(this.endPos, this.endTangent));
 
-                    currentPath = Optional.of(new Curve(controlPoints));
+                    currentPath = Optional.of(new Curve(controlPoints, 32));
                 }
                 break;
             }

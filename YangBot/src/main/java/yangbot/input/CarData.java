@@ -5,6 +5,9 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.Rotator;
 import yangbot.cpp.FlatCarData;
 import yangbot.cpp.FlatPhysics;
+import yangbot.input.playerinfo.BotInfo;
+import yangbot.input.playerinfo.PlayerInfo;
+import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
@@ -59,6 +62,7 @@ public class CarData {
     public boolean jumped;
     public int goalsScored = 0;
 
+    public final boolean isDemolished;
     public final boolean isBot;
     public final String name;
     public final String strippedName;
@@ -88,6 +92,7 @@ public class CarData {
         this.doubleJumped = playerInfo.doubleJumped();
         this.jumped = playerInfo.jumped();
         this.goalsScored = playerInfo.scoreInfo().goals();
+        this.isDemolished = playerInfo.isDemolished();
 
         if (isBot && name.endsWith("(" + (playerIndex + 1) + ")"))
             strippedName = name.substring(0, name.length() - 3).toLowerCase();
@@ -111,6 +116,7 @@ public class CarData {
         this.doubleJumped = o.doubleJumped;
         this.jumped = o.jumped;
 
+        this.isDemolished = o.isDemolished;
         this.isBot = o.isBot;
         this.name = o.name;
         this.strippedName = o.strippedName;
@@ -130,10 +136,7 @@ public class CarData {
         this.strippedName = this.name;
         this.playerIndex = -1;
         this.hitbox = new YangCarHitbox(this.orientation);
-    }
-
-    public int getTeamSign() {
-        return this.team * 2 - 1;
+        this.isDemolished = false;
     }
 
     // From L0laapk3
@@ -143,8 +146,27 @@ public class CarData {
         if (heightIncrease <= 74.48f) { // During acceleration part
             return (float) Math.max(0, Math.sqrt(10100 * heightIncrease + 531441) - 729) / 2020f;
         } else {
-            return (float) (DodgeManeuver.acceleration - Math.sqrt(1888839f - 8125f * heightIncrease)) / 1625f;
+            return (float) (DodgeManeuver.acceleration - Math.sqrt(Math.max(0, 1888839f - 8125f * heightIncrease))) / 1625f;
         }
+    }
+
+    public static float driveTorqueUp(ControlsOutput in, float velocityForward, float angularUp) {
+        final float v_f = (float) velocityForward;
+        final float w_u = (float) angularUp;
+
+        return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
+    }
+
+    public float forwardVelocity() {
+        return (float) this.velocity.dot(this.forward());
+    }
+
+    public int getTeamSign() {
+        return this.team * 2 - 1;
+    }
+
+    public PlayerInfo getPlayerInfo() {
+        return PlayerInfoManager.getFor(this);
     }
 
     public boolean isGrounded() {
@@ -267,11 +289,8 @@ public class CarData {
                 (1.0f - Math.exp(-0.001161f * Math.abs(v_f))));
     }
 
-    private float driveTorqueUp(ControlsOutput in) {
-        final float v_f = (float) velocity.dot(forward());
-        final float w_u = (float) angularVelocity.dot(up());
-
-        return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
+    public BotInfo getBotFamilyInfo() {
+        return PlayerInfoManager.getForBotFamily(this);
     }
 
     public Vector3 right() {
@@ -289,7 +308,7 @@ public class CarData {
 
         Vector3 force = forward().mul(driveForceForward(in, v_f, v_l, w_u)).add(right().mul(driveForceLeft(in, v_f, v_l, w_u)));
 
-        Vector3 torque = up().mul(driveTorqueUp(in));
+        Vector3 torque = up().mul(driveTorqueUp(in, v_f, w_u));
 
         velocity = velocity.add(force.mul(dt));
         position = position.add(velocity.mul(dt));
@@ -458,8 +477,10 @@ public class CarData {
     }
 
     public Vector3 getPathStartTangent() {
-        return Matrix3x3.axisToRotation(this.angularVelocity.mul(0.1f)).matrixMul(this.orientation)
-                .forward();
+        return this.forward();
+        //return Matrix3x3.axisToRotation(this.angularVelocity.mul(0.1f)).matrixMul(this.orientation)
+        //        .forward();
+
     }
 
     private void jump(ControlsOutput in, float dt) {

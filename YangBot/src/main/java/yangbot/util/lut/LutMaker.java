@@ -197,7 +197,7 @@ public class LutMaker {
                         float x = this.speedHelper.getFloatIndexForValue(this.probableStartSpeed);
                         float y = this.rotationHelper.getFloatIndexForValue(Math.abs(this.probableStartAngle));
 
-                        for (Integer xT : java.util.List.of((int) x, (int) Math.ceil(x))) {
+                        for (Integer xT : List.of((int) x, (int) Math.ceil(x))) {
                             for (Integer yT : List.of((int) y, (int) Math.ceil(y))) {
                                 var endPos = coolLut.get(new Tuple<>(this.speedHelper.getValueForIndex(xT), this.rotationHelper.getValueForIndex(yT))).finalPos;
                                 endPos = endPos.mul(1, Math.signum(this.probableStartAngle));

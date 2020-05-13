@@ -86,7 +86,7 @@ public class YangBallPrediction {
                     return YangBallPrediction.from(RLBotDll.getBallPrediction());
                 } catch (RLBotInterfaceException e) {
                     System.err.println("Could not get RLBot ball Prediction!");
-                    throw new RuntimeException(e);
+                    return YangBallPrediction.empty();
                 }
         }
 
@@ -106,6 +106,7 @@ public class YangBallPrediction {
             Optional<YangPredictionFrame> frame = this.getFrameAfterRelativeTime(time);
             if (!frame.isPresent())
                 break;
+
             if (Math.floor(lastAbsTime) < Math.floor(frame.get().absoluteTime)) {
                 renderer.drawLine3d(color.brighter(), frame.get().ballData.position, frame.get().ballData.position.add(0, 0, 50));
             }

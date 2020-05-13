@@ -45,7 +45,7 @@ public class PathBuilder {
 
     public float getCurrentSpeed() {
         if (this.pathSegments.size() == 0)
-            return (float) this.start.forward().dot(start.velocity);
+            return (float) this.start.forward().dot(this.start.velocity);
         return this.pathSegments.get(this.pathSegments.size() - 1).getEndSpeed();
     }
 
@@ -78,8 +78,11 @@ public class PathBuilder {
                 if (segment instanceof StraightLineSegment) {
                     var straight = (StraightLineSegment) segment;
 
-                    if (startSpeed > 500 && startSpeed < 2100) {
+                    if (startSpeed > 700 && startSpeed < 2100) {
                         if (FlipSegment.canReplace(straight, startSpeed)) {
+                            /*System.out.println("Replaced straight segment at "+optimizedSegments.size()+" speed "+startSpeed);
+                            if(optimizedSegments.size() > 0)
+                                System.out.println("Segment before was: "+optimizedSegments.get(optimizedSegments.size() - 1).getClass().getSimpleName());*/
                             var flipSegment = new FlipSegment(straight.getStartPos(), straight.getStartTangent(), startSpeed);
 
                             optimizedSegments.add(flipSegment);
@@ -94,6 +97,16 @@ public class PathBuilder {
             this.pathSegments.clear();
             this.pathSegments.addAll(optimizedSegments);
         }
+        /*if(GameData.current().getCarData().playerIndex == 0){
+            System.out.println("Path: ");
+            StringBuilder builder = new StringBuilder();
+            builder.append(" -> Start "+this.start.getPathStartTangent()+" ("+this.start.forward().dot(this.start.velocity)+")");
+            for(var path : this.pathSegments)
+                builder.append(" -> "+path.getClass().getSimpleName()+" "+path.getEndTangent()+" ("+path.getEndSpeed()+")");
+
+            System.out.println(builder.toString());
+        }*/
+
         return new SegmentedPath(this.pathSegments);
     }
 

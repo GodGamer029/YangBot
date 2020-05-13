@@ -1,10 +1,27 @@
 package yangbot.input.playerinfo;
 
+import yangbot.input.CarData;
+
 public class PlayerInfo {
 
-    public final String name;
+    private final String combName;
+    private float inactiveRotatorUntil = -1;
+    private CarData currentCarData;
 
     public PlayerInfo(String name) {
-        this.name = name;
+        this.combName = name;
     }
+
+    public void update(CarData car) {
+        this.currentCarData = car;
+    }
+
+    public void setInactiveRotatorUntil(float time) {
+        this.inactiveRotatorUntil = Math.max(this.inactiveRotatorUntil, time);
+    }
+
+    public boolean isActiveRotator() {
+        return this.currentCarData.elapsedSeconds > this.inactiveRotatorUntil;
+    }
+
 }

@@ -170,7 +170,12 @@ public class Vector2 implements Serializable {
     }
 
     public double angleBetween(Vector2 o) {
-        return Math.atan2(o.y, o.x) - Math.atan2(y, x);
+        double ang = Math.atan2(o.y, o.x) - Math.atan2(y, x);
+        if (ang > Math.PI)
+            ang -= Math.PI * 2;
+        else if (ang <= -Math.PI)
+            ang += 2 * Math.PI;
+        return ang;
     }
 
     public Vector2 rotateBy(double angle) {

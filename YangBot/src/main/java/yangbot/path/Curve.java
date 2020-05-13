@@ -128,7 +128,7 @@ public class Curve {
                 this.curvatures[this.points.size() - 1] = (float) kappa;
             }
         }
-        assert this.points.size() == this.tangents.size() && this.tangents.size() == this.curvatures.length : this.points.size() + " " + this.tangents.size() + " " + this.curvatures.length + " " + this.numSubDivisions;
+        assert this.points.size() == this.tangents.size() && this.tangents.size() == this.curvatures.length : this.points.size() + " " + this.tangents.size() + " " + this.curvatures.length + " " + this.numSubDivisions + " " + info.size();
 
         calculateDistances();
     }
@@ -451,7 +451,7 @@ public class Curve {
             Vector3 a = points.get(i);
             Vector3 b = points.get(i + 1);
 
-            float alpha = (float) MathUtils.clip(b.sub(a).dot(c.sub(a)) / b.sub(a).dot(b.sub(a)), 0f, 1f);
+            float alpha = (float) MathUtils.clip(b.sub(a).dot(c.sub(a)) / Math.max(b.sub(a).dot(b.sub(a)), 0.0001f), 0f, 1f);
             assert !Float.isNaN(alpha) : a.toString() + ":" + b.toString();
             float distance = (float) c.sub(a.add(b.sub(a).mul(alpha))).magnitude();
 
@@ -508,7 +508,7 @@ public class Curve {
         maxSpeeds = new float[curvatures.length];
 
         for (int i = 0; i < curvatures.length; i++)
-            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(curvatures[i] * 1.1f);
+            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(curvatures[i] * 1.025f);
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
         maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);

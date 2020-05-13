@@ -1,12 +1,12 @@
 package yangbot.strategy;
 
-import yangbot.cpp.YangBotJNAInterop;
+import rlbot.cppinterop.RLBotDll;
+import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
 import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
-import yangbot.optimizers.graders.OffensiveGrader;
 import yangbot.path.Curve;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.PathBuilder;
@@ -15,8 +15,8 @@ import yangbot.path.builders.segments.AtbaSegment;
 import yangbot.path.builders.segments.DriftSegment;
 import yangbot.path.builders.segments.StraightLineSegment;
 import yangbot.path.builders.segments.TurnCircleSegment;
+import yangbot.strategy.abstraction.DriveStrikeAbstraction;
 import yangbot.strategy.abstraction.IdleAbstraction;
-import yangbot.strategy.abstraction.StrikeAbstraction;
 import yangbot.strategy.advisor.RotationAdvisor;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.strategy.manuever.FollowPathManeuver;
@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 
 public class OffensiveStrategy extends Strategy {
 
-    private StrikeAbstraction strikeAbstraction = new StrikeAbstraction(new OffensiveGrader());
+    private DriveStrikeAbstraction strikeAbstraction;
     private FollowPathManeuver followPathManeuver = new FollowPathManeuver();
     private State state = State.INVALID;
     private RotationAdvisor.Advice lastAdvice = RotationAdvisor.Advice.NO_ADVICE;
@@ -137,6 +137,7 @@ public class OffensiveStrategy extends Strategy {
                     this.followPathManeuver.arrivalTime = -1;
                     this.followPathManeuver.arrivalSpeed = -1;
                     this.state = State.GET_BOOST;
+                    RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_NeedBoost);
                 }
             }
         }
@@ -165,7 +166,7 @@ public class OffensiveStrategy extends Strategy {
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
                 .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * frame.relativeTime * 0.6f)) == -teamSign) // Ball is closer to enemy goal than to own
-                .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 120 /*|| (allowWallHits && RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))*/)
+                .filter((frame) -> (frame.ballData.position.z <= BallData.COLLISION_RADIUS + 250 /*|| (allowWallHits && RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))*/)
                         && !frame.ballData.makeMutable().isInAnyGoal())
                 .collect(Collectors.toList());
 
@@ -190,11 +191,16 @@ public class OffensiveStrategy extends Strategy {
         final Vector3 startPosition = car.position.add(car.velocity.mul(RLConstants.tickFrequency * 2));
         final Vector3 startTangent = car.forward().mul(3).add(car.velocity.normalized()).normalized();
 
-        float oldPathArrival = this.strikeAbstraction.arrivalTime;
-        if (oldPathArrival < car.elapsedSeconds || oldPathArrival > strikeableFrames.get(strikeableFrames.size() - 1).absoluteTime)
-            oldPathArrival = -1;
-        else
-            oldPathArrival -= car.elapsedSeconds;
+        float oldPathArrival = -1;
+        if (this.strikeAbstraction != null) {
+            oldPathArrival = this.strikeAbstraction.arrivalTime;
+            if (oldPathArrival < car.elapsedSeconds || oldPathArrival > strikeableFrames.get(strikeableFrames.size() - 1).absoluteTime)
+                oldPathArrival = -1;
+            else
+                oldPathArrival -= car.elapsedSeconds;
+        }
+
+        Vector3 ballAtTargetPos = null;
 
         // Path finder
         while (t < maxT) {
@@ -222,13 +228,16 @@ public class OffensiveStrategy extends Strategy {
             Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.permutatePoint(new Vector3(), 1, 0, 0).magnitude()));
             if (!RLConstants.isPosNearWall(ballHitTarget.flatten(), 10))
                 ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
+
+            ballAtTargetPos = targetBallPos;
+
             final Vector3 carToDriveTarget = ballHitTarget.sub(startPosition).normalized();
             final Vector3 endTangent = carToDriveTarget.mul(4).add(ballTargetToGoalTarget).withZ(0).normalized();
 
             Curve currentPath;
             Optional<Curve> curveOptional = Optional.empty();
-            if ((RLConstants.isPosNearWall(startPosition.flatten(), 100) || RLConstants.isPosNearWall(ballHitTarget.flatten(), 50)) && startPosition.distance(ballHitTarget) > 400)
-                curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, ballHitTarget, endTangent, 25);
+            //if ((RLConstants.isPosNearWall(startPosition.flatten(), 100) || RLConstants.isPosNearWall(ballHitTarget.flatten(), 50)) && startPosition.distance(ballHitTarget) > 400)
+            //   curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, ballHitTarget, endTangent, 25);
 
             if (curveOptional.isPresent())
                 currentPath = curveOptional.get();
@@ -239,8 +248,11 @@ public class OffensiveStrategy extends Strategy {
                         .plan().get();
             }
 
-            if (currentPath.length == 0 || Float.isNaN(currentPath.length) || currentPath.points.size() == 0)
+            if (currentPath.length <= 1 || Float.isNaN(currentPath.length) || currentPath.points.size() == 0)
                 continue;
+
+            if (currentPath.tangentAt(currentPath.length).dot(car.forward()) < 0)
+                continue; // We aint drivin backward
 
             // Check if path is valid
             {
@@ -264,8 +276,18 @@ public class OffensiveStrategy extends Strategy {
         }
 
         this.state = State.FOLLOW_PATH_STRIKE;
-        this.strikeAbstraction = new StrikeAbstraction(validPath);
+        this.strikeAbstraction = new DriveStrikeAbstraction(validPath);
         this.strikeAbstraction.arrivalTime = arrivalTime;
+        this.strikeAbstraction.originalTargetBallPos = ballAtTargetPos;
+
+        float zDiff = ballAtTargetPos.z - 0.7f * BallData.COLLISION_RADIUS - car.position.z;
+        if (zDiff < 30)
+            this.strikeAbstraction.jumpBeforeStrikeDelay = 0.2f;
+        else
+            this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.2f, 1f);
+
+        this.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
+        this.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
     }
 
     private void planStrategyRetreat() {
@@ -305,18 +327,19 @@ public class OffensiveStrategy extends Strategy {
         var builder = new PathBuilder(car)
                 .optimize();
 
-        if (car.position.z > 50) {
+        if (car.position.z > 50 || builder.getCurrentPosition().distance(endPos) < 30) {
             var atba = new AtbaSegment(builder.getCurrentPosition(), endPos);
             builder.add(atba);
-        } else if (car.velocity.magnitude() > 200) {
+        } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardVelocity() > 300) {
             var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), endPos.sub(car.position).normalized(), builder.getCurrentSpeed());
             builder.add(drift);
         } else {
-            var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(1400, builder.getCurrentSpeed())), endPos.flatten());
-            builder.add(turn);
+            var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(900, builder.getCurrentSpeed())), endPos.flatten());
+            if (turn.tangentPoint != null)
+                builder.add(turn);
         }
 
-        if (builder.getCurrentPosition().distance(endPos) > 50)
+        if (builder.getCurrentPosition().distance(endPos) > 20)
             builder.add(new StraightLineSegment(builder.getCurrentPosition(), endPos));
 
         this.drivePath = builder.build();
@@ -437,8 +460,9 @@ public class OffensiveStrategy extends Strategy {
                 break;
             }
             case IDLE: {
-                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.3f : 1.5f))
+                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.1f : 2.5f))
                     return;
+
                 this.idleAbstraction.step(dt, controlsOutput);
                 if (this.idleAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
@@ -466,17 +490,21 @@ public class OffensiveStrategy extends Strategy {
                 break;
             }
             case FOLLOW_PATH_STRIKE: {
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(1.8f))
+                    return;
+
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt))
+                    return;
+
                 this.strikeAbstraction.step(dt, controlsOutput);
 
                 if (this.strikeAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
 
-                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(1.8f))
-                    return;
                 break;
             }
             case DRIVE_AT_POINT_WITHPATH: {
-                if (!car.hasWheelContact && this.drivePath.canInterrupt() && this.reevaluateStrategy(0.05f))
+                if (!car.hasWheelContact && !this.drivePath.shouldBeInAir() && this.reevaluateStrategy(0.05f))
                     return;
 
                 if (this.reevaluateStrategy(this.drivePath.canInterrupt() ? 0.4f : 1f))

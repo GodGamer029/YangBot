@@ -63,6 +63,7 @@ public class DodgeManeuver extends Maneuver {
         if (duration >= 0 && timer <= duration) {
             controlsOutput.withJump(true);
         }
+        this.timer += dt;
 
         float dodge_time = 0;
         if (duration <= 0 && delay <= 0)
@@ -89,6 +90,7 @@ public class DodgeManeuver extends Maneuver {
             if (target == null && direction != null)
                 direction_local = direction.normalized().dot(car.getDodgeOrientation());
 
+
             if (direction_local.magnitude() > 0.0f) {
                 float vf = (float) car.velocity.dot(car.forward());
                 float s = Math.abs(vf) / CarData.MAX_VELOCITY;
@@ -112,12 +114,10 @@ public class DodgeManeuver extends Maneuver {
                 controlsOutput.withRoll(0);
                 controlsOutput.withPitch(controllerInput.y);
                 controlsOutput.withYaw(controllerInput.x);
-            } else {
-                System.err.println("Dodge maneuver has no direction nor target");
             }
             controlsOutput.withJump(true);
 
-        } else if (!car.isGrounded() && !car.doubleJumped) {
+        } else if (!car.hasWheelContact && !car.doubleJumped) {
             if (this.enablePreorient) {
                 this.turnManeuver.fool(gameData);
                 this.turnManeuver.target = this.preorientOrientation;
@@ -132,7 +132,7 @@ public class DodgeManeuver extends Maneuver {
             this.setDone();
         else if (this.timer > timeout)
             this.setDone();
-        this.timer += dt;
+
     }
 
     @Override

@@ -16,7 +16,7 @@ public class PowerslideUtil {
         final var speedHelper = keyToIndex.getValueHelper1();
         final var rotationHelper = keyToIndex.getValueHelper2();
 
-        final float startAngle = (float) (startTangent.correctionAngle(endTangent) * (180f / Math.PI));
+        final float startAngle = (float) (startTangent.angleBetween(endTangent) * (180f / Math.PI));
 
         final float angleIndex = rotationHelper.getFloatIndexForValue(Math.abs(startAngle));
         final float speedIndex = speedHelper.getFloatIndexForValue(startSpeed);
@@ -29,8 +29,9 @@ public class PowerslideUtil {
         float interpolatedSpeed = InterpolationUtil.bilinear((i1, i2) -> coolLut.getWithIndex(keyToIndex.i2ToIndex(i1, i2)).finalSpeed, speedIndex, angleIndex);
         float interpolatedTime = InterpolationUtil.bilinear((i1, i2) -> coolLut.getWithIndex(keyToIndex.i2ToIndex(i1, i2)).time, speedIndex, angleIndex);
 
-        var startOrient = Matrix2x2.fromRotation((float) startTangent.angle());
-        var endPos = new Vector2(interpolatedX, interpolatedY).dot(startOrient).add(startPosition);
+        var startOrient = new Matrix2x2(startTangent, startTangent.cross());
+        // I messed up the dot product while making the lut, so this code will have to live with that now, because im not gonna regenerate the LUT again
+        var endPos = startOrient.dot(new Vector2(interpolatedX, interpolatedY)).add(startPosition);
 
         return new PowerslideEntry(interpolatedTime, interpolatedSpeed, endPos);
     }

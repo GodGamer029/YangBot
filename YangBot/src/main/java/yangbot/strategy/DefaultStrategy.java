@@ -20,7 +20,7 @@ public class DefaultStrategy extends Strategy {
         final CarData car = gameData.getCarData();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
-        Vector3 futureBallPos = ball.position.add(ball.velocity.mul(Math.min(0.5f, car.position.flatten().distance(ball.position.flatten()) / (car.velocity.flatten().magnitude() + 50))));
+        Vector3 futureBallPos = ballPrediction.getFrameAtRelativeTime((float) Math.min(0.5f, car.position.flatten().distance(ball.position.flatten()) / (car.velocity.flatten().magnitude() + 50))).get().ballData.position;
 
         if (!RLConstants.isPosNearWall(futureBallPos.flatten(), BallData.COLLISION_RADIUS + 10) || futureBallPos.z > RLConstants.arenaHeight * 0.8f || futureBallPos.z < 0)
             futureBallPos = futureBallPos.withZ(0);
@@ -29,8 +29,6 @@ public class DefaultStrategy extends Strategy {
             futureBallPos = new Vector3(0, 0, 0);
         }
 
-        //renderer.drawCentered3dCube(Color.RED, ball.position, BallData.RADIUS * 2 + 10);
-        //renderer.drawCentered3dCube(Color.BLACK, futureBallPos, BallData.RADIUS * 2 + 10);
 
         DriveManeuver.steerController(controlsOutput, car, futureBallPos);
         //controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);

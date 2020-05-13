@@ -5,6 +5,7 @@ import rlbot.ControllerState;
 import rlbot.flat.GameTickPacket;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
+import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
@@ -118,6 +119,7 @@ public class TrainingTestBot implements Bot {
 
     @Override
     public void retire() {
+        PlayerInfoManager.reset();
         System.out.println("Retiring Training bot " + playerIndex);
     }
 

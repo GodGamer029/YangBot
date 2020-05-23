@@ -32,6 +32,7 @@ public class YangBot implements Bot {
     private Maneuver kickoffManeuver = null;
     private Strategy currentPlan = null;
     private boolean hasSetPriority = false;
+    private String oldStrat = "";
 
     public YangBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -117,19 +118,28 @@ public class YangBot implements Bot {
 
             renderer.drawString2d("State: " + this.state.name(), Color.WHITE, new Point(10, 270), 2, 2);
             if (this.state != State.KICKOFF) {
+
+                if (this.currentPlan != null && this.currentPlan.getClass() != RecoverStrategy.class) {
+                    this.oldStrat = "Strategy: " + this.currentPlan.getClass().getSimpleName() + "\n" + this.currentPlan.getAdditionalInformation();
+                } else if (this.currentPlan != null)
+                    renderer.drawString2d(this.oldStrat, Color.GREEN, new Point(10, 400), 2, 2);
+
+
                 renderer.drawString2d("Strategy: " + (this.currentPlan == null ? "null" : this.currentPlan.getClass().getSimpleName()), (currentPlan != null && currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, new Point(10, 310), 2, 2);
+                if (this.currentPlan != null)
+                    renderer.drawString2d(this.currentPlan.getAdditionalInformation(), Color.WHITE, new Point(10, 350), 2, 2);
 
                 String text = this.playerIndex + ": " + (this.currentPlan == null ? "null" : this.currentPlan.getClass().getSimpleName());
                 if (this.currentPlan != null)
                     text += "\n" + this.currentPlan.getAdditionalInformation();
                 renderer.drawString3d(text, (this.currentPlan != null && this.currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
             }
-            if (false) {
-                renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 350), 1, 1);
-                renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 370), 1, 1);
-                renderer.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, 390), 1, 1);
-                renderer.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, 410), 1, 1);
-                renderer.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), Color.WHITE, new Point(10, 430), 1, 1);
+            if (true) {
+                renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 400), 1, 1);
+                renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 420), 1, 1);
+                renderer.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, 440), 1, 1);
+                renderer.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, 460), 1, 1);
+                renderer.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), output.getThrottle() < 0 ? Color.RED : Color.WHITE, new Point(10, 480), 1, 1);
             }
 
         }

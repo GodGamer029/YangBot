@@ -4,8 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.path.Curve;
-import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.strategy.manuever.FollowPathManeuver;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
 public abstract class BakeablePathSegment extends PathSegment {
@@ -13,10 +13,14 @@ public abstract class BakeablePathSegment extends PathSegment {
     protected Curve bakedPath = null;
     protected FollowPathManeuver followPathManeuver;
     private float timeEstimate = -1;
+    protected float arrivalTime = -1;
+    protected float arrivalSpeed = -1;
 
-    protected BakeablePathSegment() {
+    protected BakeablePathSegment(float startSpeed, float endSpeed) {
+        super(startSpeed);
         this.followPathManeuver = new FollowPathManeuver();
         this.followPathManeuver.arrivalTime = -1;
+        this.arrivalSpeed = endSpeed;
     }
 
     @Override
@@ -24,6 +28,8 @@ public abstract class BakeablePathSegment extends PathSegment {
         super.step(dt, output);
 
         this.followPathManeuver.path = this.getBakedPath();
+        this.followPathManeuver.arrivalTime = this.arrivalTime;
+        //this.followPathManeuver.arrivalSpeed = this.arrivalSpeed; // not needed because arrival speed is capped by curve.calculatemaxspeeds
         //this.followPathManeuver.arrivalTime = (this.getTimeEstimate() - this.timer) + GameData.current().getCarData().elapsedSeconds;
         //this.followPathManeuver.draw(GameData.current().getAdvancedRenderer(), GameData.current().getCarData());
         this.followPathManeuver.step(dt, output);
@@ -33,23 +39,27 @@ public abstract class BakeablePathSegment extends PathSegment {
 
     @Override
     public Vector3 getEndPos() {
-        return this.bake(16).pointAt(0);
+        return this.bake(SegmentedPath.MAX_SAMPLES).pointAt(0);
     }
 
     @Override
     public Vector3 getEndTangent() {
-        return this.bake(16).tangentAt(0);
+        return this.bake(SegmentedPath.MAX_SAMPLES).tangentAt(0);
     }
 
     @Override
     public float getEndSpeed() {
-        return this.bake(16).maxSpeedAt(0);
+        var p = this.bake(SegmentedPath.MAX_SAMPLES);
+        return p.maxSpeedAt(0);
     }
 
     @Override
     public float getTimeEstimate() {
         if (this.timeEstimate == -1)
-            this.timeEstimate = this.bake(16).distances[0] / DriveManeuver.max_throttle_speed + 0.05f;
+            this.bake(SegmentedPath.MAX_SAMPLES);
+
+        assert this.timeEstimate != -1;
+
         return this.timeEstimate;
     }
 
@@ -58,7 +68,7 @@ public abstract class BakeablePathSegment extends PathSegment {
     public final @NotNull Curve bake(int maxSamples) {
         if (this.bakedPath == null) {
             this.bakedPath = this.bakeInternal(maxSamples);
-            this.bakedPath.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+            this.timeEstimate = this.bakedPath.calculateMaxSpeeds(MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY), this.arrivalSpeed < 0 ? CarData.MAX_VELOCITY : this.arrivalSpeed, false/*automatically turns true if arrival speed needs boost*/);
         }
 
         return this.bakedPath;

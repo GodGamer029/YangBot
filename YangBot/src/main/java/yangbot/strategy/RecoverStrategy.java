@@ -18,7 +18,6 @@ public class RecoverStrategy extends Strategy {
     private TurnManeuver groundTurnManeuver;
     private TurnManeuver boostTurnManeuver;
     private float recoverStartTime = 0;
-    private float recoverEndTime = -1;
 
     @Override
     protected void planStrategyInternal() {
@@ -26,9 +25,9 @@ public class RecoverStrategy extends Strategy {
         CarData car = gameData.getCarData();
         if (car.hasWheelContact)
             this.setDone();
-        groundTurnManeuver = new TurnManeuver();
-        boostTurnManeuver = new TurnManeuver();
-        recoverStartTime = car.elapsedSeconds;
+        this.groundTurnManeuver = new TurnManeuver();
+        this.boostTurnManeuver = new TurnManeuver();
+        this.recoverStartTime = car.elapsedSeconds;
     }
 
     @Override
@@ -36,9 +35,9 @@ public class RecoverStrategy extends Strategy {
         final float targetZModifier = -0.8f;
         final float boostZModifier = -0.5f;
 
-        GameData gameData = GameData.current();
-        AdvancedRenderer renderer = gameData.getAdvancedRenderer();
-        CarData car = gameData.getCarData();
+        final GameData gameData = GameData.current();
+        final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
+        final CarData car = gameData.getCarData();
         final ImmutableBallData ballData = gameData.getBallData();
 
         if (car.hasWheelContact) {
@@ -46,14 +45,14 @@ public class RecoverStrategy extends Strategy {
             return;
         }
 
-        if (car.angularVelocity.magnitude() > 5.2f) {
+        if (car.angularVelocity.flatten().magnitude() > 5f) {
             return; // probably flipping
         }
 
         controlsOutput.withThrottle(1);
 
         Optional<FlatCarCollisionInfo> carCollisionInfoOptional = YangBotJNAInterop.simulateCarWallCollision(car);
-        if (!carCollisionInfoOptional.isPresent()) {
+        if (carCollisionInfoOptional.isEmpty()) {
             this.setDone();
             return;
         }
@@ -64,13 +63,12 @@ public class RecoverStrategy extends Strategy {
         Vector3 carPositionAtImpact = new Vector3(carCollisionInfo.carData().physics().position());
         float simulationTime = carCollisionInfo.carData().physics().elapsedSeconds();
 
-        this.recoverEndTime = car.elapsedSeconds + simulationTime;
+        float recoverEndTime = car.elapsedSeconds + simulationTime;
 
-        final boolean isCarNearWall = RLConstants.isPosNearWall(car.position.flatten(), 30);
-        final boolean speedflipPossible = this.recoverEndTime - this.recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && this.recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
+        final boolean speedflipPossible = recoverEndTime - this.recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
-        if (carPositionAtImpact.z > 500) {
+        if (carPositionAtImpact.z > 400) {
             targetDirection = new Vector3(0, 0, -1);
         } else {
             Optional<YangBallPrediction.YangPredictionFrame> ballFrameAtImpact = gameData.getBallPrediction().getFrameAtRelativeTime(simulationTime + 0.5f);
@@ -87,7 +85,7 @@ public class RecoverStrategy extends Strategy {
             this.groundTurnManeuver.maxErrorAngularVelocity = 1f;
         this.groundTurnManeuver.target = targetOrientationMatrix;
 
-        if (car.boost > 60 && this.groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
+        if (car.boost > 80 && this.groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
             Vector3 boostDirection = targetDirection
                     .flatten()
                     .unitVectorWithZ(targetZModifier);
@@ -107,9 +105,9 @@ public class RecoverStrategy extends Strategy {
         renderer.drawCentered3dCube(Color.RED, car.position, 50);
         renderer.drawLine3d(Color.YELLOW, impactPosition, impactPosition.add(impactNormal.mul(150)));
 
-        if (simulationTime >= 2f / 60f)
-            renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
-        renderer.drawString2d(String.format("Total: %.1f", this.recoverEndTime - this.recoverStartTime), speedflipPossible ? Color.GREEN : Color.RED, new Point(400, 450), 2, 2);
+        //if (simulationTime >= 2f / 60f)
+        //    renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
+        //renderer.drawString2d(String.format("Total: %.1f", this.recoverEndTime - this.recoverStartTime), speedflipPossible ? Color.GREEN : Color.RED, new Point(400, 450), 2, 2);
 
         if (speedflipPossible && simulationTime < 0.5f) {
             double backWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, -1, 0, -1)).sub(impactPosition));

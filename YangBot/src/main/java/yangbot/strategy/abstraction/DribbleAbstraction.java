@@ -1,17 +1,12 @@
 package yangbot.strategy.abstraction;
 
 import yangbot.input.*;
-import yangbot.path.Curve;
-import yangbot.path.EpicMeshPlanner;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.strategy.manuever.FollowPathManeuver;
-import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
-import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
-import java.awt.*;
 import java.util.Optional;
 
 public class DribbleAbstraction extends Abstraction {
@@ -54,7 +49,7 @@ public class DribbleAbstraction extends Abstraction {
 
     @Override
     public RunState stepInternal(float dt, ControlsOutput controlsOutput) {
-        final GameData gameData = this.getGameData();
+        /*final GameData gameData = this.getGameData();
         final Vector3 gravity = gameData.getGravity();
         final CarData car = gameData.getCarData();
         final ImmutableBallData ball = gameData.getBallData();
@@ -160,7 +155,7 @@ public class DribbleAbstraction extends Abstraction {
                         Optional<Curve> curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, endPosition, endTangent, 15);
                         if(curveOptional.isPresent())
                             currentPath = curveOptional.get();
-                    }*/
+                    }*
 
                     Curve.PathCheckStatus pathCheckStatus = currentPath.doPathChecking(car, frame.absoluteTime - 0.1f, null);
                     if (!pathCheckStatus.isValid() && !this.isViable()) {
@@ -174,7 +169,7 @@ public class DribbleAbstraction extends Abstraction {
                 //followPathManeuver.draw(renderer, car);
                 followPathManeuver.path.draw(renderer, Color.YELLOW);
             }
-        }
+        }*/
         return RunState.CONTINUE;
     }
 }

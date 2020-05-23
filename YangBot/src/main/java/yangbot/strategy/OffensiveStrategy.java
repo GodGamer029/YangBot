@@ -7,19 +7,14 @@ import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.fieldinfo.BoostPad;
 import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
-import yangbot.path.Curve;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.path.builders.segments.AtbaSegment;
-import yangbot.path.builders.segments.DriftSegment;
-import yangbot.path.builders.segments.StraightLineSegment;
-import yangbot.path.builders.segments.TurnCircleSegment;
+import yangbot.path.builders.segments.*;
 import yangbot.strategy.abstraction.DriveStrikeAbstraction;
 import yangbot.strategy.abstraction.IdleAbstraction;
 import yangbot.strategy.advisor.RotationAdvisor;
 import yangbot.strategy.manuever.DriveManeuver;
-import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.Line2;
@@ -27,7 +22,6 @@ import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
-import java.awt.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -35,7 +29,6 @@ import java.util.stream.Collectors;
 public class OffensiveStrategy extends Strategy {
 
     private DriveStrikeAbstraction strikeAbstraction;
-    private FollowPathManeuver followPathManeuver = new FollowPathManeuver();
     private State state = State.INVALID;
     private RotationAdvisor.Advice lastAdvice = RotationAdvisor.Advice.NO_ADVICE;
     private BallTouchInterrupt ballTouchInterrupt;
@@ -49,7 +42,7 @@ public class OffensiveStrategy extends Strategy {
         final ImmutableBallData ball = gameData.getBallData();
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
-        if (car.boost < 70 && car.position.z < 50 && car.position.distance(ball.position) > 1500 && ball.velocity.magnitude() < 2000) {
+        if (car.boost < 70 && car.position.z < 50 && car.position.distance(ball.position) > 1000 && ball.velocity.magnitude() < 2000) {
             List<BoostPad> fullPads = BoostManager.getAllBoosts();
             List<CarData> teammates = gameData.getAllCars().stream().filter(c -> c.team == car.team && c.playerIndex != car.playerIndex).collect(Collectors.toList());
             List<BoostPad> closestPadList = fullPads.stream()
@@ -85,9 +78,9 @@ public class OffensiveStrategy extends Strategy {
                                 return false;
 
                             Vector3 mateToPad = pad.getLocation().sub(mate.position).withZ(0).normalized();
-                            float speed = (float) mate.velocity.dot(carToPad);
+                            float speed = (float) mate.velocity.dot(mateToPad);
                             if (speed < 0)
-                                return false;
+                                continue;
                             speed += 50;
                             float mateTime = (float) pad.getLocation().distance(car.position) / speed;
 
@@ -102,40 +95,31 @@ public class OffensiveStrategy extends Strategy {
                     .collect(Collectors.toList());
 
             if (closestPadList.size() > 0) {
-                Curve shortestPath = null;
-                float shortestPathLength = 2000;
+                SegmentedPath shortestPath = null;
+                float shortestPathTimeEstimate = 2;
                 for (BoostPad pad : closestPadList) {
 
                     Vector3 padLocation = pad.getLocation().withZ(car.position.z);
-                    Vector3 offToBallLocation = pad.getLocation().withZ(car.position.z)
-                            .add(
-                                    ball.position
-                                            .add(ball.velocity.mul(0.6f))
-                                            .sub(pad.getLocation())
-                                            .withZ(0)
-                                            .normalized().mul(100)
-                            );
+
                     Vector3 offsetPos = padLocation.add(car.position.sub(padLocation).normalized().mul(30));
 
-                    Curve path = new EpicMeshPlanner()
+                    var path = new EpicMeshPlanner()
                             .withStart(car)
                             .addPoint(offsetPos, car.position.sub(padLocation).normalized())
                             .withEnd(padLocation, car.position.sub(padLocation).normalized()/*offToBallLocation.sub(padLocation).normalized()*/)
                             .plan().get();
-                    float pathLength = path.length;
+                    float pathTimeEstimate = path.getTotalTimeEstimate();
                     if (pad.isFullBoost())
-                        pathLength -= 800;
+                        pathTimeEstimate *= 0.8f;
 
-                    if (pathLength < shortestPathLength && path.length > 0) {
-                        shortestPathLength = Math.max(0, pathLength);
+                    if (pathTimeEstimate < shortestPathTimeEstimate) {
+                        shortestPathTimeEstimate = pathTimeEstimate;
                         shortestPath = path;
                     }
                 }
 
                 if (shortestPath != null) {
-                    this.followPathManeuver.path = shortestPath;
-                    this.followPathManeuver.arrivalTime = -1;
-                    this.followPathManeuver.arrivalSpeed = -1;
+                    this.drivePath = shortestPath;
                     this.state = State.GET_BOOST;
                     RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_NeedBoost);
                 }
@@ -149,7 +133,6 @@ public class OffensiveStrategy extends Strategy {
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
         final int teamSign = car.getTeamSign();
-        final ImmutableBallData ball = gameData.getBallData();
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         /*if (DribbleStrategy.isViable()) {
@@ -160,8 +143,6 @@ public class OffensiveStrategy extends Strategy {
 
         // Make sure we don't hit the ball back to our goal
         //assert Math.signum(ball.position.y - car.position.y) == -teamSign : "We should be in front of the ball, not ahead car: " + car.position + " ball: " + ball.position;
-
-        final boolean allowWallHits = false;
 
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 1.75f)
                 .stream()
@@ -175,7 +156,7 @@ public class OffensiveStrategy extends Strategy {
             return;
         }
 
-        Curve validPath = null;
+        SegmentedPath validPath = null;
         float arrivalTime = 0;
 
         float maxT = strikeableFrames.get(strikeableFrames.size() - 1).relativeTime - RLConstants.simulationTickFrequency * 2;
@@ -226,37 +207,30 @@ public class OffensiveStrategy extends Strategy {
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 
             Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.permutatePoint(new Vector3(), 1, 0, 0).magnitude()));
-            if (!RLConstants.isPosNearWall(ballHitTarget.flatten(), 10))
-                ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
+            ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
 
             ballAtTargetPos = targetBallPos;
 
             final Vector3 carToDriveTarget = ballHitTarget.sub(startPosition).normalized();
             final Vector3 endTangent = carToDriveTarget.mul(4).add(ballTargetToGoalTarget).withZ(0).normalized();
 
-            Curve currentPath;
-            Optional<Curve> curveOptional = Optional.empty();
-            //if ((RLConstants.isPosNearWall(startPosition.flatten(), 100) || RLConstants.isPosNearWall(ballHitTarget.flatten(), 50)) && startPosition.distance(ballHitTarget) > 400)
-            //   curveOptional = YangBotJNAInterop.findPath(startPosition, startTangent, ballHitTarget, endTangent, 25);
+            var currentPathOptional = new EpicMeshPlanner()
+                    .withStart(startPosition, startTangent)
+                    .withEnd(ballHitTarget, endTangent.mul(-1))
+                    .withArrivalTime(interceptFrame.absoluteTime)
+                    .plan();
 
-            if (curveOptional.isPresent())
-                currentPath = curveOptional.get();
-            else {
-                currentPath = new EpicMeshPlanner()
-                        .withStart(startPosition, startTangent)
-                        .withEnd(ballHitTarget, endTangent.mul(-1))
-                        .plan().get();
-            }
-
-            if (currentPath.length <= 1 || Float.isNaN(currentPath.length) || currentPath.points.size() == 0)
+            if (currentPathOptional.isEmpty())
                 continue;
 
-            if (currentPath.tangentAt(currentPath.length).dot(car.forward()) < 0)
-                continue; // We aint drivin backward
+            var currentPath = currentPathOptional.get();
+
+            if (currentPath.getCurrentPathSegment().get() instanceof CurveSegment && ((CurveSegment) currentPath.getCurrentPathSegment().get()).getBakedPath().tangentAt(-1).dot(car.forward()) < 0)
+                continue;
 
             // Check if path is valid
             {
-                currentPath.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+                /*currentPath.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
 
                 Curve.PathCheckStatus pathStatus = currentPath.doPathChecking(car, interceptFrame.absoluteTime, ballPrediction);
 
@@ -264,9 +238,13 @@ public class OffensiveStrategy extends Strategy {
                     validPath = currentPath;
                     arrivalTime = interceptFrame.absoluteTime;
                     break;
-                } else if (curveOptional.isEmpty() && currentPath.length < 700) {
-                    //System.out.println("Short path was deemed impossible: leng=" + currentPath.length + " stat=" + pathStatus.pathStatus.name() + " speed=" + pathStatus.speedNeeded);
+                }*/
+                if (currentPath.getTotalTimeEstimate() <= interceptFrame.relativeTime) {
+                    validPath = currentPath;
+                    arrivalTime = interceptFrame.absoluteTime;
+                    break;
                 }
+
             }
         }
 
@@ -295,52 +273,30 @@ public class OffensiveStrategy extends Strategy {
         final CarData car = gameData.getCarData();
         final int teamSign = car.getTeamSign();
         final ImmutableBallData ball = gameData.getBallData();
-        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         // Go back to where the ball is headed,
         Vector3 endPos = ball.position.add(ball.velocity.mul(0.3f)).withZ(RLConstants.carElevation).add(0, teamSign * 2000, 0);
         endPos = endPos.withX(endPos.x * 0.5f); // slightly centered
         endPos = endPos.withX(MathUtils.lerp(car.position.x, endPos.x, 0.75f));
-        Vector3 endTangent = new Vector3(0, teamSign, 0)
-                .add(car.forward())
-                .add(ball.velocity.normalized())
-                .normalized();
-
-        /*Optional<Curve> optionalCurve = new EpicPathPlanner()
-                .withStart(car)
-                .withEnd(endPos, endTangent)
-                //.withBallAvoidance(true, car, -1, false)
-                .withCreationStrategy(RLConstants.isPosNearWall(car.position.flatten(), 50) ? EpicPathPlanner.PathCreationStrategy.NAVMESH : EpicPathPlanner.PathCreationStrategy.JAVA_NAVMESH)
-                .plan();
-
-        if (optionalCurve.isPresent()) {
-            this.state = State.ROTATE;
-            this.followPathManeuver = new FollowPathManeuver();
-            this.followPathManeuver.arrivalTime = car.elapsedSeconds + Math.min(1.5f, Math.max(0.3f, optionalCurve.get().length / (DriveManeuver.max_throttle_speed - 50)));
-            this.followPathManeuver.path = optionalCurve.get();
-        } else
-            this.state = State.GO_BACK_SOMEHOW; // Possible if navmesh hasn't loaded yet
-
-         */
 
         this.state = State.DRIVE_AT_POINT_WITHPATH;
         var builder = new PathBuilder(car)
                 .optimize();
 
         if (car.position.z > 50 || builder.getCurrentPosition().distance(endPos) < 30) {
-            var atba = new AtbaSegment(builder.getCurrentPosition(), endPos);
+            var atba = new AtbaSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), endPos);
             builder.add(atba);
-        } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardVelocity() > 300) {
+        } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardSpeed() > 300) {
             var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), endPos.sub(car.position).normalized(), builder.getCurrentSpeed());
             builder.add(drift);
         } else {
-            var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(900, builder.getCurrentSpeed())), endPos.flatten());
+            var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(1100, builder.getCurrentSpeed())), endPos.flatten());
             if (turn.tangentPoint != null)
                 builder.add(turn);
         }
 
         if (builder.getCurrentPosition().distance(endPos) > 20)
-            builder.add(new StraightLineSegment(builder.getCurrentPosition(), endPos));
+            builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), endPos));
 
         this.drivePath = builder.build();
     }
@@ -352,7 +308,7 @@ public class OffensiveStrategy extends Strategy {
         final int teamSign = car.getTeamSign();
         final ImmutableBallData ball = gameData.getBallData();
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
-        this.state = State.INVALID;
+        //this.state = State.INVALID;
         this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt();
         this.idleAbstraction = new IdleAbstraction();
 
@@ -408,24 +364,20 @@ public class OffensiveStrategy extends Strategy {
         if (rotationAdvice == RotationAdvisor.Advice.RETREAT ||
                 Math.signum((ball.position.y + ball.velocity.y * 0.4f) - (car.position.y + car.velocity.y * 0.2f) + teamSign * 100) == teamSign) {
 
-            this.planStrategyRetreat();
+            //this.planStrategyRetreat();
+            this.state = State.IDLE;
         }
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
-
         var oldState = state;
-        if (this.reevaluateStrategy(4f)) {
-            assert false : "States/Abstractions didn't finish automatically! (" + oldState.name() + ")";
-        }
+        assert !this.reevaluateStrategy(4f) : "States/Abstractions didn't finish automatically! (" + oldState.name() + ")";
         assert this.state != State.INVALID : "Invalid state! Last advice: " + this.lastAdvice;
 
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
-        final ImmutableBallData ball = gameData.getBallData();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
-        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         final int teamSign = car.team * 2 - 1;
         final Vector2 ownGoal = new Vector2(0, teamSign * (RLConstants.goalDistance + 100));
@@ -433,26 +385,23 @@ public class OffensiveStrategy extends Strategy {
         switch (this.state) {
             case GO_BACK_SOMEHOW: {
                 DriveManeuver.steerController(controlsOutput, car, ownGoal.withZ(0));
-                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), DriveManeuver.max_throttle_speed * 0.9f, CarData.MAX_VELOCITY, 0.4f);
+                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), DriveManeuver.max_throttle_speed * 0.9f, CarData.MAX_VELOCITY, 0.04f, false);
 
-                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                if (!car.hasWheelContact && this.reevaluateStrategy(0))
                     return;
-                if (this.reevaluateStrategy(0.2f) || this.reevaluateStrategy(ballTouchInterrupt, 0.05f))
+                if (this.reevaluateStrategy(0.1f) || this.reevaluateStrategy(ballTouchInterrupt))
                     return;
                 break;
             }
             case GET_BOOST: {
 
-                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
+                if (this.drivePath.shouldReset(car) && this.reevaluateStrategy(0))
                     return;
 
-                if (this.reevaluateStrategy(ballTouchInterrupt, 0.05f) || this.reevaluateStrategy(2f))
+                if (this.drivePath.canInterrupt() && (this.reevaluateStrategy(ballTouchInterrupt) || this.reevaluateStrategy(2f)))
                     return;
 
-                this.followPathManeuver.step(dt, controlsOutput);
-                //this.followPathManeuver.draw(renderer, car);
-                this.followPathManeuver.path.draw(renderer, Color.YELLOW.brighter());
-                if (this.followPathManeuver.isDone()) {
+                if (this.drivePath.step(dt, controlsOutput)) {
                     this.reevaluateStrategy(0);
                     return;
                 }
@@ -463,34 +412,16 @@ public class OffensiveStrategy extends Strategy {
                 if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.1f : 2.5f))
                     return;
 
+                if (this.idleAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt))
+                    return;
+
                 this.idleAbstraction.step(dt, controlsOutput);
                 if (this.idleAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
                 break;
             }
-            case ROTATE: { // Basically deprecated at this point
-
-                if (!car.hasWheelContact && this.reevaluateStrategy(0.05f))
-                    return;
-
-                if (this.reevaluateStrategy(0.5f))
-                    return;
-
-                if (car.position.z > 300) {
-                    // Get back to ground level
-                    DefaultStrategy.smartBallChaser(dt, controlsOutput);
-                } else {
-                    this.followPathManeuver.step(dt, controlsOutput);
-                    //this.followPathManeuver.draw(renderer, car);
-                    this.followPathManeuver.path.draw(renderer, Color.YELLOW.darker());
-                    if (this.followPathManeuver.isDone() && this.reevaluateStrategy(0))
-                        return;
-                }
-
-                break;
-            }
             case FOLLOW_PATH_STRIKE: {
-                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(1.8f))
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(2f))
                     return;
 
                 if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt))
@@ -504,10 +435,10 @@ public class OffensiveStrategy extends Strategy {
                 break;
             }
             case DRIVE_AT_POINT_WITHPATH: {
-                if (!car.hasWheelContact && !this.drivePath.shouldBeInAir() && this.reevaluateStrategy(0.05f))
+                if (!car.hasWheelContact && this.drivePath.shouldBeOnGround() && this.reevaluateStrategy(0.05f))
                     return;
 
-                if (this.reevaluateStrategy(this.drivePath.canInterrupt() ? 0.4f : 1f))
+                if (this.reevaluateStrategy(this.drivePath.canInterrupt() ? 0.2f : 1.8f))
                     return;
 
                 if (this.drivePath == null && this.reevaluateStrategy(0))
@@ -535,7 +466,6 @@ public class OffensiveStrategy extends Strategy {
     enum State {
         IDLE,
         FOLLOW_PATH_STRIKE,
-        ROTATE,
         GO_BACK_SOMEHOW,
         GET_BOOST,
         DRIVE_AT_POINT_WITHPATH,

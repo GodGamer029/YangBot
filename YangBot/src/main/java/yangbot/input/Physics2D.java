@@ -14,6 +14,10 @@ public class Physics2D {
         this.orientation = orientation;
     }
 
+    public float forwardSpeed() {
+        return this.forward().dot(this.velocity);
+    }
+
     public Vector2 forward() {
         return this.orientation.forward();
     }

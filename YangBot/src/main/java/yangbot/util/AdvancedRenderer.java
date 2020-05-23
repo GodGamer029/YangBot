@@ -77,7 +77,7 @@ public class AdvancedRenderer extends Renderer {
     }
 
     public void drawCircle(Color c, Vector3 center, float radius, float startAngle, float endAngle) {
-        final float resolution = 8;
+        final float resolution = 10;
 
         if (startAngle > endAngle) {
             float temp = startAngle;

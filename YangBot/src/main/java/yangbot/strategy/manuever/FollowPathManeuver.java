@@ -27,7 +27,7 @@ public class FollowPathManeuver extends Maneuver {
 
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
-        final float tReact = 0.3f;
+        final float tReact = 0.4f;
 
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
@@ -39,12 +39,14 @@ public class FollowPathManeuver extends Maneuver {
         }
 
         if (path.maxSpeeds.length == 0)
-            path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+            path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, true);
 
-        final float currentSpeed = (float) car.velocity.dot(car.forward());
+        float currentPredSpeed = Math.max(1, car.forwardSpeed());
+        currentPredSpeed = MathUtils.lerp(currentPredSpeed, currentPredSpeed + speedReactionTime * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration), 0.5f);
+        currentPredSpeed = MathUtils.clip(currentPredSpeed, 1, CarData.MAX_VELOCITY);
 
         final float pathDistanceFromTarget = path.findNearest(car.position);
-        final float sAhead = (float) (pathDistanceFromTarget - Math.max(car.velocity.magnitude(), 500f) * tReact);
+        final float sAhead = (float) (pathDistanceFromTarget - Math.max(currentPredSpeed, 300f) * tReact);
 
         driveManeuver.target = path.pointAt(sAhead);
 
@@ -64,21 +66,21 @@ public class FollowPathManeuver extends Maneuver {
         } else {
             if (arrivalSpeed != -1) {
                 driveManeuver.minimumSpeed = arrivalSpeed;
-                driveManeuver.maximumSpeed = arrivalSpeed;
+                driveManeuver.maximumSpeed = arrivalSpeed + 10;
             } else {
-                driveManeuver.minimumSpeed = DriveManeuver.max_throttle_speed - 10;
+                driveManeuver.minimumSpeed = CarData.MAX_VELOCITY;
                 driveManeuver.maximumSpeed = CarData.MAX_VELOCITY;
             }
 
-            this.setIsDone(pathDistanceFromTarget <= 50f);
+            this.setIsDone(pathDistanceFromTarget <= 20f);
         }
 
-        final float maxSpeedAtPathSection = path.maxSpeedAt(pathDistanceFromTarget - currentSpeed * (4f * dt));
+        final float maxSpeedAtPathSection = path.maxSpeedAt(pathDistanceFromTarget - currentPredSpeed * speedReactionTime);
 
         driveManeuver.maximumSpeed = Math.min(maxSpeedAtPathSection, driveManeuver.maximumSpeed);
         driveManeuver.minimumSpeed = Math.min(driveManeuver.minimumSpeed, driveManeuver.maximumSpeed);
 
-        if (allowBackwardsDriving && car.forward().dot(path.tangentAt(pathDistanceFromTarget - currentSpeed * (4f * dt))) < 0) {
+        if (allowBackwardsDriving && car.forward().dot(path.tangentAt(pathDistanceFromTarget - currentPredSpeed * speedReactionTime)) < 0) {
             float temp = driveManeuver.maximumSpeed;
             driveManeuver.maximumSpeed = driveManeuver.minimumSpeed * -1;
             driveManeuver.minimumSpeed = temp * -1;
@@ -86,23 +88,14 @@ public class FollowPathManeuver extends Maneuver {
             driveManeuver.target = driveManeuver.target.add(car.position.sub(driveManeuver.target).mul(-1));
         }
 
-        boolean enableSlide = false;
-
-        if (Math.abs(maxSpeedAtPathSection) < 200) { // Very likely to be stuck in a turn that is impossible
-            driveManeuver.minimumSpeed = 200;
-            driveManeuver.maximumSpeed = 200;
+        if (Math.abs(maxSpeedAtPathSection) < 10) { // Very likely to be stuck in a turn that is impossible
+            //driveManeuver.minimumSpeed = 10;
+            //driveManeuver.maximumSpeed = 10;
             //enableSlide = true;
         }
 
-        if (this.arrivalSpeed == -1 && this.arrivalTime == -1)
-            driveManeuver.reaction_time = Math.max(this.speedReactionTime, 0.5f);
-        else
-            driveManeuver.reaction_time = Math.max(0.04f, speedReactionTime);
+        driveManeuver.reaction_time = speedReactionTime;
         driveManeuver.step(dt, controlsOutput);
-        if (enableSlide) {
-            controlsOutput.withSlide();
-            controlsOutput.withSteer(Math.signum(controlsOutput.getSteer()));
-        }
     }
 
     public float getDistanceOffPath(CarData car) {

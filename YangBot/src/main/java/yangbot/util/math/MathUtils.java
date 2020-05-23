@@ -47,6 +47,15 @@ public class MathUtils {
         return value;
     }
 
+    public static float normAngle(float angle) {
+        while (angle > Math.PI)
+            angle -= 2 * Math.PI;
+        while (angle < -Math.PI)
+            angle += 2 * Math.PI;
+
+        return angle;
+    }
+
     public static float remapClip(float value, float rangeStart, float rangeEnd, float newRangeStart, float newRangeEnd) {
         return remap(MathUtils.clip(value, rangeStart, rangeEnd), rangeStart, rangeEnd, newRangeStart, newRangeEnd);
     }

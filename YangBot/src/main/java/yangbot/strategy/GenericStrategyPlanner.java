@@ -16,12 +16,11 @@ public class GenericStrategyPlanner extends StrategyPlanner {
 
     @Override
     protected void planStrategyInternal() {
-        GameData gameData = GameData.current();
-        CarData car = gameData.getCarData();
-        final ImmutableBallData ball = gameData.getBallData();
-        YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        final GameData gameData = GameData.current();
+        final CarData car = gameData.getCarData();
+        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
-        int teamSign = car.team * 2 - 1;
+        final int teamSign = car.getTeamSign();
         List<CarData> carsInMyTeam = gameData.getAllCars().parallelStream().filter((c) -> c.team == car.team).collect(Collectors.toList());
 
         float awareness = 0;
@@ -60,7 +59,6 @@ public class GenericStrategyPlanner extends StrategyPlanner {
         awareness /= counter;
 
         if (carsInMyTeam.size() > 1) {
-            awareness -= 0.1f; // Temporary change for zombie tournament
 
             ImmutableBallData ballInFuture = ballPrediction.getFrameAtRelativeTime(0.2f).get().ballData;
             Optional<CarData> closestToBallCar = carsInMyTeam.stream()

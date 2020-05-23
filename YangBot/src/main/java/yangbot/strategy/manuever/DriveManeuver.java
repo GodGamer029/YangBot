@@ -7,19 +7,24 @@ import yangbot.input.RLConstants;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DriveManeuver extends Maneuver {
 
     public static final float min_speed = 10f;
     public static final float max_throttle_speed = 1410.0f;
     public static final float boost_acceleration = 991.667f;
     public static final float brake_acceleration = 3500.0f;
-    public static final float coasting_acceleration = 525.0f;
+    public static final float coasting_acceleration = brake_acceleration * 0.15f;
     public float reaction_time = 0.04f;
 
     public Vector3 target = null;
     public float minimumSpeed = 1400f;
     public float maximumSpeed = CarData.MAX_VELOCITY;
-    public boolean allowBoostForLowSpeeds = true;
+    public static ArrayList<List<Float>> speeds = new ArrayList<>();
+    public static ArrayList<Float> times = new ArrayList<>();
+    public boolean allowBoost = true;
 
     public static float maxDistance(float currentSpeed, float time) {
         final float drivingSpeed = RLConstants.tickRate <= 60 ? 1238.3954f : 1235.0f;
@@ -113,7 +118,7 @@ public class DriveManeuver extends Maneuver {
         return -1.0f;
     }
 
-    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime) {
+    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime, boolean allowBoost) {
         minimumSpeed = Math.min(minimumSpeed, CarData.MAX_VELOCITY);
         maximumSpeed = Math.min(maximumSpeed, CarData.MAX_VELOCITY);
         assert minimumSpeed <= maximumSpeed : "minimumSpeed (" + minimumSpeed + ") should always be equal or lower the maximumSpeed(" + maximumSpeed + ")";
@@ -121,9 +126,9 @@ public class DriveManeuver extends Maneuver {
         float minimumAcceleration = (minimumSpeed - currentSpeed) / reactionTime;
         float maximumAcceleration = (maximumSpeed - currentSpeed) / reactionTime;
 
-        float brake_coast_transition = -(0.45f * brake_acceleration + 0.55f * coasting_acceleration);
-        float coasting_throttle_transition = -0.5f * coasting_acceleration;
-        float throttle_boost_transition = 1.0f * throttleAcceleration(currentSpeed) + 0.7f * boost_acceleration;
+        float brake_coast_transition = -(MathUtils.lerp(brake_acceleration, coasting_acceleration, 0.7f));
+        float coasting_throttle_transition = -0.3f * coasting_acceleration;
+        float throttle_boost_transition = 1.0f * throttleAcceleration(currentSpeed) + 0.45f * boost_acceleration;
 
         //if (car.up().z < 0.7f) {
         //    brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
@@ -136,12 +141,16 @@ public class DriveManeuver extends Maneuver {
             output.withThrottle(0);
             output.withBoost(false);
         } else if (minimumAcceleration <= throttle_boost_transition) { // acceleration does not need boost accel
-            output.withThrottle(Math.max(0.001f, minimumAcceleration / throttleAcceleration(currentSpeed)));
+            output.withThrottle(MathUtils.remapClip(minimumAcceleration / throttleAcceleration(currentSpeed), 0, 1, 0.015f, 1));
             output.withBoost(false);
         } else {
             output.withThrottle(1.0f);
-            output.withBoost(true);
+            output.withBoost(allowBoost);
         }
+        //System.out.println("throttle_boost_transition="+throttle_boost_transition+" minimumAcceleration="+minimumAcceleration+" cur="+currentSpeed+" targ="+minimumSpeed);
+
+        speeds.add(List.of(currentSpeed, minimumSpeed, throttle_boost_transition, MathUtils.clip(minimumAcceleration, -5000, 5000), minimumSpeed - currentSpeed, brake_coast_transition, coasting_throttle_transition));
+        times.add(GameData.current().getCarData().elapsedSeconds);
     }
 
     public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {
@@ -157,10 +166,7 @@ public class DriveManeuver extends Maneuver {
         final CarData car = gameData.getCarData();
 
         steerController(controlsOutput, car, this.target);
-        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), this.minimumSpeed, this.maximumSpeed, reaction_time);
-
-        if (!allowBoostForLowSpeeds && this.minimumSpeed < DriveManeuver.max_throttle_speed - 20)
-            controlsOutput.withBoost(false);
+        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost);
 
         if (car.position.sub(target).magnitude() < 100.f)
             this.setIsDone(true);

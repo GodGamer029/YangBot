@@ -1,8 +1,11 @@
 package yangbot.path.builders;
 
 import yangbot.input.CarData;
+import yangbot.input.Physics2D;
+import yangbot.input.Physics3D;
 import yangbot.path.builders.segments.FlipSegment;
 import yangbot.path.builders.segments.StraightLineSegment;
+import yangbot.util.math.vector.Matrix2x2;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayDeque;
@@ -13,10 +16,15 @@ import java.util.List;
 public class PathBuilder {
 
     private final List<PathSegment> pathSegments;
-    private final CarData start;
+    private final Physics3D start;
     private boolean optimize = false;
 
     public PathBuilder(CarData start) {
+        this.start = start.toPhysics3d();
+        this.pathSegments = new ArrayList<>();
+    }
+
+    public PathBuilder(Physics3D start) {
         this.start = start;
         this.pathSegments = new ArrayList<>();
     }
@@ -39,14 +47,18 @@ public class PathBuilder {
 
     public Vector3 getCurrentTangent() {
         if (this.pathSegments.size() == 0)
-            return this.start.getPathStartTangent();
+            return this.start.forward();
         return this.pathSegments.get(this.pathSegments.size() - 1).getEndTangent();
     }
 
     public float getCurrentSpeed() {
         if (this.pathSegments.size() == 0)
-            return (float) this.start.forward().dot(this.start.velocity);
+            return this.start.forwardSpeed();
         return this.pathSegments.get(this.pathSegments.size() - 1).getEndSpeed();
+    }
+
+    public Physics2D getCurrentPhysics() {
+        return new Physics2D(this.getCurrentPosition().flatten(), this.getCurrentTangent().flatten().mul(this.getCurrentSpeed()), Matrix2x2.fromRotation((float) this.getCurrentTangent().flatten().angle()));
     }
 
     public float getSpeedBeforeSegment(int segment) {
@@ -86,7 +98,7 @@ public class PathBuilder {
                             var flipSegment = new FlipSegment(straight.getStartPos(), straight.getStartTangent(), startSpeed);
 
                             optimizedSegments.add(flipSegment);
-                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), straight.getEndPos()));
+                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos()));
                             continue;
                         }
                     }
@@ -97,15 +109,15 @@ public class PathBuilder {
             this.pathSegments.clear();
             this.pathSegments.addAll(optimizedSegments);
         }
-        /*if(GameData.current().getCarData().playerIndex == 0){
+        if (true) {
             System.out.println("Path: ");
             StringBuilder builder = new StringBuilder();
-            builder.append(" -> Start "+this.start.getPathStartTangent()+" ("+this.start.forward().dot(this.start.velocity)+")");
-            for(var path : this.pathSegments)
-                builder.append(" -> "+path.getClass().getSimpleName()+" "+path.getEndTangent()+" ("+path.getEndSpeed()+")");
+            builder.append(" -> Start " + this.start.forward() + " (" + this.start.forward().dot(this.start.velocity) + ")");
+            for (var path : this.pathSegments)
+                builder.append(" -> " + path.getClass().getSimpleName() + " " + path.getEndTangent() + " (" + path.getEndSpeed() + ")");
 
             System.out.println(builder.toString());
-        }*/
+        }
 
         return new SegmentedPath(this.pathSegments);
     }

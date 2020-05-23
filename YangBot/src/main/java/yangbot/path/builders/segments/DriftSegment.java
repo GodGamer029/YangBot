@@ -21,6 +21,7 @@ public class DriftSegment extends PathSegment {
     private final float endSpeed;
 
     public DriftSegment(Vector3 startPosition, Vector3 startTangent, Vector3 endTangent, float startSpeed) {
+        super(startSpeed);
         //System.out.println("Init drift: "+startPosition + " " + startTangent + " " + endTangent + " " + startSpeed);
         this.endTangent = endTangent;
         this.startPos = startPosition;

@@ -31,8 +31,6 @@ public class Curve {
     public float[] curvatures;
     public float[] distances;
 
-    public static final int TANGENT_SMOOTHING = 1 << 0;
-
     private List<ControlPoint> controlPoints;
     private PathCheckStatus pathCheckStatus = new PathCheckStatus(PathStatus.UNKNOWN);
     private static int ndiv = 16;
@@ -52,6 +50,10 @@ public class Curve {
     public Curve(List<ControlPoint> info) {
         this(info, ndiv);
     }
+
+    private static final float fac = 6f;
+    private static final float interpStart = (float) (1f / (1f + Math.exp(fac)));
+    private static final float interpEnd = (float) (1f / (1f + Math.exp(0)));
 
     public Curve(List<ControlPoint> info, int numSubSegments) {
         this.numSubDivisions = numSubSegments;
@@ -107,6 +109,9 @@ public class Curve {
 
             for (int j = 0; j < (numSubSegments + is_last); j++) {
                 float t = ((float) j) / ((float) numSubSegments);
+                // place more control points at the beginning, there is a bug in here that fucks up the first control point, so we getter place the second one close after the first one, because the second one is fine
+                if (t > 0 && t < 1 && i == 0)
+                    t = MathUtils.remapClip((float) (1f / (1f + Math.exp(-fac * (t - 1)))), interpStart, interpEnd, 0, 1);
 
                 Vector3 g = piece.evaluate(t);
                 Vector3 dg = piece.tangent(t);
@@ -171,6 +176,7 @@ public class Curve {
 
             for (int j = 0; j < (numSubDivisions + is_last); j++) {
                 float t = ((float) j) / ((float) numSubDivisions);
+                // t = MathUtils.remapClip((float)(1f / (1f + Math.exp(-5*t))), 0.05f, 0.95f, 0, 1);
 
                 Vector3 p = piece.evaluate(t);
                 Vector3 n = N0.mul(1f - t).add(N1.mul(t)).normalized();
@@ -289,7 +295,7 @@ public class Curve {
         }
 
         if (this.maxSpeeds.length == 0)
-            this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+            this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, true);
 
         float currentSpeed = (float) car.velocity.dot(car.forward());
 
@@ -335,7 +341,7 @@ public class Curve {
             // Simulate the car
             {
                 ControlsOutput sampleOutput = new ControlsOutput();
-                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead), CarData.MAX_VELOCITY, 0.04f);
+                DriveManeuver.speedController(dt, sampleOutput, currentSpeed, Math.min(maxSpeed, avgSpeedAhead), CarData.MAX_VELOCITY, 0.04f, true);
 
                 if (boost <= 0)
                     sampleOutput.withBoost(false);
@@ -388,6 +394,8 @@ public class Curve {
     }
 
     public Vector3 tangentAt(float s) {
+        if (s == -1)
+            s = distances[0];
         s = MathUtils.clip(s, 0, distances[0]);
 
         for (int i = 0; i < (points.size() - 1); i++) {
@@ -418,11 +426,12 @@ public class Curve {
         s = MathUtils.clip(s, 0, distances[0]);
 
         if (maxSpeeds.length == 0)
-            this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+            this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, true);
 
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
                 float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
+                assert u >= 0 && u <= 1 : u;
                 return MathUtils.lerp(maxSpeeds[i + 1], maxSpeeds[i], u);
             }
         }
@@ -502,13 +511,18 @@ public class Curve {
 
 
     @SuppressWarnings("UnusedReturnValue")
-    public float calculateMaxSpeeds(float v0, float vf) {
+    public float calculateMaxSpeeds(float v0, float vf, boolean allowBoost) {
+        if (vf > DriveManeuver.max_throttle_speed)
+            allowBoost = true;
         final Vector3 gravity = new Vector3(0, 0, -650);
+
+        v0 = MathUtils.clip(v0, 0, CarData.MAX_VELOCITY);
+        vf = MathUtils.clip(vf, 0, CarData.MAX_VELOCITY);
 
         maxSpeeds = new float[curvatures.length];
 
         for (int i = 0; i < curvatures.length; i++)
-            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(curvatures[i] * 1.025f);
+            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(curvatures[i] * 1.03f);
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
         maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);
@@ -518,7 +532,7 @@ public class Curve {
         for (int i = 1; i < curvatures.length; i++) {
             float ds = distances[i - 1] - distances[i];
             Vector3 t = tangents.get(i).add(tangents.get(i - 1)).normalized();
-            float attainable_speed = maximizeSpeedWithThrottle((float) (0.9f * DriveManeuver.boost_acceleration + gravity.dot(t)), maxSpeeds[i - 1], ds);
+            float attainable_speed = maximizeSpeedWithThrottle((float) ((allowBoost ? 1f : 0f) * DriveManeuver.boost_acceleration + gravity.dot(t)), maxSpeeds[i - 1], ds);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
         }
 
@@ -541,12 +555,12 @@ public class Curve {
         float currentVelocity = v0;
 
         for (int i = 0; i < 50; i++) {
-            float dv = (DriveManeuver.throttleAcceleration(currentVelocity) + additionalAcceleration) * dt;
-            float ds = (currentVelocity + 0.5f * dv) * dt;
-            currentVelocity += dv;
+            float accel = (DriveManeuver.throttleAcceleration(currentVelocity) + additionalAcceleration) * dt;
+            float ds = (currentVelocity + 0.5f * accel) * dt;
+            currentVelocity += accel;
             currentDistance += ds;
             if (currentDistance > distance) {
-                currentVelocity -= (currentDistance - distance) * (dv / ds);
+                currentVelocity -= (currentDistance - distance) * (accel / ds);
                 break;
             }
         }

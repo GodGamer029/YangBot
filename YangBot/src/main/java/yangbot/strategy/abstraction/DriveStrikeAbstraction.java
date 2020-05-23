@@ -11,9 +11,8 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.Grader;
 import yangbot.optimizers.graders.OffensiveGrader;
-import yangbot.path.Curve;
+import yangbot.path.builders.SegmentedPath;
 import yangbot.strategy.manuever.DodgeManeuver;
-import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.MathUtils;
@@ -40,7 +39,7 @@ public class DriveStrikeAbstraction extends Abstraction {
     public boolean strikeSolved = false;
     private final DodgeManeuver strikeDodge;
     public float dodgeCollisionTime = 0;
-    private FollowPathManeuver followPath;
+    private SegmentedPath path;
     public State state;
     private boolean solvedGoodStrike = false;
     public Grader customGrader;
@@ -56,19 +55,18 @@ public class DriveStrikeAbstraction extends Abstraction {
     private BallData hitBall;
     private Vector3 contactPoint;
 
-    public DriveStrikeAbstraction(Curve path) {
+    public DriveStrikeAbstraction(SegmentedPath path) {
         this(path, new OffensiveGrader());
     }
 
-    public DriveStrikeAbstraction(Curve path, @NotNull Grader grader) {
+    public DriveStrikeAbstraction(SegmentedPath path, @NotNull Grader grader) {
         this.state = State.DRIVE;
 
         this.strikeDodge = new DodgeManeuver();
         this.strikeDodge.delay = 0.4f;
         this.strikeDodge.duration = 0.2f;
 
-        this.followPath = new FollowPathManeuver();
-        this.followPath.path = path;
+        this.path = path;
 
         this.customGrader = grader;
     }
@@ -124,11 +122,9 @@ public class DriveStrikeAbstraction extends Abstraction {
 
     @Override
     protected RunState stepInternal(float dt, ControlsOutput controlsOutput) {
-        assert arrivalTime > 0;
-        assert followPath.path != null;
+        assert this.arrivalTime > 0;
+        assert this.path != null;
         assert this.jumpBeforeStrikeDelay > 0.15f : "jumpBeforeStrikeDelay should be longer than what is needed to calculate a dodge";
-
-        this.followPath.arrivalTime = this.arrivalTime;
 
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
@@ -145,31 +141,23 @@ public class DriveStrikeAbstraction extends Abstraction {
                 if (this.ballTouchInterrupt.hasInterrupted())
                     return RunState.DONE;
 
-                this.followPath.path.draw(renderer, Color.YELLOW);
-                //this.followPath.draw(renderer, car);
-                this.followPath.step(dt, controlsOutput);
+                this.path.draw(renderer);
+                this.path.step(dt, controlsOutput);
 
-                float distanceOffPath = (float) car.position.flatten().distance(this.followPath.path.pointAt(this.followPath.path.findNearest(car.position)).flatten());
-                if (distanceOffPath > 100) {
+                if (this.path.shouldReset(car)) {
                     if (debugMessages)
-                        System.out.println("Quitting strike because distanceOffPath: " + distanceOffPath);
-                    return RunState.DONE;
-                }
-
-                if (!car.hasWheelContact) {
-                    if (debugMessages)
-                        System.out.println("Quitting strike because not on ground");
+                        System.out.println("Quitting strike because path reset");
 
                     return RunState.DONE;
                 }
 
-                if (this.followPath.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.followPath.isDone()) {
+                if (this.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.path.isDone()) {
                     this.state = State.STRIKE;
-                    float delay = MathUtils.clip(this.followPath.arrivalTime - car.elapsedSeconds, 0.1f, 2f);
+                    float delay = MathUtils.clip(this.arrivalTime - car.elapsedSeconds, 0.1f, 2f);
 
                     Vector2 futureBallPos = ballPrediction.getFrameAtRelativeTime(delay).get().ballData.position.flatten();
                     float dist = (float) car.position.flatten().add(car.velocity.flatten().mul(delay)).distance(futureBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getAverageHitboxExtent();
-                    if (dist > 350) {
+                    if (dist > 450) {
                         if (debugMessages)
                             System.out.println("Quitting strike because nowhere near hitting dist=" + dist + " ");
 
@@ -226,6 +214,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                                 angleDiffStep *= 3;
                             }
                             for (float delay = duration + 0.05f; delay <= (duration < 0.2f ? 0.3f : this.maxJumpDelay); delay += jumpDelayStep) {
+                                boolean hadNonDodgeHit = false;
                                 for (float angleDiff = (float) (Math.PI * -0.8f); angleDiff < (float) (Math.PI * 0.8f); angleDiff += angleDiffStep) {
                                     simulationCount++;
                                     CarData simCar = new CarData(car);
@@ -284,10 +273,11 @@ public class DriveStrikeAbstraction extends Abstraction {
                                     // Evaluate post-collision ball state
                                     if (simBall.hasBeenTouched) {
                                         didHitBall = true;
-                                        if (!simCar.doubleJumped || simCar.dodgeTimer <= simDt * 3)
+                                        if ((!simCar.doubleJumped && hadNonDodgeHit) || simCar.dodgeTimer <= 0.05f)
                                             continue;
 
-                                        didHitBallAfterDodge = true;
+                                        hadNonDodgeHit = true;
+                                        didHitBallAfterDodge |= simCar.doubleJumped;
 
                                         // Did it hit with the wheels?
                                         {
@@ -350,10 +340,10 @@ public class DriveStrikeAbstraction extends Abstraction {
                             strikeDodge.delay = 9999;
                             strikeDodge.setDone();
                             System.out.println(car.playerIndex + ": >>> Could not satisfy grader, aborting... (Grader: " + this.customGrader.getClass().getSimpleName() + ", didHitBall=" + didHitBall + ", didHitBallAfterDodge=" + didHitBallAfterDodge + ")");
-
+                            System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
                         }
                         if (this.debugMessages) {
-                            System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
+
                             System.out.println(car.playerIndex + ": > With parameters: maxJumpDelay=" + this.maxJumpDelay + " jumpBeforeStrikeDelay=" + this.jumpBeforeStrikeDelay + " jumpDelayStep=" + this.jumpDelayStep);
 
                         }

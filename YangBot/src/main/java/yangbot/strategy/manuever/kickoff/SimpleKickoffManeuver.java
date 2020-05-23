@@ -2,13 +2,11 @@ package yangbot.strategy.manuever.kickoff;
 
 import yangbot.input.*;
 import yangbot.path.EpicMeshPlanner;
+import yangbot.path.builders.SegmentedPath;
 import yangbot.strategy.manuever.DodgeManeuver;
-import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
-
-import java.awt.*;
 
 public class SimpleKickoffManeuver extends Maneuver {
 
@@ -16,7 +14,7 @@ public class SimpleKickoffManeuver extends Maneuver {
     private float timeoutTimer = 0;
     private KickOffState kickOffState = KickOffState.INIT;
     private KickoffTester.KickOffLocation kickOffLocation = null;
-    private FollowPathManeuver followPathManeuver = null;
+    private SegmentedPath path = null;
     private DodgeManeuver dodgeManeuver = null;
 
     @Override
@@ -47,11 +45,10 @@ public class SimpleKickoffManeuver extends Maneuver {
                 this.dodgeManeuver.enablePreorient = true;
                 this.dodgeManeuver.preorientOrientation = Matrix3x3.lookAt(new Vector3(0, -1 * (car.team * 2 - 1), 0).normalized(), new Vector3(0, 0, 1));
 
-                this.followPathManeuver = new FollowPathManeuver();
-
                 this.kickOffLocation = KickoffTester.getKickoffLocation(car);
 
                 var planner = new EpicMeshPlanner()
+                        .withArrivalSpeed(2300)
                         .withStart(car)
                         .withEnd(ball.position, ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * (car.team * 2 - 1), 0).mul(0.5f)).normalized());
 
@@ -60,8 +57,7 @@ public class SimpleKickoffManeuver extends Maneuver {
                     planner.addPoint(padLoc, padLoc.sub(car.position).withZ(0).normalized());
                 }
 
-                this.followPathManeuver.path = planner.plan().get();
-                this.followPathManeuver.arrivalSpeed = CarData.MAX_VELOCITY;
+                this.path = planner.plan().get();
 
                 this.kickOffState = KickOffState.DRIVE;
 
@@ -70,21 +66,22 @@ public class SimpleKickoffManeuver extends Maneuver {
                 break;
             }
             case DRIVE: {
-                followPathManeuver.step(dt, controlsOutput);
-                if (followPathManeuver.isDone() || car.position.flatten().add(car.velocity.flatten().mul(0.3f)).distance(ball.position.flatten()) < 150) {
+                if (!path.isDone())
+                    this.path.step(dt, controlsOutput);
+                if (this.path.isDone() || car.position.flatten().add(car.velocity.flatten().mul(0.3f)).distance(ball.position.flatten()) < BallData.COLLISION_RADIUS + car.hitbox.getAverageHitboxExtent()) {
                     kickOffState = KickOffState.FLIP;
                 }
 
-                followPathManeuver.path.draw(gameData.getAdvancedRenderer(), Color.BLUE.darker());
+                this.path.draw(gameData.getAdvancedRenderer());
                 break;
             }
             case FLIP: {
                 if (!car.doubleJumped && dodgeManeuver.delay > 0 && dodgeManeuver.timer > dodgeManeuver.duration + RLConstants.tickFrequency) {
                     BallData simBall = ball.makeMutable();
                     CarData simCar = new CarData(car);
-                    simCar.step(new ControlsOutput(), 0.01f);
+                    simCar.step(new ControlsOutput(), 0.05f);
                     if (simBall.collidesWith(simCar)) {
-                        dodgeManeuver.delay = 0;
+                        dodgeManeuver.delay = dodgeManeuver.timer;
                     }
                 }
                 dodgeManeuver.step(dt, controlsOutput);

@@ -13,11 +13,16 @@ public class StraightLineSegment extends BakeablePathSegment {
 
     private final Vector3 startPos, endPos, normal;
 
-    public StraightLineSegment(Vector3 startPos, Vector3 endPos) {
-        this(startPos, endPos, new Vector3(0, 0, 1));
+    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos) {
+        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), -1);
     }
 
-    public StraightLineSegment(Vector3 startPos, Vector3 endPos, Vector3 normal) {
+    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, float endSpeed) {
+        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), endSpeed);
+    }
+
+    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, Vector3 normal, float endSpeed) {
+        super(startSpeed, endSpeed);
         this.startPos = startPos;
         this.endPos = endPos;
         this.normal = normal;
@@ -46,7 +51,7 @@ public class StraightLineSegment extends BakeablePathSegment {
         return new Curve(List.of(
                 new Curve.ControlPoint(startPos, getStartTangent(), normal),
                 new Curve.ControlPoint(endPos, getEndTangent(), normal)),
-                maxSamples / 2);
+                maxSamples);
     }
 
     @Override

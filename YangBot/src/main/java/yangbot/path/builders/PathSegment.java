@@ -9,10 +9,19 @@ import java.awt.*;
 public abstract class PathSegment {
 
     protected float timer = 0;
+    protected float startSpeed;
+
+    public PathSegment(float startSpeed) {
+        this.startSpeed = startSpeed;
+    }
 
     public boolean step(float dt, ControlsOutput output) {
         this.timer += dt;
         return true;
+    }
+
+    public float getStartSpeed() {
+        return this.startSpeed;
     }
 
     public abstract Vector3 getEndPos();

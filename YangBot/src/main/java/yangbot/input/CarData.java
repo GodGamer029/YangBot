@@ -157,7 +157,7 @@ public class CarData {
         return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
     }
 
-    public float forwardVelocity() {
+    public float forwardSpeed() {
         return (float) this.velocity.dot(this.forward());
     }
 
@@ -213,6 +213,10 @@ public class CarData {
 
     public Physics2D toPhysics2d() {
         return new Physics2D(this.position.flatten(), this.velocity.flatten(), this.orientation.flatten());
+    }
+
+    public Physics3D toPhysics3d() {
+        return new Physics3D(this.position, this.velocity, this.orientation);
     }
 
     // https://www.wolframalpha.com/input/?i=solve+291.66+%2B+1458.33+d+-+g+x+%3D+0+for+x

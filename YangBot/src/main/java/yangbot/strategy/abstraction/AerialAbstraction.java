@@ -14,7 +14,7 @@ import java.awt.*;
 
 public class AerialAbstraction extends Abstraction {
 
-    private static final float MAX_TIME_GROUND_ADJUSTMENTS = 0.4f;
+    private static final float MAX_TIME_GROUND_ADJUSTMENTS = 0.6f;
     private final AerialManeuver aerialManeuver;
     public Vector3 targetPos;
     public float arrivalTime = 0;
@@ -39,7 +39,7 @@ public class AerialAbstraction extends Abstraction {
             var deltaX = AerialManeuver.getDeltaX(simCar, target, absoluteArrival);
             var deltaXLocal = deltaX.dot(simCar.orientation);
             do {
-                float vF = simCar.forwardVelocity();
+                float vF = simCar.forwardSpeed();
                 var controls = new ControlsOutput();
                 // Align the car in-plane
                 float /*P*/ angle = (float) Math.atan2(deltaXLocal.y, deltaXLocal.x);

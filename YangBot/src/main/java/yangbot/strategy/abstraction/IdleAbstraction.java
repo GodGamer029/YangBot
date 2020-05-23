@@ -1,12 +1,8 @@
 package yangbot.strategy.abstraction;
 
 import yangbot.input.*;
-import yangbot.path.builders.PathBuilder;
+import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.path.builders.segments.AtbaSegment;
-import yangbot.path.builders.segments.DriftSegment;
-import yangbot.path.builders.segments.StraightLineSegment;
-import yangbot.path.builders.segments.TurnCircleSegment;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
@@ -25,9 +21,11 @@ public class IdleAbstraction extends Abstraction {
 
     // Predict teammate in future in x seconds
     public float teammatePredictionDelay = 0.5f;
+    // Useful for not bumping into teammates
+    public boolean doBothPredictionAndCurrent = true;
     // Y-Distance from ball when idle
-    // These may be scaled down, if too close to own goal
-    public float minIdleDistance = 1500;
+    // These may be scaled down, if too close to own goa l
+    public float minIdleDistance = 1200;
     public float maxIdleDistance = RLConstants.arenaLength * 0.5f;
 
     private SegmentedPath currentPath = null;
@@ -86,10 +84,17 @@ public class IdleAbstraction extends Abstraction {
             // Y-Distances
             for (int i = 0; i < yGrid.length; i++) {
                 float posY = yIndexToAbs.apply(i);
-                float futureMateYPos = carMate.position.y + carMate.velocity.y * teammatePredictionDelay;
+                float futureMateYPos = carMate.position.y + carMate.velocity.y * this.teammatePredictionDelay;
 
                 float distance = MathUtils.distance(posY, futureMateYPos);
                 yGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue();
+
+                /*if(this.doBothPredictionAndCurrent){
+                    // Also include current position
+                    float currentMateYPos = carMate.position.y;
+                    distance = MathUtils.distance(posY, currentMateYPos);
+                    yGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue() * 0.5f /*don't weigh it as much as prediction/;
+                }*/
             }
         }
 
@@ -99,9 +104,15 @@ public class IdleAbstraction extends Abstraction {
         {
             float lowestYDist = 9999999;
             float highestYDist = 0;
+            boolean goBackFurther = false;// When on low boost: go back further
+            boolean doTeammatesHaveBoost = teammates.stream()
+                    .anyMatch((t) -> t.getKey().boost > 30);
+            if (doTeammatesHaveBoost && localCar.boost < 30) // Only go back when teammates do have boost
+                goBackFurther = true;
+
             for (int i = 0; i < yGrid.length; i++) {
-                if (localCar.boost < 30 && i < yGrid.length / 2)
-                    continue; // When on low boost: go back further
+                if (goBackFurther && i < yGrid.length / 2)
+                    continue;
 
                 if (yGrid[i] < lowestYDist) {
                     lowestYDist = yGrid[i];
@@ -172,10 +183,17 @@ public class IdleAbstraction extends Abstraction {
             // X-Distances
             for (int i = 0; i < xGrid.length; i++) {
                 float posX = xIndexToAbs.apply(i);
-                float futureMateXPos = carMate.position.x + carMate.velocity.x * teammatePredictionDelay;
+                float futureMateXPos = carMate.position.x + carMate.velocity.x * this.teammatePredictionDelay;
 
                 float distance = MathUtils.distance(posX, futureMateXPos);
                 xGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue();
+
+                if (this.doBothPredictionAndCurrent) {
+                    float currentMateXPos = carMate.position.x;
+
+                    distance = MathUtils.distance(posX, currentMateXPos);
+                    xGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue() * 0.5f;
+                }
             }
         }
 
@@ -227,20 +245,23 @@ public class IdleAbstraction extends Abstraction {
 
         if (Math.abs(car.position.y) > RLConstants.goalDistance) {
             DriveManeuver.steerController(controlsOutput, car, new Vector3());
-            DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 900f, 1400f, 0.1f);
+            // Ideal turning speed
+            DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 850f, 950f, 0.04f, false);
+            this.currentPath = null;
             return RunState.CONTINUE;
         }
 
         if (car.position.z > 50 && car.hasWheelContact) {
             DriveManeuver.steerController(controlsOutput, car, car.position.withZ(RLConstants.carElevation));
-            DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 900f, 1400f, 0.1f);
+            DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 1050f, 1150f, 0.04f, false);
+            this.currentPath = null;
             return RunState.CONTINUE;
         }
 
         // Use position of the ball in x seconds
         float futureBallPosDelay = 0.5f;
         // If the ball is up high retreat, because this bot is too bad to hit them anyways
-        futureBallPosDelay += MathUtils.remapClip(ball.position.z, 500, 2000, 0, 0.4f);
+        futureBallPosDelay += MathUtils.remapClip(ball.position.z, 400, 2000, 0, 0.4f);
 
         // Clips idlingTarget
         final float maxX = RLConstants.arenaHalfWidth * 0.9f;
@@ -278,16 +299,14 @@ public class IdleAbstraction extends Abstraction {
                 .map(c -> new Tuple<>(c, c.getPlayerInfo().isActiveRotator() ? 1 : 0.3f))
                 .collect(Collectors.toList());
 
-        if (/*teammates.size() > 0*/ true) {
+
+        {
             var idlePos = this.findIdlePosition(car, teammates, futureBallPos);
             preferredIdlingX = idlePos.x;
             preferredIdlingY = idlePos.y;
 
             assert Math.abs(preferredIdlingY) < RLConstants.arenaHalfLength : idlePos.toString();
-        } /*else {
-            // Convert relative to absolute
-            preferredIdlingY = futureBallPos.y + teamSign * preferredIdlingY;
-        }*/
+        }
 
         // Hover around the middle area
         Vector3 idleTarget = new Vector3(
@@ -295,28 +314,34 @@ public class IdleAbstraction extends Abstraction {
                 MathUtils.clip(preferredIdlingY, -maxY, maxY),
                 RLConstants.carElevation);
 
-        if ((this.currentPath == null || this.currentPath.canInterrupt()) && (idleTarget.distance(this.pathTarget) > 300 || car.elapsedSeconds - this.lastPathBuild > 0.2f)) {
+        if (this.currentPath == null || (this.currentPath.canInterrupt() && (idleTarget.distance(this.pathTarget) > 300 || car.elapsedSeconds - this.lastPathBuild > 0.2f))) {
             this.lastPathBuild = car.elapsedSeconds;
             this.pathTarget = idleTarget;
 
-            var builder = new PathBuilder(car)
+            /*var builder = new PathBuilder(car)
                     .optimize();
             if (car.position.z > 50 || builder.getCurrentPosition().distance(idleTarget) < 30) {
-                var atba = new AtbaSegment(builder.getCurrentPosition(), idleTarget);
+                var atba = new AtbaSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), idleTarget);
                 builder.add(atba);
-            } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardVelocity() > 300 /*&& Math.abs(car.forward().flatten().angleBetween(idleTarget.sub(car.position).flatten().normalized())) > 30 * (Math.PI / 180)*/) {
+            } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardSpeed() > 300 /*&& Math.abs(car.forward().flatten().angleBetween(idleTarget.sub(car.position).flatten().normalized())) > 30 * (Math.PI / 180)*) {
                 var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), idleTarget.sub(car.position).normalized(), builder.getCurrentSpeed());
                 builder.add(drift);
             } else {
-                var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(900, builder.getCurrentSpeed())), idleTarget.flatten());
+                var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(1100, builder.getCurrentSpeed())), idleTarget.flatten());
                 if (turn.tangentPoint != null)
                     builder.add(turn);
             }
 
             if (builder.getCurrentPosition().distance(idleTarget) > 20)
-                builder.add(new StraightLineSegment(builder.getCurrentPosition(), idleTarget));
+                builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), idleTarget));
+            */
+            var pathOptional = new EpicMeshPlanner()
+                    .withStart(car)
+                    .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
+                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                    .plan();
 
-            this.currentPath = builder.build();
+            this.currentPath = pathOptional.get();
         }
 
         //renderer.drawCentered3dCube(Color.YELLOW, this.pathTarget, 50);
@@ -324,7 +349,7 @@ public class IdleAbstraction extends Abstraction {
 
         assert Math.abs(idleTarget.y) <= RLConstants.goalDistance : idleTarget.toString();
 
-        if (this.currentPath.step(dt, controlsOutput) || (!car.hasWheelContact && !this.currentPath.shouldBeInAir())) {
+        if (this.currentPath.step(dt, controlsOutput) || this.currentPath.shouldReset(car)) {
             this.currentPath = null;
             this.lastPathBuild = car.elapsedSeconds - 10;
             this.canInterruptRightNow = true;
@@ -332,21 +357,6 @@ public class IdleAbstraction extends Abstraction {
             this.currentPath.draw(renderer);
             this.canInterruptRightNow = this.currentPath.canInterrupt();
         }
-
-        /*
-
-        // Speed "controller"
-        float carToIdleDist = Math.abs(car.position.y - idleTarget.y);
-        if (Math.signum(car.position.y - idleTarget.y) == teamSign)
-            carToIdleDist = 0;
-
-        float minSpeed = DriveManeuver.max_throttle_speed * 0.9f;
-        if (carToIdleDist > 800)
-            minSpeed = MathUtils.remapClip(carToIdleDist - 800, 0, 3000, minSpeed, CarData.MAX_VELOCITY * 0.95f);
-
-        DriveManeuver.steerController(controlsOutput, car, idleTarget);
-        DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), minSpeed, CarData.MAX_VELOCITY, 0.5f);
-*/
         return RunState.CONTINUE;
     }
 

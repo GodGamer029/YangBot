@@ -12,9 +12,10 @@ import java.awt.*;
 
 public class AtbaSegment extends PathSegment {
 
-    private final Vector3 startPos, endPos;
+    protected final Vector3 startPos, endPos;
 
-    public AtbaSegment(Vector3 startPos, Vector3 endPos) {
+    public AtbaSegment(Vector3 startPos, float startSpeed, Vector3 endPos) {
+        super(startSpeed);
         this.startPos = startPos;
         this.endPos = endPos;
     }
@@ -44,7 +45,7 @@ public class AtbaSegment extends PathSegment {
         final GameData gameData = GameData.current();
         final CarData carData = gameData.getCarData();
 
-        DriveManeuver.speedController(dt, output, (float) carData.forward().dot(carData.velocity), DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY, 0.5f);
+        DriveManeuver.speedController(dt, output, (float) carData.forward().dot(carData.velocity), DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY, 0.04f, false);
         DriveManeuver.steerController(output, carData, this.endPos);
 
         return carData.position.distance(endPos) < 100;

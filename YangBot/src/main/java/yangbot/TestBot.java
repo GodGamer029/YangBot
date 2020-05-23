@@ -1,5 +1,8 @@
 package yangbot;
 
+import org.knowm.xchart.SwingWrapper;
+import org.knowm.xchart.XYChart;
+import org.knowm.xchart.XYChartBuilder;
 import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.cppinterop.RLBotDll;
@@ -9,12 +12,15 @@ import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.path.Curve;
+import yangbot.path.EpicMeshPlanner;
+import yangbot.path.builders.BakeablePathSegment;
 import yangbot.path.builders.SegmentedPath;
 import yangbot.path.builders.segments.DriftSegment;
 import yangbot.path.builders.segments.FlipSegment;
 import yangbot.strategy.abstraction.AerialAbstraction;
 import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.strategy.manuever.DodgeManeuver;
+import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
@@ -22,14 +28,16 @@ import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.stream.Collectors;
 
 public class TestBot implements Bot {
 
     private final int playerIndex;
 
-    private State state = State.YEET;
+    private State state = State.RESET;
     private float timer = -1.0f;
     private float lastTick = -1;
     private boolean hasSetPriority = false;
@@ -104,7 +112,7 @@ public class TestBot implements Bot {
 
         switch (state) {
             case YEET:
-                if (timer > 0.5f)
+                if (timer > 30f)
                     this.state = State.RESET;
                 break;
             case RESET: {
@@ -112,11 +120,11 @@ public class TestBot implements Bot {
                 this.timer = 0.0f;
                 this.state = State.INIT;
 
-                final Vector3 startPos = new Vector3(0, 100, 17);
+                final Vector3 startPos = new Vector3(0, 0, 17);
                 final Vector3 startTangent = new Vector3(0f, -1f, 0f).normalized(); //
                 final Vector3 endTangent = new Vector3(0.02, 1, 0).normalized();
                 final Vector3 targetPos = new Vector3(600, -RLConstants.goalDistance * 0.9f, 120);
-                final float startSpeed = 0f; // 1260
+                final float startSpeed = 000f; // 1260
 
                 float z = 1000;
                 RLBotDll.setGameState(new GameState()
@@ -133,35 +141,73 @@ public class TestBot implements Bot {
                         ))
                         .buildPacket());
 
-                this.aerialManeuver = new AerialManeuver();
-                this.aerialManeuver.arrivalTime = controlCar.elapsedSeconds + 2;
-                this.aerialManeuver.target = new Vector3(0, 0, z);
-
                 System.out.println("############");
                 break;
             }
             case INIT: {
-                if (timer > 0.05f) {
+                output.withThrottle(0.02f);
+                if (timer > 0.1f) {
                     this.state = State.RUN;
-                    if (!this.planAerialIntercept(ballPrediction, false))
-                        this.state = State.YEET;
+                    this.path = new EpicMeshPlanner()
+                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                            .withArrivalSpeed(500)
+                            .withStart(controlCar)
+                            .withEnd(new Vector3(Math.random() * 2000 - 1000, -2000 - Math.random() * 1000 - 509, 17), new Vector3(0, -1, 0).normalized())
+                            .plan().get();
+                    System.out.println("Estimated: " + this.path.getTotalTimeEstimate());
+                    var c = ((BakeablePathSegment) this.path.getCurrentPathSegment().get()).getBakedPath();
+                    //System.out.println(this.path.getCurrentPathSegment().get().getClass().getSimpleName());
+
+                    this.timer = 0;
+
+                    ArrayList<Tuple<Float, Float>> banger = new ArrayList<>();
+                    for (int i = c.maxSpeeds.length - 1; i >= 0; i--) {
+                        banger.add(new Tuple<>(c.distances[c.distances.length - 1] - c.distances[i], c.maxSpeeds[i]));
+                    }
+
+                    final XYChart chart = new XYChartBuilder().width(1200).height(800).title("Area").build();
+                    chart.addSeries("current", banger.stream().map(Tuple::getKey).collect(Collectors.toList()), banger.stream().map(Tuple::getValue).collect(Collectors.toList()));
+                    new SwingWrapper(chart).displayChart();
                 }
 
                 break;
             }
             case RUN: {
 
-
                 //if(timer < 0.1f){
                 //    System.out.println("Is viable: "+AerialAbstraction.isViable(controlCar, this.aerialManeuver.target, this.aerialManeuver.arrivalTime));
                 //}
 
-                this.aerialAbstraction.draw(renderer);
-                this.aerialAbstraction.step(dt, output);
+                this.path.step(dt, output);
+                this.path.draw(renderer);
+                //output.withBoost(true);
 
                 //renderer.drawString2d("IsValid: " + this.pathCheckStatus.pathStatus, Color.WHITE, new Point(400, 400), 2, 2);
-                if (timer > 5f || this.aerialAbstraction.isDone())
-                    this.state = State.RESET;
+                if (timer > 5f || this.path.isDone()) {
+                    if (timer < 0.2f) {
+                        this.state = State.RESET;
+                        return output;
+                    }
+                    this.state = State.YEET;
+                    System.out.println("Done at " + timer);
+                    this.timer = 0;
+
+                    final XYChart chart = new XYChartBuilder().width(1200).height(800).title("Area").build();
+                    chart.addSeries("current", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(0)).collect(Collectors.toList()));
+                    chart.addSeries("minimum", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(1)).collect(Collectors.toList()));
+                    chart.addSeries("throttleboosttrans", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(2)).collect(Collectors.toList()));
+                    chart.addSeries("braketrans", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(5)).collect(Collectors.toList()));
+                    chart.addSeries("coasttrans", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(6)).collect(Collectors.toList()));
+
+                    chart.addSeries("minaccel", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(3)).collect(Collectors.toList()));
+                    //chart.addSeries("boi", IntStream.range(0, DriveManeuver.speeds.size()).boxed().collect(Collectors.toList()), DriveManeuver.speeds.stream().map(t -> t.get(4)).collect(Collectors.toList()));
+
+                    new SwingWrapper(chart).displayChart();
+
+                    DriveManeuver.times.clear();
+                    DriveManeuver.speeds.clear();
+                }
+
                 break;
             }
         }
@@ -173,7 +219,7 @@ public class TestBot implements Bot {
             renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 370), 1, 1);
             renderer.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, 390), 1, 1);
             renderer.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, 410), 1, 1);
-            renderer.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), Color.WHITE, new Point(10, 430), 1, 1);
+            renderer.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), output.getThrottle() < 0 ? Color.RED : Color.WHITE, new Point(10, 430), 1, 1);
         }
 
         return output;
@@ -237,7 +283,6 @@ public class TestBot implements Bot {
         } catch (Exception | AssertionError e) {
             e.printStackTrace();
         }
-
 
         //lastGameTime = dataPacket.gameInfo.gameTimeRemaining();
 

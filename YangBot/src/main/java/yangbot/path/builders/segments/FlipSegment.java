@@ -6,6 +6,7 @@ import yangbot.input.GameData;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.strategy.manuever.TurnManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
@@ -17,15 +18,16 @@ public class FlipSegment extends PathSegment {
     private final Vector3 startPos, startTangent;
     private final Vector3 jumpStartPos, jumpEndPos;
     private final Vector3 endPos;
-    private final float startSpeed, endSpeed;
+    private final float endSpeed;
 
     private DodgeManeuver dodgeManeuver;
+    private TurnManeuver realignManeuver;
 
     public FlipSegment(Vector3 startPos, Vector3 startTangent, float startSpeed) {
+        super(startSpeed);
         assert startPos.z < 100;
         this.startPos = startPos;
         this.startTangent = startTangent;
-        this.startSpeed = startSpeed;
 
         Vector3 currentPos = startPos;
         Vector3 currentVel = startTangent.mul(startSpeed).withZ(0);
@@ -54,6 +56,7 @@ public class FlipSegment extends PathSegment {
         this.endSpeed = (float) currentVel.magnitude();
 
         this.dodgeManeuver = new DodgeManeuver();
+        this.realignManeuver = new TurnManeuver();
     }
 
     public static boolean canReplace(StraightLineSegment straightSegment, float startSpeed) {
@@ -83,21 +86,23 @@ public class FlipSegment extends PathSegment {
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
 
+        output.withThrottle(0.03f);
         if (car.hasWheelContact && this.dodgeManeuver.timer > 0.1f) {
-            output.withThrottle(0.03f);
             DriveManeuver.steerController(output, car, this.endPos);
             return this.timer >= this.getTimeEstimate();
         }
 
-        if (this.timer > 0.1f || !car.hasWheelContact || (car.forward().dot(this.getEndTangent()) > 0.95f && Math.abs(car.forwardVelocity() - car.velocity.magnitude()) < 50f)) {
-            this.dodgeManeuver.duration = 0.09f;
-            this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.05f;
+        if (!car.hasWheelContact && car.doubleJumped && Math.abs(car.angularVelocity.dot(car.right())) < 5) {
+            this.realignManeuver.target = Matrix3x3.lookAt(this.getEndPos().add(this.getEndTangent().mul(car.velocity.magnitude() * 0.3)).sub(car.position).withZ(0).normalized().add(car.velocity.normalized()).normalized(), new Vector3(0, 0, 1));
+            this.realignManeuver.step(dt, output);
+        } else if (this.timer > 0.5f || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.005f && this.getEndTangent().angle(car.velocity.normalized()) < Math.PI * 0.05f)) {
+            this.dodgeManeuver.duration = 0.08f;
+            this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.07f;
             this.dodgeManeuver.target = this.endPos;
 
             this.dodgeManeuver.step(dt, output);
         } else {
             // Align with tangent
-            var tang = this.getEndTangent();
             DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()));
         }
 
@@ -120,7 +125,7 @@ public class FlipSegment extends PathSegment {
 
     @Override
     public boolean canInterrupt() {
-        return GameData.current().getCarData().hasWheelContact;
+        return this.dodgeManeuver.timer <= 0 || (this.dodgeManeuver.timer > 0.1f && GameData.current().getCarData().hasWheelContact);
     }
 
     @Override

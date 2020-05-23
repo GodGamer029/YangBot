@@ -150,7 +150,7 @@ public class LutMaker {
                     output.withThrottle(0.03f);
                     if (timer > 0.1f) {
                         System.out.println(controlCar.forward().dot(controlCar.velocity));
-                        DriveManeuver.speedController(dt, output, (float) controlCar.forward().dot(controlCar.velocity), this.stateSetStartSpeed, this.stateSetStartSpeed, 0.5f);
+                        DriveManeuver.speedController(dt, output, (float) controlCar.forward().dot(controlCar.velocity), this.stateSetStartSpeed, this.stateSetStartSpeed, 0.5f, true);
                     }
                 }
                 break;

@@ -95,7 +95,7 @@ public class FlipSegment extends PathSegment {
         if (!car.hasWheelContact && car.doubleJumped && Math.abs(car.angularVelocity.dot(car.right())) < 5) {
             this.realignManeuver.target = Matrix3x3.lookAt(this.getEndPos().add(this.getEndTangent().mul(car.velocity.magnitude() * 0.3)).sub(car.position).withZ(0).normalized().add(car.velocity.normalized()).normalized(), new Vector3(0, 0, 1));
             this.realignManeuver.step(dt, output);
-        } else if (this.timer > 0.5f || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.005f && this.getEndTangent().angle(car.velocity.normalized()) < Math.PI * 0.05f)) {
+        } else if (this.timer > 0.2f || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.2f && this.getEndTangent().angle(car.velocity.normalized()) < Math.PI * 0.05f && Math.abs(car.velocity.z) < 50)) {
             this.dodgeManeuver.duration = 0.08f;
             this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.07f;
             this.dodgeManeuver.target = this.endPos;
@@ -103,11 +103,11 @@ public class FlipSegment extends PathSegment {
             this.dodgeManeuver.step(dt, output);
         } else {
             // Align with tangent
-            DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()));
+            DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()), 1.5f);
         }
 
         // Timeout
-        return this.dodgeManeuver.timer > 0.1f + this.getTimeEstimate();
+        return this.dodgeManeuver.timer > 0.1f + this.getTimeEstimate() || (this.dodgeManeuver.timer > 0.3 && car.hasWheelContact);
     }
 
     @Override

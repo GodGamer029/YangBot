@@ -25,7 +25,7 @@ public class IdleAbstraction extends Abstraction {
     public boolean doBothPredictionAndCurrent = true;
     // Y-Distance from ball when idle
     // These may be scaled down, if too close to own goa l
-    public float minIdleDistance = 1200;
+    public float minIdleDistance = 1300;
     public float maxIdleDistance = RLConstants.arenaLength * 0.5f;
 
     private SegmentedPath currentPath = null;
@@ -41,13 +41,19 @@ public class IdleAbstraction extends Abstraction {
         final Vector2 ownGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
 
         // Distances will be scaled back if they exceed this value
-        final float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 190;
-        final float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 100;
+        final float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 220;
+        final float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 140;
+        final float minAbsoluteChannelBallDist = 500;
 
-        final Line2 goalToBall = new Line2(
-                ownGoal,
-                (Math.abs(futureBallPos.y) > maxAbsoluteIdleY - 10) ?
-                        futureBallPos.withY((maxAbsoluteIdleY - 10) * Math.signum(futureBallPos.y)) : futureBallPos);
+        assert Math.abs(ownGoal.y) > minAbsoluteChannelBallDist;
+
+        var futureBallPosFake = futureBallPos;
+        if (Math.abs(futureBallPosFake.y) > maxAbsoluteIdleY - 10) // Satisfy max abs constraint
+            futureBallPosFake = futureBallPosFake.withY((maxAbsoluteIdleY - 10) * Math.signum(futureBallPos.y));
+        if (Math.abs(futureBallPosFake.y - ownGoal.y) < minAbsoluteChannelBallDist) // Satisfy min dist constraint
+            futureBallPosFake = futureBallPosFake.withY(Math.signum(ownGoal.y) * (Math.abs(ownGoal.y) - minAbsoluteChannelBallDist));
+
+        final Line2 goalToBallFake = new Line2(ownGoal, futureBallPosFake);
 
         float minIdleDistance = this.minIdleDistance;
         float maxIdleDistance = this.maxIdleDistance;
@@ -68,7 +74,7 @@ public class IdleAbstraction extends Abstraction {
         final float effectiveMaxIdleDistance = maxIdleDistance;
 
         // Grids: higher resolution if we have more teammates
-        float[] yGrid = new float[Math.max(15, teammates.size() * 3)];
+        float[] yGrid = new float[(int) MathUtils.clip(teammates.size() * 6 + 1, 13, 21)];
 
         // These functions return the absolute position values on the field
         final Function<Integer, Float> yIndexToAbs = ind -> {
@@ -141,16 +147,16 @@ public class IdleAbstraction extends Abstraction {
             }
         }
 
-        float[] xGrid = new float[Math.max(6, teammates.size() * 2)];
+        float[] xGrid = new float[(int) MathUtils.clip(teammates.size() * 2 + 1, 5, 11)]; // Always uneven, to make sure theres a segment in the middle
         final float decidedYPos = yIndexToAbs.apply(lowestYSpot);
         final float xChannelHalfWidth = RLConstants.goalCenterToPost * 1.2f;
 
         assert maxAbsoluteIdleX > xChannelHalfWidth;
 
         final Function<Integer, Float> xIndexToAbs = ind -> {
-            float relativeX = MathUtils.remap(ind, 0, xGrid.length - 1, -xChannelHalfWidth, xChannelHalfWidth);
-            var intersectionOpt = goalToBall.getIntersectionPointWithInfOtherLine(new Line2(new Vector2(-1, decidedYPos), new Vector2(1, decidedYPos)));
-            assert intersectionOpt.isPresent() : goalToBall.toString() + " " + decidedYPos;
+            float relativeX = MathUtils.remapClip(ind, 0, xGrid.length - 1, -xChannelHalfWidth, xChannelHalfWidth);
+            var intersectionOpt = goalToBallFake.getIntersectionPointWithInfOtherLine(new Line2(new Vector2(-1, decidedYPos), new Vector2(1, decidedYPos)));
+            assert intersectionOpt.isPresent() : goalToBallFake.toString() + " " + decidedYPos;
             float intersectedX = intersectionOpt.get().x;
             if (Math.abs(intersectedX) + xChannelHalfWidth > maxAbsoluteIdleX)
                 intersectedX = (maxAbsoluteIdleX - xChannelHalfWidth) * Math.signum(intersectedX);
@@ -164,16 +170,16 @@ public class IdleAbstraction extends Abstraction {
             // Negative x
             {
                 float posX = xIndexToAbs.apply(i);
-                float distance = MathUtils.distance(posX, -xChannelHalfWidth);
+                float distance = MathUtils.distance(posX, xIndexToAbs.apply(0));
 
-                xGrid[i] += 1 / Math.max(distance, 10);
+                xGrid[i] += (1 / Math.max(distance, 10)) * 0.5f;
             }
             // Positive x
             {
                 float posX = xIndexToAbs.apply(i);
-                float distance = MathUtils.distance(posX, xChannelHalfWidth);
+                float distance = MathUtils.distance(posX, xIndexToAbs.apply(xGrid.length - 1));
 
-                xGrid[i] += 1 / Math.max(distance, 10);
+                xGrid[i] += (1 / Math.max(distance, 10)) * 0.5f;
             }
         }
 
@@ -251,12 +257,12 @@ public class IdleAbstraction extends Abstraction {
             return RunState.CONTINUE;
         }
 
-        if (car.position.z > 50 && car.hasWheelContact) {
+        /*if (car.position.z > 50 && car.hasWheelContact) {
             DriveManeuver.steerController(controlsOutput, car, car.position.withZ(RLConstants.carElevation));
             DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 1050f, 1150f, 0.04f, false);
             this.currentPath = null;
             return RunState.CONTINUE;
-        }
+        }*/
 
         // Use position of the ball in x seconds
         float futureBallPosDelay = 0.5f;

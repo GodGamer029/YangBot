@@ -46,7 +46,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
             return;
         }
         this.circleRadius = Math.min(minR, circleRadius);
-        System.out.println("Circle radius for: " + DriveManeuver.maxTurningSpeed(1 / this.circleRadius));
+        //System.out.println("Circle radius for: " + DriveManeuver.maxTurningSpeed(1 / this.circleRadius));
 
         this.circlePos = startPos.add(start.right().mul(Math.signum(correctionAngle)).mul(this.circleRadius));
 

@@ -24,6 +24,10 @@ public class Range implements Serializable {
         return val >= start && val < end;
     }
 
+    public static boolean isInRange(float val, float start, float end) {
+        return val >= start && val <= end;
+    }
+
     @Override
     public String toString() {
         return "Range(" + start + " - " + end + ")";

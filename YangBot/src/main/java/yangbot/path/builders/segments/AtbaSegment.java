@@ -53,8 +53,8 @@ public class AtbaSegment extends PathSegment {
 
     @Override
     public void draw(AdvancedRenderer renderer, Color color) {
-        renderer.drawCentered3dCube(Color.RED, this.startPos, 20);
+        renderer.drawCentered3dCube(Color.RED, this.startPos, 100);
         renderer.drawLine3d(color, this.startPos, this.endPos);
-        renderer.drawCentered3dCube(Color.GREEN, this.endPos, 20);
+        renderer.drawCentered3dCube(Color.GREEN, this.endPos, 100);
     }
 }

@@ -56,6 +56,7 @@ public class MathUtils {
         return angle;
     }
 
+
     public static float remapClip(float value, float rangeStart, float rangeEnd, float newRangeStart, float newRangeEnd) {
         return remap(MathUtils.clip(value, rangeStart, rangeEnd), rangeStart, rangeEnd, newRangeStart, newRangeEnd);
     }

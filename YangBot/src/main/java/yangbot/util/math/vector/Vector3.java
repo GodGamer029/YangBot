@@ -258,4 +258,8 @@ public class Vector3 extends rlbot.vector.Vector3 {
     public String toString(int decimalPlaces) {
         return this.getClass().getSimpleName() + String.format("(x=%." + decimalPlaces + "f;y=%." + decimalPlaces + "f;z=%." + decimalPlaces + "f)", x, y, z);
     }
+
+    public float min() {
+        return Math.min(x, Math.min(y, z));
+    }
 }

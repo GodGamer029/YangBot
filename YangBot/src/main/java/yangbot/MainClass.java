@@ -32,7 +32,7 @@ public class MainClass {
 
     public static void main(String[] args) {
         System.out.println("I am running Java v" + System.getProperty("java.version"));
-
+        Locale.setDefault(Locale.US);
         Logger rootLogger = LogManager.getLogManager().getLogger("");
         rootLogger.setLevel(Level.FINE);
         for (Handler h : rootLogger.getHandlers()) {

@@ -7,9 +7,6 @@ import yangbot.input.RLConstants;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class DriveManeuver extends Maneuver {
 
     public static final float min_speed = 10f;
@@ -22,8 +19,8 @@ public class DriveManeuver extends Maneuver {
     public Vector3 target = null;
     public float minimumSpeed = 1400f;
     public float maximumSpeed = CarData.MAX_VELOCITY;
-    public static ArrayList<List<Float>> speeds = new ArrayList<>();
-    public static ArrayList<Float> times = new ArrayList<>();
+    //public static ArrayList<List<Float>> speeds = new ArrayList<>();
+    //public static ArrayList<Float> times = new ArrayList<>();
     public boolean allowBoost = true;
 
     public static float maxDistance(float currentSpeed, float time) {
@@ -149,15 +146,19 @@ public class DriveManeuver extends Maneuver {
         }
         //System.out.println("throttle_boost_transition="+throttle_boost_transition+" minimumAcceleration="+minimumAcceleration+" cur="+currentSpeed+" targ="+minimumSpeed);
 
-        speeds.add(List.of(currentSpeed, minimumSpeed, throttle_boost_transition, MathUtils.clip(minimumAcceleration, -5000, 5000), minimumSpeed - currentSpeed, brake_coast_transition, coasting_throttle_transition));
-        times.add(GameData.current().getCarData().elapsedSeconds);
+        //speeds.add(List.of(currentSpeed, minimumSpeed, throttle_boost_transition, MathUtils.clip(minimumAcceleration, -5000, 5000), minimumSpeed - currentSpeed, brake_coast_transition, coasting_throttle_transition));
+        //times.add(GameData.current().getCarData().elapsedSeconds);
     }
 
-    public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {
+    public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos, float multiplier) {
         Vector3 target_local = targetPos.sub(car.position).dot(car.orientation);
 
         float angle = (float) Math.atan2(target_local.y, target_local.x);
-        output.withSteer(MathUtils.clip(3.0f * angle * (float) Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
+        output.withSteer(MathUtils.clip(multiplier * 3.0f * angle * (float) Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
+    }
+
+    public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {
+        steerController(output, car, targetPos, 1);
     }
 
     @Override

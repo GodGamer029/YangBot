@@ -3,8 +3,6 @@ package yangbot.strategy.abstraction;
 import org.jetbrains.annotations.NotNull;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.QuickChatSelection;
-import rlbot.gamestate.GameInfoState;
-import rlbot.gamestate.GameState;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.input.interrupt.BallTouchInterrupt;
@@ -14,6 +12,7 @@ import yangbot.optimizers.graders.OffensiveGrader;
 import yangbot.path.builders.SegmentedPath;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.Range;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix3x3;
@@ -45,15 +44,17 @@ public class DriveStrikeAbstraction extends Abstraction {
     public Grader customGrader;
     private BallTouchInterrupt ballTouchInterrupt = null;
 
-    public boolean debugMessages = false;
+    public boolean debugMessages = true;
     public float maxJumpDelay = 0.6f;
     public float jumpDelayStep = 0.15f;
     public float jumpBeforeStrikeDelay = 0.3f;
     public Vector3 originalTargetBallPos = null;
+
     private YangBallPrediction hitPrediction;
     private CarData hitCar;
     private BallData hitBall;
     private Vector3 contactPoint;
+    private boolean doesHitNotInvolveDodge;
 
     public DriveStrikeAbstraction(SegmentedPath path) {
         this(path, new OffensiveGrader());
@@ -182,7 +183,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                     //if(this.originalTargetBallPos != null)
                     //    ballAtArrival = this.originalTargetBallPos;
 
-                    float T = Math.min(ballPrediction.relativeTimeOfLastFrame() - 0.1f, (float) ((ballAtArrival.flatten().sub(car.position.flatten()).magnitude() - BallData.COLLISION_RADIUS + Math.abs(ballAtArrival.z - car.position.z)) / car.velocity.magnitude()));
+                    float T = Math.min(ballPrediction.relativeTimeOfLastFrame() - 0.1f, (float) ((ballAtArrival.sub(car.position).magnitude() - BallData.COLLISION_RADIUS - car.hitbox.getMinHitboxExtent()) / MathUtils.clip(car.velocity.magnitude() + 100, 400, CarData.MAX_VELOCITY)));
                     if (T > Math.min(this.jumpBeforeStrikeDelay + 0.5f, DodgeManeuver.timeout) || T <= RLConstants.tickFrequency) {
                         strikeDodge.direction = null;
                         strikeDodge.target = null;
@@ -205,6 +206,9 @@ public class DriveStrikeAbstraction extends Abstraction {
                         int simulationCount = 0;
                         boolean didHitBall = false;
                         boolean didHitBallAfterDodge = false;
+                        int numGraderCalls = 0;
+                        int numWheelHits = 0;
+                        int numHits = 0;
 
                         for (float duration = Math.max(0.1f, this.strikeDodge.timer); duration <= 0.2f; duration = duration < 0.2f ? 0.2f : 999f) {
                             float jumpDelayStep = this.jumpDelayStep;
@@ -242,8 +246,9 @@ public class DriveStrikeAbstraction extends Abstraction {
                                     FoolGameData foolGameData = GameData.current().fool();
                                     Vector3 simContact = null;
 
+                                    float timeEnd = T + 0.2f;
                                     // Simulate ball - car collision
-                                    for (float time = 0; time < T + 0.2f; time += simDt) {
+                                    for (float time = 0; time < timeEnd; time += simDt) {
                                         ControlsOutput simControls = new ControlsOutput();
 
                                         foolGameData.foolCar(simCar);
@@ -252,6 +257,13 @@ public class DriveStrikeAbstraction extends Abstraction {
                                         simDodge.step(simDt, simControls);
 
                                         simCar.step(simControls, simDt);
+                                        // Don't let the car escape the arena
+                                        if (simCar.position.x >= RLConstants.arenaHalfWidth)
+                                            break;
+                                        if (simCar.position.y >= RLConstants.arenaHalfLength)
+                                            break;
+                                        if (simCar.position.z < RLConstants.carElevation - 5)
+                                            break;
 
                                         simContact = simBall.collide(simCar, 0);
 
@@ -272,24 +284,32 @@ public class DriveStrikeAbstraction extends Abstraction {
 
                                     // Evaluate post-collision ball state
                                     if (simBall.hasBeenTouched) {
+
                                         didHitBall = true;
-                                        if ((!simCar.doubleJumped && hadNonDodgeHit) || simCar.dodgeTimer <= 0.05f)
+                                        final boolean isNonDodgeHit = (!simCar.doubleJumped || simCar.dodgeTimer < 0.05f);
+                                        if (isNonDodgeHit && hadNonDodgeHit)
                                             continue;
 
+                                        numHits++;
+
                                         hadNonDodgeHit = true;
-                                        didHitBallAfterDodge |= simCar.doubleJumped;
+                                        didHitBallAfterDodge |= !isNonDodgeHit;
 
                                         // Did it hit with the wheels?
                                         {
                                             assert simContact != null;
-                                            var rel = simContact.sub(simCar.position);
-                                            rel = simCar.hitbox.removeOffset(rel);
-                                            Vector3 localContact = rel.dot(simCar.hitbox.getOrientation()).div(simCar.hitbox.hitboxLengths.mul(0.5f));
+                                            var rel = simContact.sub(simCar.position); // car -> contact
+                                            float localContactF = (float) rel.dot(simCar.hitbox.getOrientation().forward());
+                                            rel = simCar.hitbox.removeOffset(rel); // hitbox center -> contact
+                                            float localHitboxContactZ = (float) simCar.hitbox.getOrientation().up().dot(rel);
 
-                                            if (localContact.z < -0.99f/* && localContact.flatten().magnitude() < Math.sqrt(1.9f)*/) {
+                                            final var wheelInfo = car.wheelInfo;
+                                            final var frontAxle = wheelInfo.get(1, 0);
+                                            final var backAxle = wheelInfo.get(-1, 0);
+                                            if (localHitboxContactZ < -simCar.hitbox.hitboxLengths.mul(0.5f).z && Range.isInRange(localContactF, backAxle.localPos.x - backAxle.radius - 1, frontAxle.localPos.x + frontAxle.radius + 1)) {
                                                 //if(debugMessages)
                                                 //    System.out.println("Stopped because hit with wheels");
-
+                                                numWheelHits++;
                                                 continue;
                                             }
                                         }
@@ -300,6 +320,8 @@ public class DriveStrikeAbstraction extends Abstraction {
                                         final GameData tempGameData = new GameData(0L);
                                         tempGameData.update(simCar, new ImmutableBallData(simBall), new ArrayList<>(), gameData.getGravity().z, dt, renderer);
                                         tempGameData.setBallPrediction(simBallPred);
+
+                                        numGraderCalls++;
 
                                         if (this.customGrader.isImproved(tempGameData))
                                             applyDodgeSettings = true;
@@ -313,12 +335,16 @@ public class DriveStrikeAbstraction extends Abstraction {
                                             this.strikeDodge.preorientOrientation = simDodge.preorientOrientation;
                                             this.strikeDodge.controllerInput = simDodge.controllerInput;
 
+                                            if (isNonDodgeHit)
+                                                this.strikeDodge.delay = 9999;
+
                                             this.strikeSolved = true;
                                             this.hitPrediction = simBallPred;
                                             this.hitCar = simCar;
                                             this.hitBall = simBall;
                                             this.contactPoint = simContact;
-                                            this.dodgeCollisionTime = simCar.elapsedSeconds;
+                                            this.dodgeCollisionTime = simCar.elapsedSeconds + car.elapsedSeconds;
+                                            this.doesHitNotInvolveDodge = isNonDodgeHit;
                                         }
                                     }
                                 }
@@ -328,9 +354,9 @@ public class DriveStrikeAbstraction extends Abstraction {
                         if (this.strikeSolved) { // Found shot
 
                             if (debugMessages) {
-                                System.out.println("Optimized dodgeManeuver: delay=" + this.strikeDodge.delay + " duration=" + this.strikeDodge.duration + " ");
+                                System.out.println(car.playerIndex + ": >> Optimized dodgeManeuver: delay=" + this.strikeDodge.delay + " duration=" + this.strikeDodge.duration + " grader=" + this.customGrader.getClass().getSimpleName() + " doesHitNotInvolveDodge=" + doesHitNotInvolveDodge);
 
-                                RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
+                                //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(0.1f)).buildPacket());
                             }
 
                         } else { // Couldn't satisfy grader
@@ -339,7 +365,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                             strikeDodge.duration = 0;
                             strikeDodge.delay = 9999;
                             strikeDodge.setDone();
-                            System.out.println(car.playerIndex + ": >>> Could not satisfy grader, aborting... (Grader: " + this.customGrader.getClass().getSimpleName() + ", didHitBall=" + didHitBall + ", didHitBallAfterDodge=" + didHitBallAfterDodge + ")");
+                            System.out.println(car.playerIndex + ": >>> Could not satisfy grader, aborting... (Grader: " + this.customGrader.getClass().getSimpleName() + ", didHitBall=" + didHitBall + ", didHitBallAfterDodge=" + didHitBallAfterDodge + ", numHits=" + numHits + ", numGraderCalls=" + numGraderCalls + ", numWheelHits=" + numWheelHits + ")");
                             System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
                         }
                         if (this.debugMessages) {
@@ -348,7 +374,7 @@ public class DriveStrikeAbstraction extends Abstraction {
 
                         }
 
-                        System.out.println(car.playerIndex + ":  > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + simulationCount + " simulations");
+                        System.out.println(car.playerIndex + ":  > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + simulationCount + " simulations at: " + car.elapsedSeconds);
                     }
                 }
 
@@ -357,13 +383,25 @@ public class DriveStrikeAbstraction extends Abstraction {
 
                 if (ball.hasBeenTouched() && ball.getLatestTouch().playerIndex == car.playerIndex && car.elapsedSeconds - ball.getLatestTouch().gameSeconds - strikeDodge.timer < -0.1f) {
                     strikeDodge.setDone();
-                    this.dodgeCollisionTime = car.elapsedSeconds;
+                    float originalCollTime = this.dodgeCollisionTime;
+                    this.dodgeCollisionTime = Math.min(this.dodgeCollisionTime, car.elapsedSeconds + 0.2f);
+                    if (this.doesHitNotInvolveDodge)
+                        this.dodgeCollisionTime = car.elapsedSeconds;
+                    if (debugMessages)
+                        System.out.println(" - Ball touched, quitting strike soon (prev=" + originalCollTime + ", now=" + this.dodgeCollisionTime + ")");
                 }
 
                 if (strikeDodge.isDone() && car.elapsedSeconds > this.dodgeCollisionTime) {
                     if (debugMessages) {
                         System.out.println("Quitting strike because strikeDodge isDone: " + strikeDodge.timer + " " + strikeDodge.delay + " " + strikeDodge.duration + " ");
-                        RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
+                        //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
+                    }
+
+                    return RunState.DONE;
+                } else if (this.strikeSolved && car.elapsedSeconds > this.dodgeCollisionTime + 0.2f) {
+                    if (debugMessages) {
+                        System.out.println("Quitting strike because dodgeCollisionTime over: " + this.dodgeCollisionTime + " rel=" + (this.hitCar.elapsedSeconds));
+                        //RLBotDll.setGameState(new GameState().withGameInfoState(new GameInfoState().withGameSpeed(1f)).buildPacket());
                     }
 
                     return RunState.DONE;

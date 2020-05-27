@@ -109,7 +109,7 @@ public class PathBuilder {
             this.pathSegments.clear();
             this.pathSegments.addAll(optimizedSegments);
         }
-        if (true) {
+        if (false) {
             System.out.println("Path: ");
             StringBuilder builder = new StringBuilder();
             builder.append(" -> Start " + this.start.forward() + " (" + this.start.forward().dot(this.start.velocity) + ")");

@@ -68,7 +68,7 @@ public class RecoverStrategy extends Strategy {
         final boolean speedflipPossible = recoverEndTime - this.recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
-        if (carPositionAtImpact.z > 400) {
+        if (carPositionAtImpact.z > 200) {
             targetDirection = new Vector3(0, 0, -1);
         } else {
             Optional<YangBallPrediction.YangPredictionFrame> ballFrameAtImpact = gameData.getBallPrediction().getFrameAtRelativeTime(simulationTime + 0.5f);

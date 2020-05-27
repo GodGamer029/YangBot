@@ -103,6 +103,10 @@ public class YangCarHitbox extends YangHitbox {
         return this.hitboxLengths.mul(0.5f).mean();
     }
 
+    public float getMinHitboxExtent() {
+        return this.hitboxLengths.mul(0.5f).min();
+    }
+
     @Override
     public void draw(Renderer renderer, Vector3 p, float scale, Color c) {
         renderer.drawLine3d(c, permutatePoint(p, 1, 1, 1, scale), permutatePoint(p, 1, 1, -1, scale));

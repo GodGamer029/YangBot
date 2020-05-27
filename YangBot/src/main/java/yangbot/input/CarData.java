@@ -57,6 +57,7 @@ public class CarData {
     public boolean hasWheelContact;
     public float elapsedSeconds;
 
+    public final YangWheelInfo wheelInfo = YangWheelInfo.octane();
     public final YangCarHitbox hitbox;
     public boolean doubleJumped;
     public boolean jumped;

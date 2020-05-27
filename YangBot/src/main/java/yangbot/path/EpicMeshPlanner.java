@@ -26,7 +26,7 @@ public class EpicMeshPlanner {
     private boolean avoidBall = false;
     private boolean ballAvoidanceNecessary = false;
     private CarData carSim = null;
-    private float arrivalTime = -1, arrivalSpeed = -1;
+    private float arrivalTime = -1, arrivalSpeed = DriveManeuver.max_throttle_speed;
     private PathCreationStrategy pathCreationStrategy;
     private List<Tuple<Vector3, Vector3>> additionalPoints;
 

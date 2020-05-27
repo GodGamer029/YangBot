@@ -64,6 +64,7 @@ public class YangBot implements Bot {
         switch (state) {
             case RESET: {
                 if (KickoffTester.isKickoff() && KickoffTester.shouldGoForKickoff(car, gameData.getAllCars().stream().filter((c) -> c.team == car.team).collect(Collectors.toList()), ball)) {
+                    System.out.println("##################### Kickoff");
                     this.kickoffManeuver = new SimpleKickoffManeuver();
                     this.state = State.KICKOFF;
                     output.withThrottle(1);
@@ -114,7 +115,7 @@ public class YangBot implements Bot {
         // Print Throttle info
         {
             GameData.current().getBallPrediction().draw(renderer, Color.BLUE, 2);
-            renderer.drawString2d("Dt: " + dt, Color.WHITE, new Point(10, 240), 1, 1);
+            renderer.drawString2d("Dt: " + dt, Color.WHITE, new Point(10, 250), 1, 1);
 
             renderer.drawString2d("State: " + this.state.name(), Color.WHITE, new Point(10, 270), 2, 2);
             if (this.state != State.KICKOFF) {
@@ -156,6 +157,7 @@ public class YangBot implements Bot {
         }
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 210), 1, 1);
+        renderer.drawString2d(String.format("Time: %.2f", myCar.elapsedSeconds), Color.WHITE, new Point(10, 230), 1, 1);
         if (false) {
             renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 230), 1, 1);
             renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);

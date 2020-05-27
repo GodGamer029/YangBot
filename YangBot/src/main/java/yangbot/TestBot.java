@@ -20,7 +20,6 @@ import yangbot.path.builders.segments.FlipSegment;
 import yangbot.strategy.abstraction.AerialAbstraction;
 import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.strategy.manuever.DodgeManeuver;
-import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
@@ -112,32 +111,29 @@ public class TestBot implements Bot {
 
         switch (state) {
             case YEET:
-                if (timer > 30f)
+                if (timer > 6f)
                     this.state = State.RESET;
                 break;
             case RESET: {
                 this.trail.clear();
                 this.timer = 0.0f;
-                this.state = State.INIT;
+                this.state = State.YEET;
 
-                final Vector3 startPos = new Vector3(0, 0, 17);
-                final Vector3 startTangent = new Vector3(0f, -1f, 0f).normalized(); //
-                final Vector3 endTangent = new Vector3(0.02, 1, 0).normalized();
-                final Vector3 targetPos = new Vector3(600, -RLConstants.goalDistance * 0.9f, 120);
-                final float startSpeed = 000f; // 1260
-
-                float z = 1000;
+                final Vector3 startPos = new Vector3(0, 160, 550);
+                final Vector3 startTangent = new Vector3(0, -1f, 0).normalized(); //
+                final float startSpeed = 0f; // 1260
                 RLBotDll.setGameState(new GameState()
                         .withGameInfoState(new GameInfoState().withGameSpeed(1f))
                         .withCarState(controlCar.playerIndex, new CarState().withPhysics(new PhysicsState()
                                 .withLocation(startPos.toDesiredVector())
-                                .withVelocity(startTangent.mul(startSpeed).toDesiredVector())
+                                .withVelocity(new Vector3(0, 0, -5).toDesiredVector())
                                 .withRotation(Matrix3x3.lookAt(startTangent, new Vector3(0, 0, 1)).toEuler().toDesiredRotation())
                                 .withAngularVelocity(new Vector3().toDesiredVector())
                         ).withBoostAmount(100f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(0f, 0f, z))
-                                .withVelocity(new DesiredVector3((float) Math.random() * 400 - 200f, (float) Math.random() * 50f, 200f))
+                                .withLocation(new DesiredVector3(0f, 0f, 500f))
+                                .withVelocity(new DesiredVector3(0f, 0f, 0f))
+                                .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                         ))
                         .buildPacket());
 
@@ -192,7 +188,7 @@ public class TestBot implements Bot {
                     System.out.println("Done at " + timer);
                     this.timer = 0;
 
-                    final XYChart chart = new XYChartBuilder().width(1200).height(800).title("Area").build();
+                    /*final XYChart chart = new XYChartBuilder().width(1200).height(800).title("Area").build();
                     chart.addSeries("current", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(0)).collect(Collectors.toList()));
                     chart.addSeries("minimum", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(1)).collect(Collectors.toList()));
                     chart.addSeries("throttleboosttrans", DriveManeuver.times, DriveManeuver.speeds.stream().map(t -> t.get(2)).collect(Collectors.toList()));
@@ -205,12 +201,14 @@ public class TestBot implements Bot {
                     new SwingWrapper(chart).displayChart();
 
                     DriveManeuver.times.clear();
-                    DriveManeuver.speeds.clear();
+                    DriveManeuver.speeds.clear();*/
                 }
 
                 break;
             }
         }
+
+        controlCar.hitbox.draw(renderer, controlCar.position, 1, Color.GREEN);
 
         // Print Throttle info
         {

@@ -258,11 +258,13 @@ public class OffensiveStrategy extends Strategy {
         this.strikeAbstraction.arrivalTime = arrivalTime;
         this.strikeAbstraction.originalTargetBallPos = ballAtTargetPos;
 
-        float zDiff = ballAtTargetPos.z - 0.7f * BallData.COLLISION_RADIUS - car.position.z;
-        if (zDiff < 30)
+        float zDiff = ballAtTargetPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
+        if (zDiff < 5)
             this.strikeAbstraction.jumpBeforeStrikeDelay = 0.2f;
         else
-            this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.2f, 1f);
+            this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z), 0.2f, 1f);
+
+        System.out.println("Setting jumpBeforeStrikeDelay=" + this.strikeAbstraction.jumpBeforeStrikeDelay + " zDiff=" + zDiff + " ballTargetZ=" + ballAtTargetPos.z + " carZ=" + car.position.z);
 
         this.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
         this.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);

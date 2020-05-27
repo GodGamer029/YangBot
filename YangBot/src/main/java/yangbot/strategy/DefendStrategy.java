@@ -226,8 +226,8 @@ public class DefendStrategy extends Strategy {
         this.strikeAbstraction.maxJumpDelay = 0.6f;
         this.strikeAbstraction.jumpDelayStep = 0.15f;
 
-        float zDiff = targetBallPos.z - 0.7f * BallData.COLLISION_RADIUS - car.position.z;
-        if (zDiff < 30)
+        float zDiff = targetBallPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
+        if (zDiff < 5)
             this.strikeAbstraction.jumpBeforeStrikeDelay = 0.2f;
         else
             this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z), 0.2f, 1f);
@@ -251,7 +251,6 @@ public class DefendStrategy extends Strategy {
         this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt(-1);
         this.idleAbstraction = new IdleAbstraction();
         this.idleAbstraction.minIdleDistance = 500;
-        this.idleAbstraction.maxIdleDistance = 3000;
         this.strikeAbstraction = null;
         this.state = State.INVALID;
 

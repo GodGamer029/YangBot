@@ -16,7 +16,7 @@ public abstract class BakeablePathSegment extends PathSegment {
     protected float arrivalTime = -1;
     protected float arrivalSpeed = -1;
 
-    protected BakeablePathSegment(float startSpeed, float endSpeed) {
+    protected BakeablePathSegment(float startSpeed, float endSpeed, float arrivalTime) {
         super(startSpeed);
         this.followPathManeuver = new FollowPathManeuver();
         this.followPathManeuver.arrivalTime = -1;

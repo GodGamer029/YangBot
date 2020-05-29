@@ -107,6 +107,7 @@ public class OffensiveStrategy extends Strategy {
                             .withStart(car)
                             .addPoint(offsetPos, car.position.sub(padLocation).normalized())
                             .withEnd(padLocation, car.position.sub(padLocation).normalized()/*offToBallLocation.sub(padLocation).normalized()*/)
+                            //.withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                             .plan().get();
                     float pathTimeEstimate = path.getTotalTimeEstimate();
                     if (pad.isFullBoost())
@@ -206,6 +207,9 @@ public class OffensiveStrategy extends Strategy {
             final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 
+            if (ballTargetToGoalTarget.dot(startTangent) < 0)
+                continue;
+
             Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.permutatePoint(new Vector3(), 1, 0, 0).magnitude()));
             ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
 
@@ -216,8 +220,10 @@ public class OffensiveStrategy extends Strategy {
 
             var currentPathOptional = new EpicMeshPlanner()
                     .withStart(startPosition, startTangent)
-                    .withEnd(ballHitTarget, endTangent.mul(-1))
+                    .withEnd(ballHitTarget, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
+                    .withArrivalSpeed(MathUtils.remapClip((float) car.boost, 0, 70, DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY))
+                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
             if (currentPathOptional.isEmpty())

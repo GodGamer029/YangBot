@@ -38,12 +38,13 @@ public class IdleAbstraction extends Abstraction {
 
         final int teamSign = localCar.getTeamSign();
         final AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
-        final Vector2 ownGoal = new Vector2(0, teamSign * RLConstants.goalDistance);
 
         // Distances will be scaled back if they exceed this value
         final float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 220;
         final float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 140;
-        final float minAbsoluteChannelBallDist = 500;
+        final float minAbsoluteChannelBallDist = 1000;
+
+        final Vector2 ownGoal = new Vector2(0, teamSign * Math.min(RLConstants.goalDistance, maxAbsoluteIdleY + 10));
 
         assert Math.abs(ownGoal.y) > minAbsoluteChannelBallDist;
 
@@ -149,7 +150,12 @@ public class IdleAbstraction extends Abstraction {
 
         float[] xGrid = new float[(int) MathUtils.clip(teammates.size() * 2 + 1, 5, 11)]; // Always uneven, to make sure theres a segment in the middle
         final float decidedYPos = yIndexToAbs.apply(lowestYSpot);
-        final float xChannelHalfWidth = RLConstants.goalCenterToPost * 1.2f;
+
+        final float xChannelHalfWidth;
+        {
+            final float distToOwnGoal = Math.abs(decidedYPos - ownGoal.y);
+            xChannelHalfWidth = MathUtils.remapClip(distToOwnGoal, 0, 1000, RLConstants.goalCenterToPost * 0.9f, RLConstants.goalCenterToPost * 1.2f);
+        }
 
         assert maxAbsoluteIdleX > xChannelHalfWidth;
 

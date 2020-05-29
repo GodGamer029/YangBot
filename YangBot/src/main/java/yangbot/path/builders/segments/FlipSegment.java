@@ -68,6 +68,8 @@ public class FlipSegment extends PathSegment {
         // Wait 0.1s
         var startTangent = straightSegment.getStartTangent();
         var startPos = straightSegment.getStartPos().add(straightSegment.getStartTangent().mul(startSpeed).mul(0.15f));
+        if (startPos.z > 50)
+            return false;
         var flipSegment = new FlipSegment(startPos, straightSegment.getStartTangent(), startSpeed + 20);
         // Did we overshoot?
         var flipEndPos = flipSegment.endPos.add(startTangent.mul(flipSegment.endSpeed * tolerance));

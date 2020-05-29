@@ -18,7 +18,7 @@ import java.util.List;
 public class TurnCircleSegment extends BakeablePathSegment {
 
     public final Vector2 circlePos;
-    private static final float MIN_CIRCLE_RADIUS = 1 / DriveManeuver.maxTurningCurvature(200);
+    private static final float MIN_CIRCLE_RADIUS = 1 / DriveManeuver.maxTurningCurvature(600);
     public final Vector2 tangentPoint;
     private final Vector2 endPos;
     private final Vector2 startPos;
@@ -26,7 +26,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
     private float circleRadius;
 
     public TurnCircleSegment(Physics2D start, float circleRadius, Vector2 endPos) {
-        super(start.forwardSpeed(), -1);
+        super(start.forwardSpeed(), -1, -1);
 
         this.circleRadius = circleRadius;
         this.endPos = endPos;

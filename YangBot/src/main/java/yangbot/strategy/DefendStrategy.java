@@ -191,15 +191,16 @@ public class DefendStrategy extends Strategy {
 
             final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
             final Vector3 targetPos = interceptFrame.ballData.position;
-            final Vector3 endTangent = new Vector3(targetPos.flatten().sub(ownGoal).normalized(), 0);
-            final Vector3 endPos = targetPos.withZ(car.position.z).sub(endTangent.mul(BallData.COLLISION_RADIUS * 0.7f));
+            final Vector3 endTangent = new Vector3(targetPos.flatten().sub(ownGoal).normalized().mul(2).add(targetPos.flatten().sub(car.position.flatten()).normalized()).normalized(), 0);
+            final Vector3 endPos = targetPos.withZ(car.position.z).sub(endTangent.mul(BallData.COLLISION_RADIUS + car.hitbox.getMinHitboxExtent()));
 
             var pathPlanner = new EpicMeshPlanner()
                     .withStart(car, 10)
                     .withEnd(endPos, endTangent)
                     //.withBallAvoidance(true, car, interceptFrame.absoluteTime, true)
                     .withArrivalTime(interceptFrame.absoluteTime)
-                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.SIMPLE);
+                    .withArrivalSpeed(MathUtils.remapClip((float) car.boost, 0, 50, DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY))
+                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH);
             var pathOptional = pathPlanner.plan();
 
             if (pathOptional.isPresent()) {
@@ -265,6 +266,7 @@ public class DefendStrategy extends Strategy {
         int teamSign = car.team * 2 - 1;
 
         final float MAX_HEIGHT_GROUND_SHOT = 230f + BallData.COLLISION_RADIUS * 0.65f;
+        final float MAX_HEIGHT_DOUBLEJUMP = 500;
         final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
 
         // Getting scored on
@@ -284,8 +286,8 @@ public class DefendStrategy extends Strategy {
                 }
 
                 var aerialFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
-                        .filter((frame) -> frame.relativeTime < 3f)
-                        .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_GROUND_SHOT)
+                        .filter((frame) -> frame.relativeTime < 3.5f)
+                        .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_DOUBLEJUMP)
                         .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
                 if (this.planAerialIntercept(aerialFrames, false))
@@ -325,10 +327,10 @@ public class DefendStrategy extends Strategy {
                 YangBallPrediction framesBeforeAreaEnter = ballPrediction.getBeforeRelative(frameAreaEnter.relativeTime + 0.5f);
                 if (framesBeforeAreaEnter.frames.size() > 0) {
 
-                    if (car.boost > 20) {
+                    if (car.boost > 10) {
                         var aerialFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
-                                .filter((frame) -> frame.relativeTime < 3f)
-                                .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_GROUND_SHOT)
+                                .filter((frame) -> frame.relativeTime < 3.5f)
+                                .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_DOUBLEJUMP)
                                 .collect(Collectors.toList()), framesBeforeAreaEnter.tickFrequency);
 
                         if (this.planAerialIntercept(aerialFrames, false))

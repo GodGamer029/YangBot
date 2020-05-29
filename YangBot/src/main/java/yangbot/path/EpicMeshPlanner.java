@@ -155,7 +155,7 @@ public class EpicMeshPlanner {
                     builder.add(getToGround);
                 }
                 var neededTangent = this.endPos.sub(builder.getCurrentPosition()).flatten().normalized();
-                if (builder.getCurrentSpeed() > 300 && Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent)) > 30 * (Math.PI / 180)) {
+                if (builder.getCurrentSpeed() > 300 && builder.getCurrentPosition().flatten().distance(this.endPos.flatten()) > 1000 && Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent)) > 30 * (Math.PI / 180)) {
                     var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), this.endPos.sub(builder.getCurrentPosition()).normalized(), builder.getCurrentSpeed());
                     builder.add(drift);
                     neededTangent = this.endPos.sub(builder.getCurrentPosition()).flatten().normalized();
@@ -167,7 +167,7 @@ public class EpicMeshPlanner {
                         builder.add(turn);
                 }
 
-                builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), this.endPos, this.arrivalSpeed));
+                builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), this.endPos, this.arrivalSpeed, this.arrivalTime));
 
                 currentPath = Optional.of(builder.build());
                 break;

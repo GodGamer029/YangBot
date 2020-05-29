@@ -14,15 +14,15 @@ public class StraightLineSegment extends BakeablePathSegment {
     private final Vector3 startPos, endPos, normal;
 
     public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos) {
-        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), -1);
+        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), -1, -1);
     }
 
-    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, float endSpeed) {
-        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), endSpeed);
+    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, float endSpeed, float arrivalTime) {
+        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), endSpeed, arrivalTime);
     }
 
-    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, Vector3 normal, float endSpeed) {
-        super(startSpeed, endSpeed);
+    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, Vector3 normal, float endSpeed, float arrivalTime) {
+        super(startSpeed, endSpeed, arrivalTime);
         this.startPos = startPos;
         this.endPos = endPos;
         this.normal = normal;

@@ -136,11 +136,18 @@ public class DriveStrikeAbstraction extends Abstraction {
         if (this.ballTouchInterrupt == null)
             this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt(-1);
 
+        if (this.originalTargetBallPos != null) {
+            renderer.drawCentered3dCube(Color.PINK, this.originalTargetBallPos, BallData.COLLISION_RADIUS * 2);
+        }
+
         switch (this.state) {
             case DRIVE:
 
-                if (this.ballTouchInterrupt.hasInterrupted())
+                if (this.ballTouchInterrupt.hasInterrupted()) {
+                    if (debugMessages)
+                        System.out.println("Quitting strike because ballTouchInterrupt");
                     return RunState.DONE;
+                }
 
                 this.path.draw(renderer);
                 this.path.step(dt, controlsOutput);
@@ -418,9 +425,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                     renderer.drawCentered3dCube(Color.BLACK, this.hitBall.position, BallData.COLLISION_RADIUS * 2);
                     renderer.drawCentered3dCube(Color.GREEN, this.contactPoint, 30);
 
-                    if (this.originalTargetBallPos != null) {
-                        renderer.drawCentered3dCube(Color.PINK, this.originalTargetBallPos, BallData.COLLISION_RADIUS * 2);
-                    }
+
                 }
 
                 break;

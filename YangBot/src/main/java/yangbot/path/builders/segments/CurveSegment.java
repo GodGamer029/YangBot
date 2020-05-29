@@ -21,7 +21,7 @@ public class CurveSegment extends BakeablePathSegment {
     }
 
     public CurveSegment(Curve c, float startSpeed) {
-        super(startSpeed, -1);
+        super(startSpeed, -1, -1);
         this.curve = c;
     }
 

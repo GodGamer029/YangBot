@@ -147,7 +147,7 @@ public class AerialManeuver extends Maneuver {
 
     public boolean isViable(CarData car, float maxBoostUse) {
         var gravity = GameData.current().getGravity();
-        maxBoostUse = Math.min(maxBoostUse, (float) car.boost);
+        maxBoostUse = Math.min(maxBoostUse, (float) car.boost + 5);
         float T = this.arrivalTime - car.elapsedSeconds;
         if (T <= 0)
             return false;

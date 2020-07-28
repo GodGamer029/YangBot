@@ -7,7 +7,7 @@ import yangbot.util.math.vector.Vector3;
 // TODO: use navmesh
 public class GetToGroundSegment extends AtbaSegment {
 
-    public GetToGroundSegment(Vector3 startPos, Vector3 startTangent, float startSpeed) {
+    public GetToGroundSegment(Vector3 startPos, float startSpeed) {
         super(startPos, startSpeed, startPos.withZ(RLConstants.carElevation - 1));
     }
 

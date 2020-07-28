@@ -17,6 +17,7 @@ public class AerialAbstraction extends Abstraction {
     private static final float MAX_TIME_GROUND_ADJUSTMENTS = 0.6f;
     private final AerialManeuver aerialManeuver;
     public Vector3 targetPos;
+    public Vector3 targetOrientPos = null;
     public float arrivalTime = 0;
     private float timer = 0;
     private State state;
@@ -87,7 +88,7 @@ public class AerialAbstraction extends Abstraction {
         var deltaX = AerialManeuver.getDeltaX(car, this.targetPos, arrivalTime);
 
         switch (this.state) {
-            case DRIVE:
+            case DRIVE: {
                 var deltaXLocal = deltaX.dot(car.orientation);
 
                 // Align the car in-plane
@@ -108,12 +109,15 @@ public class AerialAbstraction extends Abstraction {
                     // fallthrough to FLY case
                 } else
                     return RunState.CONTINUE;
-
+            }
             case FLY:
 
                 this.aerialManeuver.target = this.targetPos;
                 this.aerialManeuver.arrivalTime = this.arrivalTime;
-                this.aerialManeuver.target_orientation = Matrix3x3.lookAt(this.targetPos.sub(car.position), car.up());
+                var lookPos = this.targetPos;
+                if (this.targetOrientPos != null)
+                    lookPos = this.targetOrientPos;
+                this.aerialManeuver.target_orientation = Matrix3x3.lookAt(lookPos.sub(this.targetPos.sub(deltaX)), car.up());
                 this.aerialManeuver.step(dt, controlsOutput);
                 if (this.aerialManeuver.isDone() || car.elapsedSeconds > this.arrivalTime + 0.1f)
                     return RunState.DONE;
@@ -131,6 +135,9 @@ public class AerialAbstraction extends Abstraction {
 
         renderer.drawCentered3dCube(Color.GREEN, targetPos, 50);
         renderer.drawCentered3dCube(Color.GREEN, targetPos, 120);
+
+        renderer.drawCentered3dCube(Color.MAGENTA, targetOrientPos, 50);
+        renderer.drawCentered3dCube(Color.MAGENTA, targetOrientPos, 120);
 
         var deltaX = AerialManeuver.getDeltaX(car, this.targetPos, arrivalTime);
         //float D = car.angularVelocity.dot(car.orientation).z;

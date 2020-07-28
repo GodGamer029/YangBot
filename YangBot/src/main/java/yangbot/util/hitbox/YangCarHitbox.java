@@ -103,6 +103,10 @@ public class YangCarHitbox extends YangHitbox {
         return this.hitboxLengths.mul(0.5f).mean();
     }
 
+    public float getForwardExtent() {
+        return this.hitboxOffset.x + this.hitboxLengths.x * 0.5f;
+    }
+
     public float getMinHitboxExtent() {
         return this.hitboxLengths.mul(0.5f).min();
     }

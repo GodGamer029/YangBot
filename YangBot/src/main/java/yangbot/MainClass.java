@@ -56,6 +56,12 @@ public class MainClass {
                 BOT_TYPE = BotType.TEST;
             else if (args[0].equalsIgnoreCase("trainingtest"))
                 BOT_TYPE = BotType.TRAINING_TEST;
+            else if (args[0].equalsIgnoreCase("twitch"))
+                BOT_TYPE = BotType.TWITCH;
+
+            if (BOT_TYPE != BotType.PRODUCTION) {
+                args[0] = "";
+            }
         }
         log.info("Using Bot type: " + BOT_TYPE);
         lazyLoadNavigator();
@@ -155,6 +161,37 @@ public class MainClass {
         new Timer(1000, botIndexListener).start();
         new Timer(1000, mapSettingsListener).start();
         lazyPrepJit();
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+        }
+        /*
+        var actionServerPort = DEFAULT_PORT + 1;
+
+            new Thread(() -> {
+                new SpringApplication(Swagger2SpringBoot.class).run("--server.port="+actionServerPort);
+            }).start();
+
+            new Thread(() -> {
+                var apiClient = new ApiClient();
+                apiClient.setBasePath("http://127.0.0.1:7307");
+                var registerApi = new RegisterApi(apiClient);
+                while (true) {
+                    try {
+                        var registration = new ActionServerRegistration().baseUrl("http://127.0.0.1:"+actionServerPort);
+                        var response = registerApi.registerActionServer(registration);
+                        System.out.println("Action server registration gave "+response.getCode()+" - "+response.getMessage());
+                    } catch (Exception e) {
+                        // Eat the exception
+                    } finally {
+                        try{
+                            Thread.sleep(10000);
+                        }catch (Exception e){ }
+                    }
+                }
+            }).start();
+        }*/
     }
 
     private static void lazyLoadNavigator() {
@@ -285,6 +322,7 @@ public class MainClass {
         PRODUCTION,
         TEST,
         TRAINING,
-        TRAINING_TEST
+        TRAINING_TEST,
+        TWITCH
     }
 }

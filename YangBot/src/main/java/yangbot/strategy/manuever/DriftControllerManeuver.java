@@ -22,9 +22,11 @@ public class DriftControllerManeuver extends Maneuver {
         Vector3 angularLocal = car.angularVelocity.dot(car.orientation).div(CarData.MAX_ANGULAR_VELOCITY);
         Vector3 targetLocal = this.targetDirection.dot(car.orientation);
 
-        if (this.targetDirection.dot(car.forward()) > 0.98f && Math.abs(angularLocal.z) < 0.01f && car.velocity.normalized().dot(this.targetDirection) > 0.97f) {
+        if (this.targetDirection.dot(car.forward()) > 0.98f && Math.abs(angularLocal.z) < 0.01f && car.velocity.normalized().dot(this.targetDirection) > 0.97f)
             this.setDone();
-        }
+
+        if (car.position.z > 50 || car.up().dot(new Vector3(0, 0, 1)) < 0.5f)
+            this.setDone();
 
         // Steer
         {

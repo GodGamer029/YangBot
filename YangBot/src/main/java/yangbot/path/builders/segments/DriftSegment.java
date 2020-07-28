@@ -19,6 +19,7 @@ public class DriftSegment extends PathSegment {
     private final Vector3 endPos;
     private final float totalTraversalTime;
     private final float endSpeed;
+    private final boolean isEasySlide;
 
     public DriftSegment(Vector3 startPosition, Vector3 startTangent, Vector3 endTangent, float startSpeed) {
         super(startSpeed);
@@ -32,8 +33,11 @@ public class DriftSegment extends PathSegment {
 
         assert startPosition.z < 100;
 
+        final float angle = (float) Math.abs(startTangent.flatten().normalized().angleBetween(endTangent.flatten().normalized()) * (180f / Math.PI));
+        isEasySlide = angle < 80;
+
         var powerslide = PowerslideUtil.getPowerslide(startSpeed, startPosition.flatten(), startTangent.flatten().normalized(), endTangent.flatten().normalized());
-        this.endPos = powerslide.finalPos.withZ(startPosition.z);
+        this.endPos = powerslide.finalPos.withZ(startPosition.z).add(endTangent.withZ(0).mul(15));
         this.totalTraversalTime = powerslide.time;
         this.endSpeed = powerslide.finalSpeed;
     }
@@ -50,7 +54,7 @@ public class DriftSegment extends PathSegment {
 
     @Override
     public boolean canInterrupt() {
-        return false;
+        return isEasySlide;
     }
 
     @Override
@@ -70,7 +74,7 @@ public class DriftSegment extends PathSegment {
 
     @Override
     public float getTimeEstimate() {
-        return this.totalTraversalTime;
+        return this.totalTraversalTime * 1.05f;
     }
 
     @Override

@@ -26,7 +26,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
     private float circleRadius;
 
     public TurnCircleSegment(Physics2D start, float circleRadius, Vector2 endPos) {
-        super(start.forwardSpeed(), -1, -1);
+        super(start.forwardSpeed(), MathUtils.clip(DriveManeuver.maxTurningSpeed(1 / circleRadius), 400, DriveManeuver.max_throttle_speed), -1);
 
         this.circleRadius = circleRadius;
         this.endPos = endPos;
@@ -46,7 +46,6 @@ public class TurnCircleSegment extends BakeablePathSegment {
             return;
         }
         this.circleRadius = Math.min(minR, circleRadius);
-        //System.out.println("Circle radius for: " + DriveManeuver.maxTurningSpeed(1 / this.circleRadius));
 
         this.circlePos = startPos.add(start.right().mul(Math.signum(correctionAngle)).mul(this.circleRadius));
 
@@ -112,7 +111,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
             corrAng = (float) (Math.signum(-this.ccw) * (Math.PI - Math.abs(corrAng) + Math.PI));
         float endAngle = startAngle + corrAng;
 
-        float angleDiv = (endAngle - startAngle) / MathUtils.clip(maxSamples, 4, 16);
+        float angleDiv = (endAngle - startAngle) / MathUtils.clip(maxSamples, 4, 10);
         if (Math.abs(angleDiv) < 0.1f) {
             angleDiv = 0.1f * Math.signum(angleDiv);
         }
@@ -156,6 +155,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
         // End point
         pointList.add(new Curve.ControlPoint(this.tangentPoint.withZ(z), endTangent));
 
-        return new Curve(pointList, 8);
+        var curvRet = new Curve(pointList, 16);
+        return curvRet;
     }
 }

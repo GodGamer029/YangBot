@@ -3,6 +3,7 @@ package yangbot.strategy.manuever.kickoff;
 import yangbot.input.*;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
+import yangbot.strategy.abstraction.DriveStrikeAbstraction;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.util.math.vector.Matrix3x3;
@@ -16,6 +17,12 @@ public class SimpleKickoffManeuver extends Maneuver {
     private KickoffTester.KickOffLocation kickOffLocation = null;
     private SegmentedPath path = null;
     private DodgeManeuver dodgeManeuver = null;
+    private static final boolean SLOWKICKOFF = false;
+    private Vector3 targetPos;
+    private DriveStrikeAbstraction driveStrikeAbstraction;
+    private boolean discoveredGoer = false;
+    private EpicMeshPlanner planner;
+    private boolean dontJump = false;
 
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
@@ -50,7 +57,43 @@ public class SimpleKickoffManeuver extends Maneuver {
                 var planner = new EpicMeshPlanner()
                         .withArrivalSpeed(2300)
                         .withStart(car)
-                        .withEnd(ball.position, ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * (car.team * 2 - 1), 0).mul(0.5f)).normalized());
+                        .withEnd(ball.position.withZ(17), ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * car.getTeamSign(), 0).mul(0.5f)).normalized());
+
+                this.targetPos = ball.position;
+
+                if (SLOWKICKOFF && this.kickOffLocation == KickoffTester.KickOffLocation.CORNER) {
+                    var enemy = gameData.getAllCars().stream()
+                            .filter((c) -> c.team != car.team && Math.abs(c.position.x) >= 2040 && Math.abs(c.position.x) <= 2056 && Math.signum(c.position.x) == -Math.signum(car.position.x))
+                            .findFirst();
+                    if (enemy.isPresent()) {
+                        this.dodgeManeuver.duration = 0.1f;
+                        var midPos = new Vector3(Math.signum(car.position.x) * 50, Math.signum(car.position.y) * 700, 17);
+                        var endPos = new Vector3(Math.signum(car.position.x) * 0, Math.signum(car.position.y) * 300, 17);
+                        planner = planner
+                                .addPoint(midPos, new Vector3(0, -Math.signum(car.position.y), 0))
+                                .withEnd(endPos, ball.position.sub(endPos).normalized().add(new Vector3(0, -1 * car.getTeamSign(), 0).mul(0.1f)).normalized())
+                                .withArrivalTime(car.elapsedSeconds + 1.9f)
+                                .withArrivalSpeed(1900);
+                        this.targetPos = endPos;
+
+                        this.planner = planner;
+                        this.dontJump = true;
+
+                        this.path = planner.plan().get();
+
+                        /*this.driveStrikeAbstraction = new DriveStrikeAbstraction(path);
+                        this.driveStrikeAbstraction.jumpBeforeStrikeDelay = 0.15f; // depend on path being done
+                        this.driveStrikeAbstraction.strikeCalcDelay = 0.3f;
+                        this.driveStrikeAbstraction.maxJumpDelay = 0.45f;
+                        this.driveStrikeAbstraction.jumpDelayStep = 0.05f;
+                        this.driveStrikeAbstraction.strikeDodge.duration = 0.08f;
+                        this.driveStrikeAbstraction.arrivalTime = car.elapsedSeconds + path.getTotalTimeEstimate();
+                        this.driveStrikeAbstraction.forceJump = true;
+
+                        //this.kickOffState = KickOffState.DRIVESTRIKE;
+                        //return;*/
+                    }
+                }
 
                 if (this.kickOffLocation == KickoffTester.KickOffLocation.OFF_CENTER) {
                     Vector3 padLoc = new Vector3(Math.signum(car.position.x) * 120f, 2816.0f * car.getTeamSign(), RLConstants.carElevation);
@@ -65,12 +108,23 @@ public class SimpleKickoffManeuver extends Maneuver {
                     this.setDone();
                 break;
             }
+            case DRIVESTRIKE: {
+                this.driveStrikeAbstraction.step(dt, controlsOutput);
+                if (this.driveStrikeAbstraction.isDone())
+                    this.setDone();
+
+                break;
+            }
             case DRIVE: {
                 if (!path.isDone())
                     this.path.step(dt, controlsOutput);
-                if (this.path.isDone() || car.position.flatten().add(car.velocity.flatten().mul(0.3f)).distance(ball.position.flatten()) < BallData.COLLISION_RADIUS + car.hitbox.getAverageHitboxExtent()) {
-                    kickOffState = KickOffState.FLIP;
+                if (this.path.isDone() || car.position.flatten().add(car.velocity.flatten().mul(0.3f)).distance(this.targetPos.flatten()) < BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()) {
+                    if (!this.dontJump)
+                        this.kickOffState = KickOffState.FLIP;
                 }
+
+                if (this.dontJump && this.path.isDone())
+                    this.setDone();
 
                 this.path.draw(gameData.getAdvancedRenderer());
                 break;
@@ -99,6 +153,7 @@ public class SimpleKickoffManeuver extends Maneuver {
     enum KickOffState {
         INIT,
         DRIVE,
-        FLIP
+        FLIP,
+        DRIVESTRIKE
     }
 }

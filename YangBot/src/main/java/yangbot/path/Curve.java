@@ -512,7 +512,8 @@ public class Curve {
 
     @SuppressWarnings("UnusedReturnValue")
     public float calculateMaxSpeeds(float v0, float vf, boolean allowBoost) {
-        if (vf > DriveManeuver.max_throttle_speed)
+        System.out.println("calculateMaxSpeeds v0=" + v0 + " vf=" + vf + " allowBoost=" + allowBoost);
+        if (vf > DriveManeuver.max_throttle_speed + 1)
             allowBoost = true;
         final Vector3 gravity = new Vector3(0, 0, -650);
 
@@ -521,8 +522,16 @@ public class Curve {
 
         maxSpeeds = new float[curvatures.length];
 
+        float[] tempCurvatures = new float[curvatures.length + 2];
+        System.arraycopy(this.curvatures, 0, tempCurvatures, 0, curvatures.length);
+        tempCurvatures[curvatures.length] = 0; // pretend like the last two curvatures are 0 (end of path)
+        tempCurvatures[curvatures.length + 1] = 0;
+
+        for (int i = 0; i < curvatures.length; i++) // average the curvatures
+            tempCurvatures[i] = (tempCurvatures[i] + tempCurvatures[i + 1] + tempCurvatures[i + 2]) / 3;
+
         for (int i = 0; i < curvatures.length; i++)
-            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(curvatures[i] * 1.03f);
+            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(tempCurvatures[i] * 1.03f);
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
         maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);

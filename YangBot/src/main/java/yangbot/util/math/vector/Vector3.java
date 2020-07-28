@@ -201,7 +201,7 @@ public class Vector3 extends rlbot.vector.Vector3 {
         return this.mul(1 / magnitude());
     }
 
-    public double dot(Vector3 other) {
+    public float dot(Vector3 other) {
         return x * other.x + y * other.y + z * other.z;
     }
 

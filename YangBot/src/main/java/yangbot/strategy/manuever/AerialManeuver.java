@@ -99,7 +99,7 @@ public class AerialManeuver extends Maneuver {
         Vector3 delta_x = target.sub(xf);
         Vector3 direction = delta_x.normalized();
 
-        if (delta_x.magnitude() > reorient_distance) {
+        if (delta_x.magnitude() > reorient_distance || (this.arrivalTime - car.elapsedSeconds > 0.4f && delta_x.magnitude() > 5)) {
             this.turnManuver.target = Matrix3x3.lookAt(direction, new Vector3(0, 0, 1));
         } else {
             if (target_orientation == null || Math.abs(target_orientation.det() - 1f) < 0.01f) {
@@ -108,7 +108,7 @@ public class AerialManeuver extends Maneuver {
                 this.turnManuver.target = target_orientation;
             }
         }
-        if (this.doubleJump.timer < 0.1f && this.arrivalTime - car.elapsedSeconds > 0.5f)
+        if (this.doubleJump.timer < 0.1f && this.arrivalTime - car.elapsedSeconds > 0.7f)
             this.turnManuver.target = Matrix3x3.roofTo(direction, new Vector3(0, 0, 1));
 
         turnManuver.step(dt, null);

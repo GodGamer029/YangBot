@@ -3,7 +3,6 @@ package yangbot.strategy.abstraction;
 import yangbot.input.*;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
@@ -25,8 +24,8 @@ public class IdleAbstraction extends Abstraction {
     public boolean doBothPredictionAndCurrent = true;
     // Y-Distance from ball when idle
     // These may be scaled down, if too close to own goa l
-    public float minIdleDistance = 1300;
-    public float maxIdleDistance = RLConstants.arenaLength * 0.5f;
+    public float minIdleDistance = 1500;
+    public float maxIdleDistance = RLConstants.arenaLength * 0.45f;
 
     private SegmentedPath currentPath = null;
     private Vector3 pathTarget = new Vector3(0, 0, -999999);
@@ -96,12 +95,12 @@ public class IdleAbstraction extends Abstraction {
                 float distance = MathUtils.distance(posY, futureMateYPos);
                 yGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue();
 
-                /*if(this.doBothPredictionAndCurrent){
+                if (this.doBothPredictionAndCurrent) {
                     // Also include current position
                     float currentMateYPos = carMate.position.y;
                     distance = MathUtils.distance(posY, currentMateYPos);
-                    yGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue() * 0.5f /*don't weigh it as much as prediction/;
-                }*/
+                    yGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue() * 0.5f /*don't weigh it as much as prediction*/;
+                }
             }
         }
 
@@ -112,9 +111,10 @@ public class IdleAbstraction extends Abstraction {
             float lowestYDist = 9999999;
             float highestYDist = 0;
             boolean goBackFurther = false;// When on low boost: go back further
-            boolean doTeammatesHaveBoost = teammates.stream()
-                    .anyMatch((t) -> t.getKey().boost > 30);
-            if (doTeammatesHaveBoost && localCar.boost < 30) // Only go back when teammates do have boost
+            var teammatesWithBoostHereToHelp = teammates.stream()
+                    .filter((t) -> t.getKey().boost > 30)
+                    .anyMatch(t -> Math.abs(t.getKey().position.y - localCar.position.y) < RLConstants.arenaLength * 0.4f);
+            if (teammatesWithBoostHereToHelp && localCar.boost < 30) // Only go back when teammates do have boost
                 goBackFurther = true;
 
             for (int i = 0; i < yGrid.length; i++) {
@@ -243,7 +243,14 @@ public class IdleAbstraction extends Abstraction {
             }
         }
 
-        return new Vector2(xIndexToAbs.apply(lowestXSpot), yIndexToAbs.apply(lowestYSpot));
+        float ySpot = yIndexToAbs.apply(lowestYSpot);
+        if (lowestYSpot > 0 && lowestYSpot < yGrid.length - 1) { // Place the car within a tolerance zone, so we don't need to always drive back and forth
+            float halfBoundary = (effectiveMaxIdleDistance - effectiveMinIdleDistance) / (yGrid.length - 1);
+            halfBoundary *= 0.5f;
+            ySpot = MathUtils.remapClip(localCar.position.y, ySpot - halfBoundary, ySpot + halfBoundary, ySpot - halfBoundary, ySpot + halfBoundary);
+        }
+
+        return new Vector2(xIndexToAbs.apply(lowestXSpot), ySpot);
     }
 
     @Override
@@ -255,25 +262,11 @@ public class IdleAbstraction extends Abstraction {
         final int teamSign = car.getTeamSign();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
-        if (Math.abs(car.position.y) > RLConstants.goalDistance) {
-            DriveManeuver.steerController(controlsOutput, car, new Vector3());
-            // Ideal turning speed
-            DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 850f, 950f, 0.04f, false);
-            this.currentPath = null;
-            return RunState.CONTINUE;
-        }
-
-        /*if (car.position.z > 50 && car.hasWheelContact) {
-            DriveManeuver.steerController(controlsOutput, car, car.position.withZ(RLConstants.carElevation));
-            DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), 1050f, 1150f, 0.04f, false);
-            this.currentPath = null;
-            return RunState.CONTINUE;
-        }*/
 
         // Use position of the ball in x seconds
-        float futureBallPosDelay = 0.5f;
+        float futureBallPosDelay = 0.4f;
         // If the ball is up high retreat, because this bot is too bad to hit them anyways
-        futureBallPosDelay += MathUtils.remapClip(ball.position.z, 400, 2000, 0, 0.4f);
+        futureBallPosDelay += MathUtils.remapClip(ball.position.z, 400, 2000, 0.05f, 0.4f);
 
         // Clips idlingTarget
         final float maxX = RLConstants.arenaHalfWidth * 0.9f;
@@ -310,7 +303,6 @@ public class IdleAbstraction extends Abstraction {
                 //.filter(c -> RotationAdvisor.isInfrontOfBall(c, ball))
                 .map(c -> new Tuple<>(c, c.getPlayerInfo().isActiveRotator() ? 1 : 0.3f))
                 .collect(Collectors.toList());
-
 
         {
             var idlePos = this.findIdlePosition(car, teammates, futureBallPos);

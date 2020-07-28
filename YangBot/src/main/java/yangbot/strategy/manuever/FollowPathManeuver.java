@@ -108,17 +108,18 @@ public class FollowPathManeuver extends Maneuver {
         float distanceOffPath = this.getDistanceOffPath(car);
         final float timeUntilArrival = Math.max(this.arrivalTime - car.elapsedSeconds, 0.01f);
         float perc = 100 - (100 * currentPos / this.path.length);
-        renderer.drawString2d(String.format("Speed %.1f", currentPos / timeUntilArrival), Color.WHITE, new Point(500, 390), 1, 1);
-        renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, 410), 1, 1);
-        renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, 430), 1, 1);
+        int yPos = 530;
+        renderer.drawString2d(String.format("Speed %.1f", currentPos / timeUntilArrival), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, yPos += 20), 1, 1);
         if (this.arrivalTime > 0)
-            renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs)", timeUntilArrival, this.arrivalTime), Color.WHITE, new Point(500, 450), 2, 2);
+            renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs)", timeUntilArrival, this.arrivalTime), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         else
-            renderer.drawString2d(String.format("Speed %.1fs", car.velocity.magnitude()), Color.WHITE, new Point(500, 450), 2, 2);
+            renderer.drawString2d(String.format("Speed %.1fs", car.velocity.magnitude()), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         //renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
-        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, 490), 2, 2);
-        renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, 530), 2, 2);
-        renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, 570), 2, 2);
+        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, yPos += 40), 2, 2);
     }
 
     public float distanceError(float s0, float T, float dt, float v0, float vT, float aT) {

@@ -32,10 +32,9 @@ public class DefensiveGrader extends Grader {
             boolean landsInGoal = ballAtFrame.makeMutable().isInOwnGoal(teamSign);
 
             if (landsInGoal) {
-                /*if(time > this.timeToGoal){
+                if (time > this.timeToGoal) {
                     this.timeToGoal = time;
-                    return true;
-                }*/
+                }
 
                 return false;
             }
@@ -54,7 +53,7 @@ public class DefensiveGrader extends Grader {
         float dist = 0;
         int distSamples = 0;
         // Take some samples for avg. dist to own goal
-        for (float time = 0; time < Math.min(2f, simBallPred.relativeTimeOfLastFrame()); time += 0.25f) {
+        for (float time = 0; time < Math.min(2.5f, simBallPred.relativeTimeOfLastFrame()); time += 0.25f) {
             Optional<YangBallPrediction.YangPredictionFrame> dataAtFrame = simBallPred.getFrameAtRelativeTime(time);
             if (dataAtFrame.isEmpty())
                 break;

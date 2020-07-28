@@ -68,7 +68,7 @@ public class RecoverStrategy extends Strategy {
         final boolean speedflipPossible = recoverEndTime - this.recoverStartTime <= DodgeManeuver.startTimeout && !car.doubleJumped && recoverEndTime - recoverStartTime > 0.15f && carPositionAtImpact.z < 1000;
         Vector3 targetDirection = ballData.position.sub(car.position).normalized();
 
-        if (carPositionAtImpact.z > 200) {
+        if (carPositionAtImpact.z > 150) {
             targetDirection = new Vector3(0, 0, -1);
         } else {
             Optional<YangBallPrediction.YangPredictionFrame> ballFrameAtImpact = gameData.getBallPrediction().getFrameAtRelativeTime(simulationTime + 0.5f);
@@ -85,7 +85,7 @@ public class RecoverStrategy extends Strategy {
             this.groundTurnManeuver.maxErrorAngularVelocity = 1f;
         this.groundTurnManeuver.target = targetOrientationMatrix;
 
-        if (car.boost > 80 && this.groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
+        if (car.boost > 60 && simulationTime > 0.6f && this.groundTurnManeuver.simulate(car).elapsedSeconds + RLConstants.simulationTickFrequency < simulationTime) { // More than 50 boost & can complete the surface-align maneuver before impact
             Vector3 boostDirection = targetDirection
                     .flatten()
                     .unitVectorWithZ(targetZModifier);
@@ -109,10 +109,10 @@ public class RecoverStrategy extends Strategy {
         //    renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
         //renderer.drawString2d(String.format("Total: %.1f", this.recoverEndTime - this.recoverStartTime), speedflipPossible ? Color.GREEN : Color.RED, new Point(400, 450), 2, 2);
 
-        if (speedflipPossible && simulationTime < 0.5f) {
+        if (speedflipPossible && simulationTime < 0.2f) {
             double backWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, -1, 0, -1)).sub(impactPosition));
             double frontWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, 1, 0, -1)).sub(impactPosition));
-            if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight - 15 > backWheelsHeight) {
+            if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight > backWheelsHeight + 15 && frontWheelsHeight < backWheelsHeight + 50) {
                 controlsOutput.withJump(true);
                 controlsOutput.withPitch(-1);
                 controlsOutput.withYaw(0);

@@ -9,9 +9,8 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.DefensiveGrader;
 import yangbot.path.EpicMeshPlanner;
-import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.path.builders.segments.*;
+import yangbot.path.builders.segments.CurveSegment;
 import yangbot.strategy.abstraction.AerialAbstraction;
 import yangbot.strategy.abstraction.DriveStrikeAbstraction;
 import yangbot.strategy.abstraction.IdleAbstraction;
@@ -112,6 +111,7 @@ public class DefendStrategy extends Strategy {
                             .withStart(car)
                             .addPoint(offsetPos, car.position.sub(padLocation).normalized())
                             .withEnd(padLocation, car.position.sub(padLocation).normalized()/*offToBallLocation.sub(padLocation).normalized()*/)
+                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                             .plan().get();
                     float pathTimeEstimate = path.getTotalTimeEstimate();
                     if (pad.isFullBoost())
@@ -137,8 +137,9 @@ public class DefendStrategy extends Strategy {
     private boolean planAerialIntercept(YangBallPrediction ballPrediction, boolean debug) {
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
+        final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * RLConstants.goalDistance);
 
-        float t = DodgeManeuver.max_duration + 0.15f;
+        float t = DodgeManeuver.max_duration + 0.1f;
 
         // Find intercept
         do {
@@ -147,13 +148,18 @@ public class DefendStrategy extends Strategy {
                 break;
 
             final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
-            final Vector3 targetPos = interceptFrame.ballData.position;
+            final Vector3 ballPos = interceptFrame.ballData.position;
+            final var carToBall = ballPos.sub(car.position).normalized();
+            final var goalToBall = ballPos.sub(ownGoal.withZ(100)).normalized();
+            final Vector3 targetOffset = carToBall.add(goalToBall).normalized();
+            final Vector3 targetPos = ballPos.sub(targetOffset.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent() * 0.9f));
 
             // We should arrive at the ball a bit early to catch it
             boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
             if (isPossible) {
                 this.aerialAbstraction = new AerialAbstraction();
                 this.aerialAbstraction.targetPos = targetPos;
+                this.aerialAbstraction.targetOrientPos = ballPos;
                 this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
                 this.state = State.AERIAL;
                 return true;
@@ -192,14 +198,15 @@ public class DefendStrategy extends Strategy {
             final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
             final Vector3 targetPos = interceptFrame.ballData.position;
             final Vector3 endTangent = new Vector3(targetPos.flatten().sub(ownGoal).normalized().mul(2).add(targetPos.flatten().sub(car.position.flatten()).normalized()).normalized(), 0);
-            final Vector3 endPos = targetPos.withZ(car.position.z).sub(endTangent.mul(BallData.COLLISION_RADIUS + car.hitbox.getMinHitboxExtent()));
+            final Vector3 endPos = targetPos.withZ(car.position.z).sub(endTangent.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
 
             var pathPlanner = new EpicMeshPlanner()
                     .withStart(car, 10)
                     .withEnd(endPos, endTangent)
                     //.withBallAvoidance(true, car, interceptFrame.absoluteTime, true)
                     .withArrivalTime(interceptFrame.absoluteTime)
-                    .withArrivalSpeed(MathUtils.remapClip((float) car.boost, 0, 50, DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY))
+                    .withArrivalSpeed(MathUtils.remapClip((float) car.boost, 0, 70, DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY))
+                    .allowOptimize(false)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH);
             var pathOptional = pathPlanner.plan();
 
@@ -207,11 +214,16 @@ public class DefendStrategy extends Strategy {
                 boolean isValid = true;
                 if (pathOptional.get().getCurrentPathSegment().get() instanceof CurveSegment && ((CurveSegment) pathOptional.get().getCurrentPathSegment().get()).getBakedPath().tangentAt(-1).dot(car.forward()) < 0)
                     isValid = false;
-                if (pathOptional.get().getTotalTimeEstimate() < interceptFrame.relativeTime && isValid) {
-                    validPath = pathOptional.get();
-                    arrivalTime = interceptFrame.absoluteTime;
-                    targetBallPos = targetPos;
-                    break;
+                else if (pathOptional.get().getSegmentList().get(pathOptional.get().getSegmentList().size() - 1).getEndTangent().dot(car.forward()) < 0)
+                    isValid = false;
+                if (isValid) {
+                    float timeEstimate = pathOptional.get().getTotalTimeEstimate();
+                    if (timeEstimate < interceptFrame.relativeTime && interceptFrame.relativeTime - timeEstimate < 0.3f) {
+                        validPath = pathOptional.get();
+                        arrivalTime = interceptFrame.absoluteTime;
+                        targetBallPos = targetPos;
+                        break;
+                    }
                 }
             }
 
@@ -226,12 +238,13 @@ public class DefendStrategy extends Strategy {
         this.strikeAbstraction.arrivalTime = arrivalTime;
         this.strikeAbstraction.maxJumpDelay = 0.6f;
         this.strikeAbstraction.jumpDelayStep = 0.15f;
+        this.strikeAbstraction.originalTargetBallPos = targetBallPos;
 
         float zDiff = targetBallPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
         if (zDiff < 5)
-            this.strikeAbstraction.jumpBeforeStrikeDelay = 0.2f;
+            this.strikeAbstraction.jumpBeforeStrikeDelay = 0.25f;
         else
-            this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z), 0.2f, 1f);
+            this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
 
         this.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
         this.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
@@ -253,7 +266,7 @@ public class DefendStrategy extends Strategy {
         this.idleAbstraction = new IdleAbstraction();
         this.idleAbstraction.minIdleDistance = 500;
         this.strikeAbstraction = null;
-        this.state = State.INVALID;
+        //this.state = State.INVALID;
 
         if (this.checkReset(1f))
             return;
@@ -353,7 +366,7 @@ public class DefendStrategy extends Strategy {
         if (car.position.flatten().distance(ownGoal) < ball.position.flatten().distance(ownGoal)) {
             // Just boom it bruh
             {
-                YangBallPrediction framesBeforeGoal = ballPrediction.getBeforeRelative(3f);
+                YangBallPrediction framesBeforeGoal = ballPrediction.getBeforeRelative(3.5f);
                 final float carToOwnGoalDist = (float) car.position.flatten().distance(ownGoal);
                 framesBeforeGoal = YangBallPrediction.from(framesBeforeGoal.frames.stream()
                         // Reachable on z axis
@@ -382,15 +395,16 @@ public class DefendStrategy extends Strategy {
             this.state = State.IDLE; // We are in a defensive position
             return;
         }
+        this.state = State.IDLE;
         // Rotate
-        {
+        /*{
             var rotateTarget = ownGoal.withZ(RLConstants.carElevation);
 
             var builder = new PathBuilder(car).optimize();
             if (car.position.z > 30 || builder.getCurrentPosition().distance(rotateTarget) < 30) {
                 var atba = new AtbaSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), rotateTarget);
                 builder.add(atba);
-            } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardSpeed() > 300 /*&& Math.abs(car.forward().flatten().angleBetween(rotateTarget.sub(car.position).flatten().normalized())) > 45 * (Math.PI / 180)*/) {
+            } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardSpeed() > 300 /*&& Math.abs(car.forward().flatten().angleBetween(rotateTarget.sub(car.position).flatten().normalized())) > 45 * (Math.PI / 180)*) {
                 var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), rotateTarget.sub(car.position).normalized(), builder.getCurrentSpeed());
                 builder.add(drift);
             } else {
@@ -404,7 +418,7 @@ public class DefendStrategy extends Strategy {
 
             this.segmentedPath = builder.build();
             this.state = State.ROTATE;
-        }
+        }*/
         assert this.state != State.INVALID;
     }
 
@@ -487,10 +501,8 @@ public class DefendStrategy extends Strategy {
                 break;
             }
             case FOLLOW_PATH_STRIKE: {
-                if (!car.hasWheelContact && this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(0.05f))
-                    return;
 
-                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(2f))
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(2.5f))
                     return;
 
                 if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt))

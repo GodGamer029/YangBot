@@ -90,22 +90,32 @@ public class FlipSegment extends PathSegment {
 
         output.withThrottle(0.03f);
         if (car.hasWheelContact && this.dodgeManeuver.timer > 0.1f) {
+            // On ground after jump
             DriveManeuver.steerController(output, car, this.endPos);
             return this.timer >= this.getTimeEstimate();
         }
 
         if (!car.hasWheelContact && car.doubleJumped && Math.abs(car.angularVelocity.dot(car.right())) < 5) {
-            this.realignManeuver.target = Matrix3x3.lookAt(this.getEndPos().add(this.getEndTangent().mul(car.velocity.magnitude() * 0.3)).sub(car.position).withZ(0).normalized().add(car.velocity.normalized()).normalized(), new Vector3(0, 0, 1));
+            // after dodge, realigning to land where we need to
+            this.realignManeuver.target = Matrix3x3.lookAt(this.getEndPos().add(this.getEndTangent().mul(car.velocity.magnitude() * 0.3)).sub(car.position).withZ(0).normalized().mul(2).add(car.velocity.normalized()).normalized(), new Vector3(0, 0, 1));
             this.realignManeuver.step(dt, output);
-        } else if (this.timer > 0.2f || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.2f && this.getEndTangent().angle(car.velocity.normalized()) < Math.PI * 0.05f && Math.abs(car.velocity.z) < 50)) {
+        } else if (this.timer > 0.15f || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.2f && this.getEndTangent().angle(car.velocity.normalized()) < 2.5f * (Math.PI / 180) && Math.abs(car.velocity.z) < 50)) {
+            //if(this.dodgeManeuver.timer == 0){
+            //    System.out.println("Initiated jump timer="+this.timer+" ang="+((this.getEndTangent().angle(car.velocity.normalized()) / Math.PI) * 180));
+            //}
             this.dodgeManeuver.duration = 0.08f;
             this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.07f;
             this.dodgeManeuver.target = this.endPos;
 
             this.dodgeManeuver.step(dt, output);
         } else {
-            // Align with tangent
-            DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()), 1.5f);
+            // Align with tangent, probably still on ground
+            DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()), 1);
+
+            float curSpeed = car.forwardSpeed();
+            if (curSpeed < 1400 && Math.abs(curSpeed - this.getStartSpeed()) > 1) {
+                DriveManeuver.speedController(dt, output, curSpeed, this.getStartSpeed(), this.getStartSpeed(), 0.03f, false);
+            }
         }
 
         // Timeout

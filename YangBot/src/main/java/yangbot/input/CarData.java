@@ -12,6 +12,7 @@ import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.hitbox.YangCarHitbox;
+import yangbot.util.math.Car2D;
 import yangbot.util.math.vector.Matrix2x2;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector2;
@@ -218,6 +219,10 @@ public class CarData {
 
     public Physics3D toPhysics3d() {
         return new Physics3D(this.position, this.velocity, this.orientation);
+    }
+
+    public Car2D toCar2D() {
+        return new Car2D(this.position.flatten(), this.velocity.flatten(), this.forward().flatten(), (float) this.up().dot(angularVelocity), this.elapsedSeconds);
     }
 
     // https://www.wolframalpha.com/input/?i=solve+291.66+%2B+1458.33+d+-+g+x+%3D+0+for+x
@@ -479,6 +484,22 @@ public class CarData {
 
         this.hitbox.setOrientation(this.orientation);
         this.lastControllerInputs = in;
+    }
+
+    public void smartPrediction(float time) {
+        assert this.hasWheelContact;
+
+        float dt = RLConstants.simulationTickFrequency;
+        Vector3 localVel = new Vector3(this.forwardSpeed(), this.right().dot(this.velocity), 0);
+        for (float t = 0; t < time; t += dt) {
+            if (t < 0.5f)
+                this.orientation = Matrix3x3.axisToRotation(this.angularVelocity.mul(dt)).matrixMul(this.orientation);
+            this.velocity = this.forward().mul(localVel.x).add(this.right().mul(localVel.y));
+            this.position = this.position.add(this.velocity.mul(dt, dt, 0));
+            this.elapsedSeconds += dt;
+        }
+
+        this.hitbox.setOrientation(this.orientation);
     }
 
     public Vector3 getPathStartTangent() {

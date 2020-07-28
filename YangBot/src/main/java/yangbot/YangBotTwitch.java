@@ -10,10 +10,7 @@ import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
-import yangbot.strategy.AfterKickoffStrategy;
-import yangbot.strategy.DefaultStrategy;
-import yangbot.strategy.RecoverStrategy;
-import yangbot.strategy.Strategy;
+import yangbot.strategy.*;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.strategy.manuever.kickoff.KickoffTester;
 import yangbot.strategy.manuever.kickoff.SimpleKickoffManeuver;
@@ -25,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class YangBot implements Bot {
+public class YangBotTwitch implements Bot/*, ActionEntity*/ {
 
     private final int playerIndex;
     private int lastMessageId = -1;
@@ -36,8 +33,9 @@ public class YangBot implements Bot {
     private Strategy currentPlan = null;
     private boolean hasSetPriority = false;
     private String oldStrat = "";
+    private Strategy forcedNextStrategy = null;
 
-    public YangBot(int playerIndex) {
+    public YangBotTwitch(int playerIndex) {
         this.playerIndex = playerIndex;
     }
 
@@ -45,8 +43,8 @@ public class YangBot implements Bot {
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
 
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
-        //if (this.playerIndex != 0 && this.playerIndex != 3)
-        //    renderer = new DummyRenderer(this.playerIndex);
+        if (this.playerIndex != 0 && this.playerIndex != 3)
+            renderer = new DummyRenderer(this.playerIndex);
 
         final GameData gameData = GameData.current();
         CarData car = input.car;
@@ -92,6 +90,13 @@ public class YangBot implements Bot {
                 int i = 0;
                 StringBuilder circularPlanExplainer = new StringBuilder();
                 circularPlanExplainer.append(this.currentPlan.getClass().getSimpleName());
+
+                if (this.forcedNextStrategy != null) {
+                    this.currentPlan = this.forcedNextStrategy;
+                    this.currentPlan.planStrategy();
+                    this.forcedNextStrategy = null;
+                }
+
                 while (this.currentPlan.isDone()) {
                     this.currentPlan = currentPlan.suggestStrategy().orElse(new DefaultStrategy());
                     circularPlanExplainer.append(" -> " + this.currentPlan.getClass().getSimpleName());
@@ -195,10 +200,10 @@ public class YangBot implements Bot {
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
 
         AdvancedRenderer r;
-        //if (playerIndex == 0 || playerIndex == 3)
-        r = AdvancedRenderer.forBotLoop(this);
-        // else
-        //    r = new DummyRenderer(this.playerIndex);
+        if (playerIndex == 0 || playerIndex == 3)
+            r = AdvancedRenderer.forBotLoop(this);
+        else
+            r = new DummyRenderer(this.playerIndex);
         r.startPacket();
 
         BoostManager.loadGameTickPacket(packet);
@@ -239,7 +244,7 @@ public class YangBot implements Bot {
     @Override
     public void retire() {
         PlayerInfoManager.reset();
-        System.out.println("Retiring Yang bot " + playerIndex);
+        System.out.println("Retiring Yang bot twitch " + playerIndex);
     }
 
     protected List<QuickChat> receiveQuickChat(CarData car) {
@@ -260,6 +265,59 @@ public class YangBot implements Bot {
         }
         return new ArrayList<>();
     }
+
+    /*
+    @Override
+    public ModelApiResponse handleActionChoice(BotAction action) {
+        if(action.getActionType() == null || action.getActionType().length() == 0)
+            return new ModelApiResponse().code(400).message("Null choice!");
+
+        Strategy plan;
+        switch(action.getActionType()){
+            case "aerial": {
+                plan = new ForceAerialStrategy();
+            } break;
+            case "bump": {
+                plan = new ForceBumpStrategy((Integer)action.getData().get("playerIndex"));
+            } break;
+            default:
+                return new ModelApiResponse().code(400).message("Action type not recognized.");
+        }
+
+        this.forcedNextStrategy = plan;
+        return new ModelApiResponse().code(200).message("I'll do that.");
+    }
+
+    @Override
+    public List<BotAction> getAvailableActions() {
+        ArrayList<BotAction> actions = new ArrayList<>();
+
+        var game = GameData.current();
+        if(game.getCarData() == null || !game.getCarData().hasWheelContact)
+            return actions;
+
+        if(game.getCarData().boost > 30){
+            game.getAllCars().stream()
+                    .filter(c -> c.team != game.getCarData().team && !c.isDemolished && c.hasWheelContact && c.position.z < 50)
+                    .forEach(c -> actions.add(new BotAction()
+                            .actionType("bump")
+                            .description("Bump "+c.name)
+                            .putDataItem("playerIndex", c.playerIndex))
+                    );
+        }
+        if(game.getCarData().boost > 40){
+            actions.add(new BotAction()
+                    .actionType("aerial")
+                    .description("Aerial somewhere"));
+        }
+
+        return actions;
+    }
+
+    @Override
+    public BotAction getCurrentAction() {
+        return null;
+    }*/
 
     enum State {
         RESET,

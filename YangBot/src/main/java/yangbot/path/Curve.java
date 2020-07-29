@@ -512,7 +512,7 @@ public class Curve {
 
     @SuppressWarnings("UnusedReturnValue")
     public float calculateMaxSpeeds(float v0, float vf, boolean allowBoost) {
-        System.out.println("calculateMaxSpeeds v0=" + v0 + " vf=" + vf + " allowBoost=" + allowBoost);
+        //System.out.println("calculateMaxSpeeds v0=" + v0 + " vf=" + vf + " allowBoost=" + allowBoost);
         if (vf > DriveManeuver.max_throttle_speed + 1)
             allowBoost = true;
         final Vector3 gravity = new Vector3(0, 0, -650);

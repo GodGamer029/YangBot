@@ -1,6 +1,7 @@
 package yangbot.util.math;
 
 import yangbot.input.ControlsOutput;
+import yangbot.input.RLConstants;
 import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.util.math.vector.Vector2;
 
@@ -89,11 +90,13 @@ public class Car2D {
         if (Math.abs(speed) < 10)
             return;
         float direction = Math.signum(speed);
-        for (float t = 0; t < 3 /*max*/; t += 0.05f) {
-            this.step(new ControlsOutput().withThrottle(-direction), 0.05f);
+        float dt = RLConstants.tickFrequency;
+        this.step(new ControlsOutput(), RLConstants.tickFrequency); // We can only influence the next tick, because of latency
+        for (float t = 0; t < 3 /*max*/; t += dt) {
+            this.step(new ControlsOutput().withThrottle(-direction), dt);
 
             speed = this.velocity.dot(this.tangent);
-            if (Math.abs(speed) < 10)
+            if (Math.abs(speed) < 1)
                 break;
             float newDirection = Math.signum(speed);
             if (direction != newDirection)

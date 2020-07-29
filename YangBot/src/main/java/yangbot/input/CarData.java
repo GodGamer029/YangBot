@@ -13,6 +13,7 @@ import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.hitbox.YangCarHitbox;
 import yangbot.util.math.Car2D;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix2x2;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector2;
@@ -150,6 +151,14 @@ public class CarData {
         } else {
             return (float) (DodgeManeuver.acceleration - Math.sqrt(Math.max(0, 1888839f - 8125f * heightIncrease))) / 1625f;
         }
+    }
+
+    // airTime ranges between ~1 to ~1.73
+    public static float getJumpHoldDurationForTotalAirTime(float airTime, float gravity) {
+        assert gravity > 0;
+        float d = (float) -Math.sqrt(625 * gravity * gravity - 3645000 * gravity * (400 * airTime * airTime - 20 * airTime + 1) + 2916 * (729000000 * airTime * airTime + 255217000 * airTime + 1252969)) / 1458000 + gravity / 58320 + airTime - 1 / 40f;
+
+        return MathUtils.clip(d, 0.025f, 0.2f);
     }
 
     public static float driveTorqueUp(ControlsOutput in, float velocityForward, float angularUp) {

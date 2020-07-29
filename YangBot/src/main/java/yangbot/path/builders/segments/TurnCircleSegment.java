@@ -28,6 +28,9 @@ public class TurnCircleSegment extends BakeablePathSegment {
     public TurnCircleSegment(Physics2D start, float circleRadius, Vector2 endPos) {
         super(start.forwardSpeed(), MathUtils.clip(DriveManeuver.maxTurningSpeed(1 / circleRadius), 400, DriveManeuver.max_throttle_speed), -1);
 
+        float targetCircleSpeed = this.getEndSpeed();
+        boolean needsSlowdownCircles = this.getStartSpeed() - 50 > targetCircleSpeed;
+
         this.circleRadius = circleRadius;
         this.endPos = endPos;
         this.startPos = start.position;
@@ -60,6 +63,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
 
         // Find the 2 tangent points
         // https://www.onlinemathlearning.com/tangent-circle.html
+        // https://www.onlinemathlearning.com/image-files/tangent-circle_clip_image001.gif
         float circleEndDist = (float) this.circlePos.distance(endPos);
         float alpha = (float) Math.acos(this.circleRadius / circleEndDist);
         var circleToEndPos = endPos.sub(this.circlePos).normalized();

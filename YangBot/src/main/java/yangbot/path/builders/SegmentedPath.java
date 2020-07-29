@@ -56,6 +56,7 @@ public class SegmentedPath {
             renderer.drawString2d("Speed: " + GameData.current().getCarData().forwardSpeed(), Color.WHITE, new Point(400, 490), 1, 1);
             renderer.drawString2d("StartSpeed: " + curSeg.get().getStartSpeed(), Color.WHITE, new Point(400, 510), 1, 1);
             renderer.drawString2d("EndSpeed: " + curSeg.get().getEndSpeed(), Color.WHITE, new Point(400, 530), 1, 1);
+            renderer.drawString2d("T estimate: " + curSeg.get().getTimeEstimate(), Color.WHITE, new Point(400, 550), 1, 1);
 
         }
     }

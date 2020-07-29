@@ -177,13 +177,13 @@ public class EpicMeshPlanner {
 
                 float turnAngle = (float) Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent));
                 if (turnAngle > 1 * (Math.PI / 180)) {
-                    float wantedSpeed = MathUtils.clip(builder.getCurrentSpeed(), 1400, 2250);
+                    float wantedSpeed = MathUtils.clip(builder.getCurrentSpeed(), 1400, 2200);
                     float illegalSpeed = wantedSpeed - 1100;
                     if (illegalSpeed < 0)
                         illegalSpeed = 0;
 
                     // 1 if we can keep all speed, 0 if we should throttle down to 1100
-                    float allowance = MathUtils.remapClip(turnAngle, 0, (float) (50.f * (Math.PI / 180)), 0.9f, 0);
+                    float allowance = MathUtils.remapClip(turnAngle, 0, (float) (70.f * (Math.PI / 180)), 1f, 0);
 
                     float targetSpeed = 1100 + illegalSpeed * allowance;
                     //System.out.println("Allowance: "+allowance+" target: "+targetSpeed);

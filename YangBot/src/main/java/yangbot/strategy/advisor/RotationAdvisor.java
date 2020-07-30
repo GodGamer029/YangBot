@@ -57,15 +57,9 @@ public class RotationAdvisor {
                 .filter(c -> c.position.distance(ballData.position) > 300)
                 .count();
 
-        /*float medianBoost = (float) teammates.stream()
-                .sorted(Comparator.comparingDouble(c -> c.boost))
-                .collect(Collectors.toList())
-                .get((teammates.size() - 1) / 2).boost;*/
-
         // Find car with least time to ball
         Optional<CarData> attackingCarOptional = teammates.stream()
-                // Exclude myself if too little boost
-                //.filter(c -> c.boost >= medianBoost || !c.strippedName.equalsIgnoreCase("yangbot"))
+                .filter(c -> c.getPlayerInfo().isActiveShooter())
                 .filter(c -> isInfrontOfBall(c, ballData))
                 .filter(c -> !isHeadedBack(c))
                 .filter(c -> {
@@ -78,17 +72,16 @@ public class RotationAdvisor {
 
                     return yDist > xDist * 0.75f; // Attack from middle, not side
                 })
-                .map(c -> new Tuple<>(c, c.position.distance(ballData.position) / (c.forward().flatten().dot(c.velocity.flatten()) + 50)))
+                .map(c -> new Tuple<>(c, c.position.distance(ballData.position) / Math.max(50, (c.forward().flatten().dot(c.velocity.flatten()) + 50))))
                 .min(Comparator.comparingDouble(Tuple::getValue))
                 .map(Tuple::getKey); // Convert back to CarData
 
-        if (!attackingCarOptional.isPresent())
+        if (attackingCarOptional.isEmpty())
             return Advice.IDLE;
 
         final CarData attackingCar = attackingCarOptional.get();
 
         // TODO: recognize passing plays
-
         if (numberOfCarsAbleToDefend <= 1) {
             if (attackingCar.playerIndex == localCar.playerIndex) {
                 if (Math.abs(localCar.position.y - ballData.position.y) < 1000)
@@ -98,7 +91,7 @@ public class RotationAdvisor {
                 return Advice.RETREAT;
         }
 
-        return attackingCar.playerIndex == localCar.playerIndex ? Advice.ATTACK : Advice.IDLE;
+        return attackingCar.playerIndex == localCar.playerIndex ? Advice.ATTACK : Advice.PREPARE_FOR_PASS;
     }
 
     public enum Advice {

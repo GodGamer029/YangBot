@@ -10,10 +10,7 @@ import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
-import yangbot.strategy.AfterKickoffStrategy;
-import yangbot.strategy.DefaultStrategy;
-import yangbot.strategy.RecoverStrategy;
-import yangbot.strategy.Strategy;
+import yangbot.strategy.*;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.strategy.manuever.kickoff.KickoffTester;
 import yangbot.strategy.manuever.kickoff.SimpleKickoffManeuver;
@@ -37,16 +34,18 @@ public class YangBot implements Bot {
     private boolean hasSetPriority = false;
     private String oldStrat = "";
 
+    private boolean renderingActive = true;
+
     public YangBot(int playerIndex) {
         this.playerIndex = playerIndex;
     }
 
     private ControlsOutput processInput(DataPacket input) {
-        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
+        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency * 0.9f);
 
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
-        //if (this.playerIndex != 0 && this.playerIndex != 3)
-        //    renderer = new DummyRenderer(this.playerIndex);
+        if (!renderingActive)
+            renderer = new DummyRenderer(this.playerIndex);
 
         final GameData gameData = GameData.current();
         CarData car = input.car;
@@ -195,10 +194,13 @@ public class YangBot implements Bot {
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
 
         AdvancedRenderer r;
-        //if (playerIndex == 0 || playerIndex == 3)
-        r = AdvancedRenderer.forBotLoop(this);
-        // else
-        //    r = new DummyRenderer(this.playerIndex);
+        if (playerIndex == 0 || playerIndex == 3)
+            r = AdvancedRenderer.forBotLoop(this);
+        else {
+            r = new DummyRenderer(this.playerIndex);
+            this.renderingActive = false;
+        }
+
         r.startPacket();
 
         BoostManager.loadGameTickPacket(packet);
@@ -220,14 +222,32 @@ public class YangBot implements Bot {
             for (var needBoost : needBoostChatters) {
                 needBoost.getPlayerInfo().setInactiveRotatorUntil(needBoost.elapsedSeconds + 0.7f);
             }
+
+            var inactiveShooterChatters = quickchats.stream()
+                    .filter((q) -> q.quickChatSelection() == QuickChatSelection.Information_AllYours || q.quickChatSelection() == QuickChatSelection.Information_Defending || q.quickChatSelection() == QuickChatSelection.Information_GoForIt)
+                    // Convert to CarData
+                    .map((c) -> dataPacket.allCars.stream().filter(b -> b.playerIndex == c.playerIndex()).findFirst())
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    //
+                    .filter((q) -> q.team == dataPacket.car.team)
+                    .collect(Collectors.toList());
+
+            for (var inactiveShoot : inactiveShooterChatters) {
+                inactiveShoot.getPlayerInfo().setInactiveShooterUntil(inactiveShoot.elapsedSeconds + 0.7f);
+            }
         }
 
         ControlsOutput controlsOutput = new ControlsOutput();
+
+        //long t = System.nanoTime();
         try {
             controlsOutput = processInput(dataPacket);
         } catch (Exception | AssertionError e) {
             e.printStackTrace();
         }
+        //if(dataPacket.car.playerIndex == 0 || dataPacket.car.playerIndex == 3)
+        //System.out.println("ms: "+((System.nanoTime() - t)*0.000001f));
 
 
         lastTick = dataPacket.gameInfo.secondsElapsed();

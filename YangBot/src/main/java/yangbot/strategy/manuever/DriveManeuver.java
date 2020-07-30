@@ -154,7 +154,9 @@ public class DriveManeuver extends Maneuver {
         Vector3 target_local = targetPos.sub(car.position).dot(car.orientation);
 
         float angle = (float) Math.atan2(target_local.y, target_local.x);
-        output.withSteer(MathUtils.clip(multiplier * 3.0f * angle * (float) Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
+        float d = 0.05f;
+        float p = 3.1f;
+        output.withSteer(MathUtils.clip(d * -car.angularVelocity.dot(car.up()) + multiplier * p * angle * (float) Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
     }
 
     public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {
@@ -167,7 +169,8 @@ public class DriveManeuver extends Maneuver {
         final CarData car = gameData.getCarData();
 
         steerController(controlsOutput, car, this.target);
-        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()), this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost);
+        float steerSlowdown = car.slowdownForceFromSteering(controlsOutput.getSteer()); // include steering slowdown so that we don't brake too much
+        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()) + steerSlowdown * dt, this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost);
 
         if (car.position.sub(target).magnitude() < 100.f)
             this.setIsDone(true);

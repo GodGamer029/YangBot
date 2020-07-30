@@ -3,6 +3,7 @@ package yangbot.strategy.abstraction;
 import yangbot.input.*;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
+import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
@@ -24,8 +25,9 @@ public class IdleAbstraction extends Abstraction {
     public boolean doBothPredictionAndCurrent = true;
     // Y-Distance from ball when idle
     // These may be scaled down, if too close to own goa l
-    public float minIdleDistance = 1500;
-    public float maxIdleDistance = RLConstants.arenaLength * 0.45f;
+    public float minIdleDistance = 2000;
+    public float maxIdleDistance = RLConstants.arenaLength * 0.55f;
+    public float forceRetreatTimeout = 0;
 
     private SegmentedPath currentPath = null;
     private Vector3 pathTarget = new Vector3(0, 0, -999999);
@@ -53,6 +55,7 @@ public class IdleAbstraction extends Abstraction {
         if (Math.abs(futureBallPosFake.y - ownGoal.y) < minAbsoluteChannelBallDist) // Satisfy min dist constraint
             futureBallPosFake = futureBallPosFake.withY(Math.signum(ownGoal.y) * (Math.abs(ownGoal.y) - minAbsoluteChannelBallDist));
 
+        // This line is used to keep the bots between the own goal and the ball, keeping them close to a possible save
         final Line2 goalToBallFake = new Line2(ownGoal, futureBallPosFake);
 
         float minIdleDistance = this.minIdleDistance;
@@ -116,6 +119,8 @@ public class IdleAbstraction extends Abstraction {
                     .anyMatch(t -> Math.abs(t.getKey().position.y - localCar.position.y) < RLConstants.arenaLength * 0.4f);
             if (teammatesWithBoostHereToHelp && localCar.boost < 30) // Only go back when teammates do have boost
                 goBackFurther = true;
+            if (this.forceRetreatTimeout > 0)
+                goBackFurther = true;
 
             for (int i = 0; i < yGrid.length; i++) {
                 if (goBackFurther && i < yGrid.length / 2)
@@ -131,7 +136,7 @@ public class IdleAbstraction extends Abstraction {
             }
 
             // Draw
-            if (false) {
+            if (true) {
                 for (int i = 0; i < yGrid.length; i++) {
                     float yPos = yIndexToAbs.apply(i);
                     float val = 1 - MathUtils.clip(MathUtils.remap(yGrid[i], lowestYDist, highestYDist, 0, 1), 0, 1);
@@ -237,7 +242,7 @@ public class IdleAbstraction extends Abstraction {
 
                     float xSize = (xChannelHalfWidth * 2) / (xGrid.length - 1);
 
-                    renderer.drawCentered3dCube(col, new Vector3(xPos, yPos, 50), new Vector3(xSize, 150, 100));
+                    //renderer.drawCentered3dCube(col, new Vector3(xPos, yPos, 50), new Vector3(xSize, 150, 100));
                     //renderer.drawString3d(String.format("%.5f", xGrid[i]), Color.WHITE, new Vector3(xPos, yPos, 200), 1, 1);
                 }
             }
@@ -262,6 +267,8 @@ public class IdleAbstraction extends Abstraction {
         final int teamSign = car.getTeamSign();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
+        if (this.forceRetreatTimeout > 0)
+            this.forceRetreatTimeout -= dt;
 
         // Use position of the ball in x seconds
         float futureBallPosDelay = 0.4f;
@@ -318,30 +325,19 @@ public class IdleAbstraction extends Abstraction {
                 MathUtils.clip(preferredIdlingY, -maxY, maxY),
                 RLConstants.carElevation);
 
-        if (this.currentPath == null || (this.currentPath.canInterrupt() && (idleTarget.distance(this.pathTarget) > 300 || car.elapsedSeconds - this.lastPathBuild > 0.2f))) {
+        if (this.currentPath == null || (this.currentPath.canInterrupt() && (idleTarget.distance(this.pathTarget) > 600 || car.elapsedSeconds - this.lastPathBuild > 0.5f))) {
+
             this.lastPathBuild = car.elapsedSeconds;
             this.pathTarget = idleTarget;
 
-            /*var builder = new PathBuilder(car)
-                    .optimize();
-            if (car.position.z > 50 || builder.getCurrentPosition().distance(idleTarget) < 30) {
-                var atba = new AtbaSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), idleTarget);
-                builder.add(atba);
-            } else if (car.angularVelocity.magnitude() < 0.1f && car.forwardSpeed() > 300 /*&& Math.abs(car.forward().flatten().angleBetween(idleTarget.sub(car.position).flatten().normalized())) > 30 * (Math.PI / 180)*) {
-                var drift = new DriftSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), idleTarget.sub(car.position).normalized(), builder.getCurrentSpeed());
-                builder.add(drift);
-            } else {
-                var turn = new TurnCircleSegment(car.toPhysics2d(), 1 / DriveManeuver.maxTurningCurvature(Math.max(1100, builder.getCurrentSpeed())), idleTarget.flatten());
-                if (turn.tangentPoint != null)
-                    builder.add(turn);
-            }
+            float targetArrivalSpeed = DriveManeuver.max_throttle_speed;
+            if (Math.abs(idleTarget.y) > RLConstants.goalDistance * 0.8f)
+                targetArrivalSpeed = 900; // We don't want to faceplant the goal wall
 
-            if (builder.getCurrentPosition().distance(idleTarget) > 20)
-                builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), idleTarget));
-            */
             var pathOptional = new EpicMeshPlanner()
                     .withStart(car)
                     .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
+                    .withArrivalSpeed(targetArrivalSpeed)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
@@ -354,8 +350,9 @@ public class IdleAbstraction extends Abstraction {
         assert Math.abs(idleTarget.y) <= RLConstants.goalDistance : idleTarget.toString();
 
         if (this.currentPath.step(dt, controlsOutput) || this.currentPath.shouldReset(car)) {
+
             this.currentPath = null;
-            this.lastPathBuild = car.elapsedSeconds - 10;
+            this.lastPathBuild = car.elapsedSeconds;
             this.canInterruptRightNow = true;
         } else {
             this.currentPath.draw(renderer);

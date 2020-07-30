@@ -23,6 +23,9 @@ public class FlipSegment extends PathSegment {
     private DodgeManeuver dodgeManeuver;
     private TurnManeuver realignManeuver;
 
+    private static final float startTolerance = 0.05f;
+    private static final float endTolerance = 0.1f;
+
     public FlipSegment(Vector3 startPos, Vector3 startTangent, float startSpeed) {
         super(startSpeed);
         assert startPos.z < 100;
@@ -33,7 +36,7 @@ public class FlipSegment extends PathSegment {
         Vector3 currentVel = startTangent.mul(startSpeed).withZ(0);
 
         // Jump phase
-        currentPos = currentPos.add(currentVel.mul(0.15f));
+        currentPos = currentPos.add(currentVel.mul(0.15f + startTolerance)); // dodge happens at 0.15s
         this.jumpStartPos = currentPos;
 
         // Dodge
@@ -43,14 +46,14 @@ public class FlipSegment extends PathSegment {
         simCar.doubleJumped = false;
         simCar.jumpTimer = 0.15f;
         simCar.lastControllerInputs.withJump(false);
-        simCar.step(new ControlsOutput().withJump(true).withPitch(-1), 0);
+        simCar.step(new ControlsOutput().withJump(true).withPitch(-1), 0); // dodge
         assert simCar.doubleJumped;
 
         currentVel = simCar.velocity.withZ(0);
 
         this.jumpEndPos = currentPos.add(currentVel.mul(1.25f - 0.15f));
 
-        currentPos = currentPos.add(currentVel.mul(1.25f - 0.15f + 0.1f));
+        currentPos = currentPos.add(currentVel.mul(1.25f - 0.15f + endTolerance));
 
         this.endPos = currentPos;
         this.endSpeed = (float) currentVel.magnitude();
@@ -63,8 +66,6 @@ public class FlipSegment extends PathSegment {
         if (straightSegment.getStartPos().z > 50 || straightSegment.getEndPos().z > 50)
             return false;
 
-        final float tolerance = 0.1f; // seconds added before and after the dodge
-
         // Wait 0.1s
         var startTangent = straightSegment.getStartTangent();
         var startPos = straightSegment.getStartPos().add(straightSegment.getStartTangent().mul(startSpeed).mul(0.15f));
@@ -72,7 +73,7 @@ public class FlipSegment extends PathSegment {
             return false;
         var flipSegment = new FlipSegment(startPos, straightSegment.getStartTangent(), startSpeed + 20);
         // Did we overshoot?
-        var flipEndPos = flipSegment.endPos.add(startTangent.mul(flipSegment.endSpeed * tolerance));
+        var flipEndPos = flipSegment.endPos.add(startTangent.mul(flipSegment.endSpeed * endTolerance));
         var tangent = straightSegment.getEndPos().sub(flipEndPos).normalized();
 
         if (tangent.dot(startTangent) < 0)
@@ -91,21 +92,28 @@ public class FlipSegment extends PathSegment {
         output.withThrottle(0.03f);
         if (car.hasWheelContact && this.dodgeManeuver.timer > 0.1f) {
             // On ground after jump
-            DriveManeuver.steerController(output, car, this.endPos);
-            return this.timer >= this.getTimeEstimate();
+            DriveManeuver.steerController(output, car, this.endPos.add(this.getEndTangent().mul(car.velocity.magnitude() * 0.4)));
+            return this.timer >= this.getTimeEstimate() || car.position.sub(this.endPos).dot(this.getEndTangent()) > 0;
         }
 
         if (!car.hasWheelContact && car.doubleJumped && Math.abs(car.angularVelocity.dot(car.right())) < 5) {
             // after dodge, realigning to land where we need to
-            this.realignManeuver.target = Matrix3x3.lookAt(this.getEndPos().add(this.getEndTangent().mul(car.velocity.magnitude() * 0.3)).sub(car.position).withZ(0).normalized().mul(2).add(car.velocity.normalized()).normalized(), new Vector3(0, 0, 1));
+            this.realignManeuver.target = Matrix3x3.lookAt(
+                    this.getEndPos()
+                            .add(this.getEndTangent().mul(car.velocity.magnitude() * 0.6))
+                            .sub(car.position).withZ(0).normalized()
+                            .mul(2.5).add(car.velocity.flatten().normalized().withZ(0))
+                            //.add(0, 0, 0.2f) // looking up a bit makes the back wheels touch the ground first, which looks "smoother"
+                            .normalized()
+                    , new Vector3(0, 0, 1));
             this.realignManeuver.step(dt, output);
-        } else if (this.timer > 0.15f || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.2f && this.getEndTangent().angle(car.velocity.normalized()) < 2.5f * (Math.PI / 180) && Math.abs(car.velocity.z) < 50)) {
+        } else if (this.timer > startTolerance + endTolerance || this.dodgeManeuver.timer > 0 || !car.hasWheelContact || (car.forward().angle(this.getEndTangent()) < Math.PI * 0.2f && this.getEndTangent().angle(car.velocity.normalized()) < 2.5f * (Math.PI / 180) && Math.abs(car.velocity.z) < 50)) {
             //if(this.dodgeManeuver.timer == 0){
             //    System.out.println("Initiated jump timer="+this.timer+" ang="+((this.getEndTangent().angle(car.velocity.normalized()) / Math.PI) * 180));
             //}
             this.dodgeManeuver.duration = 0.08f;
             this.dodgeManeuver.delay = this.dodgeManeuver.duration + 0.07f;
-            this.dodgeManeuver.target = this.endPos;
+            this.dodgeManeuver.target = this.endPos.add(car.velocity.mul(-0.5f));
 
             this.dodgeManeuver.step(dt, output);
         } else {
@@ -113,13 +121,13 @@ public class FlipSegment extends PathSegment {
             DriveManeuver.steerController(output, car, car.position.add(this.getEndTangent()), 1);
 
             float curSpeed = car.forwardSpeed();
-            if (curSpeed < 1400 && Math.abs(curSpeed - this.getStartSpeed()) > 1) {
-                DriveManeuver.speedController(dt, output, curSpeed, this.getStartSpeed(), this.getStartSpeed(), 0.03f, false);
+            if (Math.abs(curSpeed - this.getStartSpeed()) > 1) {
+                DriveManeuver.speedController(dt, output, curSpeed, this.getStartSpeed() + 0.5f, this.getStartSpeed() + 3.5f, 0.03f, false);
             }
         }
 
         // Timeout
-        return this.dodgeManeuver.timer > 0.1f + this.getTimeEstimate() || (this.dodgeManeuver.timer > 0.3 && car.hasWheelContact);
+        return this.dodgeManeuver.timer > 0.1f + this.getTimeEstimate();
     }
 
     @Override
@@ -157,7 +165,7 @@ public class FlipSegment extends PathSegment {
 
     @Override
     public float getTimeEstimate() {
-        return 1.35f;
+        return 1.25f + startTolerance + endTolerance;
     }
 
     @Override

@@ -3,7 +3,6 @@ package yangbot.path.builders;
 import org.jetbrains.annotations.NotNull;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
-import yangbot.input.GameData;
 import yangbot.path.Curve;
 import yangbot.strategy.manuever.FollowPathManeuver;
 import yangbot.util.math.MathUtils;
@@ -34,8 +33,14 @@ public abstract class BakeablePathSegment extends PathSegment {
 
         //this.followPathManeuver.arrivalSpeed = this.arrivalSpeed; // not needed because arrival speed is capped by curve.calculatemaxspeeds
         //this.followPathManeuver.arrivalTime = (this.getTimeEstimate() - this.timer) + GameData.current().getCarData().elapsedSeconds;
-        this.followPathManeuver.draw(GameData.current().getAdvancedRenderer(), GameData.current().getCarData());
-        this.followPathManeuver.step(dt, output);
+        //this.followPathManeuver.draw(GameData.current().getAdvancedRenderer(), GameData.current().getCarData());
+        try {
+            this.followPathManeuver.step(dt, output);
+        } catch (Exception e) {
+            System.err.println("Exception in Segment: " + this.getClass().getSimpleName());
+            throw e;
+        }
+
 
         return this.followPathManeuver.isDone();
     }

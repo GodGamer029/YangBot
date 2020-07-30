@@ -29,6 +29,7 @@ public class EpicMeshPlanner {
     private boolean ballAvoidanceNecessary = false;
     private CarData carSim = null;
     private boolean allowOptimize = true;
+    private boolean allowFullSend = true; // Enable boost, even when arrival speed < 1400
     private float arrivalTime = -1, arrivalSpeed = DriveManeuver.max_throttle_speed;
     private PathCreationStrategy pathCreationStrategy;
     private List<Tuple<Vector3, Vector3>> additionalPoints;
@@ -40,6 +41,13 @@ public class EpicMeshPlanner {
 
     public EpicMeshPlanner allowOptimize(boolean allow) {
         this.allowOptimize = allow;
+        return this;
+    }
+
+    public EpicMeshPlanner allowFullSend(boolean allow) {
+        this.allowFullSend = allow;
+        // the fact that you're reading this means that my bot is performing well :O
+        // how neat!
         return this;
     }
 
@@ -159,8 +167,8 @@ public class EpicMeshPlanner {
                 if (this.allowOptimize)
                     builder.optimize();
 
-                if (Math.abs(this.startPos.y) > RLConstants.goalDistance - 50) {
-                    var getOutOfGoal = new GetOutOfGoalSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), builder.getCurrentSpeed());
+                if (Math.abs(this.startPos.y) > RLConstants.goalDistance - 50 && Math.abs(this.startPos.x) < RLConstants.goalCenterToPost) {
+                    var getOutOfGoal = new GetOutOfGoalSegment(builder.getCurrentPosition(), builder.getCurrentTangent(), builder.getCurrentSpeed(), this.endPos);
                     builder.add(getOutOfGoal);
                 }
 

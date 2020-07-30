@@ -157,7 +157,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                     if (debugMessages)
                         System.out.println("Quitting strike because path reset");
 
-                    return RunState.DONE;
+                    return RunState.FAILED;
                 }
 
                 if (this.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.path.isDone()) {
@@ -171,9 +171,9 @@ public class DriveStrikeAbstraction extends Abstraction {
                     float dist = (float) car.position.flatten().add(car.velocity.flatten().mul(delay)).distance(futureBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getAverageHitboxExtent();
                     if (dist > 450) {
                         if (debugMessages)
-                            System.out.println(car.playerIndex + ": Quitting strike because nowhere near hitting dist=" + dist + " ");
+                            System.out.println(car.playerIndex + ": Quitting strike because nowhere near hitting dist=" + dist + " delay=" + delay + " carp=" + car.position + " carv=" + car.velocity + " ballp=" + futureBallPos);
 
-                        return RunState.DONE;
+                        return RunState.FAILED;
                     }
                 }
                 break;
@@ -198,6 +198,7 @@ public class DriveStrikeAbstraction extends Abstraction {
 
                     final float coarseBallHitEstimation = (float) ((ballAtArrival.sub(car.position).magnitude() - BallData.COLLISION_RADIUS - car.hitbox.getMinHitboxExtent()) / MathUtils.clip(car.velocity.magnitude() + 100, 200, CarData.MAX_VELOCITY));
                     float T = Math.min(ballPrediction.relativeTimeOfLastFrame() - 0.1f, coarseBallHitEstimation);
+                    T = Math.max(T, this.jumpBeforeStrikeDelay - this.strikeDodge.timer);
                     if (T > Math.min(this.jumpBeforeStrikeDelay + 0.5f, DodgeManeuver.timeout) || T <= RLConstants.tickFrequency) {
                         strikeDodge.direction = null;
                         strikeDodge.target = null;
@@ -382,6 +383,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                             strikeDodge.setDone();
                             System.out.println(car.playerIndex + ": >>> Could not satisfy grader, aborting... (Grader: " + this.customGrader.getClass().getSimpleName() + ", didHitBall=" + didHitBall + ", didHitBallAfterDodge=" + didHitBallAfterDodge + ", numHits=" + numHits + ", numGraderCalls=" + numGraderCalls + ", numWheelHits=" + numWheelHits + ", T=" + T + ")");
                             System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
+                            System.out.println(car.playerIndex + ": > State info: " + car.toString().replaceAll("\n\t", ",") + " ball=" + ball.toString());
                         }
                         if (this.debugMessages) {
                             System.out.println(car.playerIndex + ": > With parameters: maxJumpDelay=" + this.maxJumpDelay + " jumpBeforeStrikeDelay=" + this.jumpBeforeStrikeDelay + " jumpDelayStep=" + this.jumpDelayStep + " timer=" + this.strikeDodge.timer + " graderinfo=" + this.customGrader.getAdditionalInfo());
@@ -429,10 +431,7 @@ public class DriveStrikeAbstraction extends Abstraction {
                     this.hitCar.hitbox.draw(renderer, this.hitCar.position, 1, Color.ORANGE);
                     renderer.drawCentered3dCube(Color.BLACK, this.hitBall.position, BallData.COLLISION_RADIUS * 2);
                     renderer.drawCentered3dCube(Color.GREEN, this.contactPoint, 30);
-
-
                 }
-
                 break;
         }
 

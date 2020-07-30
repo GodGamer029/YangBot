@@ -153,6 +153,10 @@ public class CarData {
         }
     }
 
+    public float slowdownForceFromSteering(float steerIn) {
+        return (-0.07186693033945346f * Math.abs(steerIn) + -0.05545323728191764f * Math.abs(this.angularVelocity.dot(this.up())) + 0.00062552963716722f * Math.abs(this.velocity.dot(this.right()))) * this.forwardSpeed();
+    }
+
     // airTime ranges between ~1 to ~1.73
     public static float getJumpHoldDurationForTotalAirTime(float airTime, float gravity) {
         assert gravity > 0;

@@ -3,7 +3,6 @@ package yangbot.strategy;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
-import yangbot.strategy.abstraction.Abstraction;
 import yangbot.strategy.abstraction.DribbleAbstraction;
 import yangbot.util.math.vector.Vector3;
 
@@ -42,8 +41,8 @@ public class DribbleStrategy extends Strategy {
             return;
         }
 
-        Abstraction.RunState dribbleRunState = dribbleAbstraction.step(dt, controlsOutput);
-        if (dribbleRunState == Abstraction.RunState.DONE)
+        var dribbleRunState = dribbleAbstraction.step(dt, controlsOutput);
+        if (dribbleRunState.isDone())
             this.setDone();
     }
 

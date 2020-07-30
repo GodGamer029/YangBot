@@ -59,7 +59,9 @@ public class DefensiveGrader extends Grader {
                 break;
 
             ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
-            dist += ballAtFrame.position.flatten().distance(ownGoal);
+
+            // Weigh x axis more, we don't want to pass it back to the opponent waiting in the middle
+            dist += ballAtFrame.position.flatten().sub(ownGoal).mul(1.2f, 1).magnitude();
             distSamples++;
         }
 

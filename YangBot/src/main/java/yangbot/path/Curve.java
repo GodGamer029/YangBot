@@ -387,6 +387,8 @@ public class Curve {
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
                 float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
+                if (Float.isNaN(u)) // Happens when distances are equal
+                    return points.get(i + 1);
                 return MathUtils.lerp(points.get(i + 1), points.get(i), u);
             }
         }
@@ -460,8 +462,8 @@ public class Curve {
             Vector3 a = points.get(i);
             Vector3 b = points.get(i + 1);
 
-            float alpha = (float) MathUtils.clip(b.sub(a).dot(c.sub(a)) / Math.max(b.sub(a).dot(b.sub(a)), 0.0001f), 0f, 1f);
-            assert !Float.isNaN(alpha) : a.toString() + ":" + b.toString();
+            float alpha = MathUtils.clip(b.sub(a).dot(c.sub(a)) / Math.max(b.sub(a).dot(b.sub(a)), 0.0001f), 0f, 1f);
+            assert !Float.isNaN(alpha) : a.toString() + ":" + b.toString() + " " + i + " " + c;
             float distance = (float) c.sub(a.add(b.sub(a).mul(alpha))).magnitude();
 
             if (distance < minDistance) {

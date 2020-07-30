@@ -62,7 +62,9 @@ public class OffensiveGrader extends Grader {
                 break;
 
             ImmutableBallData ballAtFrame = dataAtFrame.get().ballData;
-            dist += ballAtFrame.position.flatten().distance(enemyGoal);
+
+            // a ball close to the middle is worth more than a ball close in the corner
+            dist += ballAtFrame.position.flatten().sub(enemyGoal).mul(1.2f, 1).magnitude();
             distSamples++;
         }
 

@@ -25,9 +25,11 @@ public class FollowPathManeuver extends Maneuver {
         driveManeuver = new DriveManeuver();
     }
 
+    private float closeToDestTimeout = 0;
+
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
-        final float tReact = 0.4f;
+        final float tReact = 0.35f;
 
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
@@ -42,13 +44,23 @@ public class FollowPathManeuver extends Maneuver {
             path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, true);
 
         float currentPredSpeed = Math.max(1, car.forwardSpeed());
-        currentPredSpeed = MathUtils.lerp(currentPredSpeed, currentPredSpeed + speedReactionTime * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration), 0.5f);
+        currentPredSpeed += Math.signum(currentPredSpeed) * car.velocity.dot(car.right());
+        currentPredSpeed = MathUtils.lerp(currentPredSpeed, currentPredSpeed + Math.signum(currentPredSpeed) * 0.04f * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration), 0.5f);
         currentPredSpeed = MathUtils.clip(currentPredSpeed, 1, CarData.MAX_VELOCITY);
 
         final float pathDistanceFromTarget = path.findNearest(car.position);
-        final float sAhead = (float) (pathDistanceFromTarget - Math.max(currentPredSpeed, 300f) * tReact);
+        final float sAhead = pathDistanceFromTarget - Math.max(currentPredSpeed, 300f) * tReact;
 
-        driveManeuver.target = path.pointAt(sAhead);
+        if (sAhead < 0) {
+            // we add an invisible point after the curve's tail to keep the car aligned with the end tangent
+            var lastPoint = path.pointAt(0);
+            var lastTangent = path.tangentAt(0);
+            float leeway = currentPredSpeed * tReact * 1.1f;
+            var lerpPoint = lastPoint.add(lastTangent.mul(Math.min(leeway, -sAhead)));
+
+            driveManeuver.target = lerpPoint;
+        } else
+            driveManeuver.target = path.pointAt(sAhead);
 
         if (this.arrivalTime != -1) {
             final float T_min = RLConstants.tickFrequency * 3;
@@ -72,7 +84,14 @@ public class FollowPathManeuver extends Maneuver {
                 driveManeuver.maximumSpeed = CarData.MAX_VELOCITY;
             }
 
-            this.setIsDone(pathDistanceFromTarget <= 20f);
+            if (pathDistanceFromTarget <= 20 || this.closeToDestTimeout > 0) { // Trigger a timeout as to not break existing code relying on the more lenient end condition
+                this.closeToDestTimeout += dt;
+
+                if (this.closeToDestTimeout >= 0.05f || pathDistanceFromTarget <= 5f) {
+                    this.setIsDone(true);
+                    this.closeToDestTimeout = 0.05f;
+                }
+            }
         }
 
         final float maxSpeedAtPathSection = path.maxSpeedAt(pathDistanceFromTarget - currentPredSpeed * speedReactionTime);

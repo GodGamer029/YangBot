@@ -21,36 +21,35 @@ public class TurnCircleSegment extends BakeablePathSegment {
     private static final float MIN_CIRCLE_RADIUS = 1 / DriveManeuver.maxTurningCurvature(600);
     public final Vector2 tangentPoint;
     private final Vector2 endPos;
-    private final Vector2 startPos;
+    private final Vector2 startPos, startTangent;
+    private final Vector2 turnCircleStartPos;
     private final float ccw; // clockwise or counterclockwise
     private float circleRadius;
 
     public TurnCircleSegment(Physics2D start, float circleRadius, Vector2 endPos) {
-        super(start.forwardSpeed(), MathUtils.clip(DriveManeuver.maxTurningSpeed(1 / circleRadius), 400, DriveManeuver.max_throttle_speed), -1);
-
-        float targetCircleSpeed = this.getEndSpeed();
-        boolean needsSlowdownCircles = this.getStartSpeed() - 50 > targetCircleSpeed;
+        super(start.forwardSpeed(), MathUtils.clip(DriveManeuver.maxTurningSpeed(1 / circleRadius), 200, DriveManeuver.max_throttle_speed), -1);
 
         this.circleRadius = circleRadius;
         this.endPos = endPos;
         this.startPos = start.position;
+        this.startTangent = start.forward();
+        float speed = start.forwardSpeed();
+        this.turnCircleStartPos = this.startPos.add(this.startTangent.mul(speed * 0.08f)); // give the car enough time to steer and get angular velocity up, this is especially important in cases like this where we steer at the max. turning circle
 
-        final var startPos = start.position;
-
-        var startToEnd = endPos.sub(startPos).normalized();
+        var startToEnd = endPos.sub(turnCircleStartPos).normalized();
         var correctionAngle = start.forward().correctionAngle(startToEnd);
 
-        var localEnd = endPos.sub(startPos).dot(start.orientation);
+        var localEnd = endPos.sub(turnCircleStartPos).dot(start.orientation);
         float minR = (float) Math.abs((localEnd.magnitudeSquared() / (2 * localEnd.y))) - 5;
         if (minR < MIN_CIRCLE_RADIUS) {
             this.tangentPoint = null;
             this.ccw = 0;
-            this.circlePos = startPos;
+            this.circlePos = turnCircleStartPos;
             return;
         }
         this.circleRadius = Math.min(minR, circleRadius);
 
-        this.circlePos = startPos.add(start.right().mul(Math.signum(correctionAngle)).mul(this.circleRadius));
+        this.circlePos = turnCircleStartPos.add(start.right().mul(Math.signum(correctionAngle)).mul(this.circleRadius));
 
         if (this.circlePos.distance(endPos) <= this.circleRadius) {
             assert false;
@@ -71,7 +70,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
         var t1 = this.circlePos.add(circleToEndPos.mul(this.circleRadius).rotateBy(alpha));
         var t2 = this.circlePos.add(circleToEndPos.mul(this.circleRadius).rotateBy(-alpha));
 
-        float car_cc = Math.signum(this.circlePos.sub(startPos).withZ(0).normalized().crossProduct(start.forward().withZ(0)).z);
+        float car_cc = Math.signum(this.circlePos.sub(turnCircleStartPos).withZ(0).normalized().crossProduct(start.forward().withZ(0)).z);
         float t1_cc = Math.signum(this.circlePos.sub(t1).normalized().withZ(0).crossProduct(endPos.sub(t1).normalized().withZ(0)).z);
         float t2_cc = Math.signum(this.circlePos.sub(t2).normalized().withZ(0).crossProduct(endPos.sub(t2).normalized().withZ(0)).z);
 
@@ -89,7 +88,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
     public void draw(AdvancedRenderer renderer, Color color) {
         assert tangentPoint != null;
         //renderer.drawCircle(Color.PINK, circlePos.withZ(40), this.circleRadius);
-        var startDir = this.startPos.sub(this.circlePos).normalized();
+        var startDir = this.turnCircleStartPos.sub(this.circlePos).normalized();
         var endDir = this.tangentPoint.sub(this.circlePos).normalized();
 
         float startAngle = (float) startDir.angle();
@@ -99,6 +98,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
         float endAngle = startAngle + corrAng;
 
         renderer.drawCircle(color, circlePos.withZ(20), this.circleRadius, startAngle, endAngle);
+        renderer.drawLine3d(color, this.startPos.withZ(20), this.turnCircleStartPos.withZ(20));
         //renderer.drawLine3d(color.darker(), endPos.withZ(20), this.tangentPoint.withZ(20));
     }
 
@@ -106,7 +106,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
     protected @NotNull Curve bakeInternal(int maxSamples) {
         assert tangentPoint != null;
 
-        var startDir = this.startPos.sub(this.circlePos).normalized();
+        var startDir = this.turnCircleStartPos.sub(this.circlePos).normalized();
         var endDir = this.tangentPoint.sub(this.circlePos).normalized();
 
         float startAngle = (float) startDir.angle();
@@ -123,6 +123,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
 
         List<Curve.ControlPoint> pointList = new ArrayList<>();
         float z = RLConstants.carElevation;
+        pointList.add(new Curve.ControlPoint(this.startPos.withZ(z), this.startTangent.withZ(0)));
 
         boolean shouldExit = false;
         for (float currentAngle = startAngle; Math.signum(currentAngle - endAngle) == Math.signum(startAngle - endAngle); currentAngle += angleDiv) {
@@ -138,11 +139,17 @@ public class TurnCircleSegment extends BakeablePathSegment {
             // Calculate tangent
             Vector3 tangent;
             {
-                var prevAngle = Vector2.fromAngle(currentAngle - angleDiv * 0.1f);
+                /*var prevAngle = Vector2.fromAngle(currentAngle - angleDiv * 0.1f);
                 var nexAngle = Vector2.fromAngle(currentAngle + angleDiv * 0.1f);
-                var prev = prevAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);
-                var nex = nexAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);
-                tangent = nex.sub(prev).withZ(0).normalized();
+                var prev = prevAngle;
+                var nex = nexAngle;
+                tangent = nex.sub(prev).normalized().withZ(0);
+                System.out.println(tangent.flatten() + ":"+Vector2.fromAngle(currentAngle).cross().mul(Math.signum(angleDiv)).normalized()+" "+angleDiv);
+*/
+                tangent = Vector2.fromAngle(currentAngle)
+                        .cross()
+                        .mul(Math.signum(angleDiv))
+                        .normalized().withZ(0);
             }
 
             var thisPos = thisAngle.mul(this.circleRadius).add(this.circlePos).withZ(z);

@@ -3,6 +3,7 @@ package yangbot.util.math;
 import yangbot.input.ControlsOutput;
 import yangbot.input.RLConstants;
 import yangbot.strategy.manuever.AerialManeuver;
+import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.math.vector.Vector2;
 
 public class Car2D {
@@ -43,7 +44,7 @@ public class Car2D {
         final float throttle_threshold = 0.05f;
         final float throttle_force = 1550.0f;
         final float max_speed = 2275.0f;
-        final float min_speed = 10.0f;
+        final float min_speed = 3.0f;
         final float braking_threshold = -0.001f;
         final float supersonic_turn_drag = -98.25f;
 
@@ -90,13 +91,36 @@ public class Car2D {
         if (Math.abs(speed) < 10)
             return;
         float direction = Math.signum(speed);
-        float dt = RLConstants.tickFrequency;
+        float dt = RLConstants.simulationTickFrequency;
         this.step(new ControlsOutput(), RLConstants.tickFrequency); // We can only influence the next tick, because of latency
         for (float t = 0; t < 3 /*max*/; t += dt) {
             this.step(new ControlsOutput().withThrottle(-direction), dt);
 
             speed = this.velocity.dot(this.tangent);
-            if (Math.abs(speed) < 1)
+            if (Math.abs(speed) < 3)
+                break;
+            float newDirection = Math.signum(speed);
+            if (direction != newDirection)
+                break;
+        }
+    }
+
+    // Copy of the function above, but using the speed controller
+    public void simulateGentleFullStop() {
+        assert angularVelocity == 0 : "this could get wonky";
+        float speed = this.velocity.dot(this.tangent);
+        if (Math.abs(speed) < 5)
+            return;
+        float direction = Math.signum(speed);
+        float dt = RLConstants.simulationTickFrequency;
+        this.step(new ControlsOutput(), RLConstants.tickFrequency); // We can only influence the next tick, because of latency
+        for (float t = 0; t < 3 /*max*/; t += dt) {
+            var out = new ControlsOutput();
+            DriveManeuver.speedController(dt, out, speed, 0, 0, 0.03f, false);
+            this.step(out, dt);
+
+            speed = this.velocity.dot(this.tangent);
+            if (Math.abs(speed) < 10)
                 break;
             float newDirection = Math.signum(speed);
             if (direction != newDirection)
@@ -109,13 +133,20 @@ public class Car2D {
 
         assert angularVelocity == 0 : "this could get wonky";
 
-        float dt = 0.05f;
+        if (distance <= 0)
+            return;
+
+        float dt = 1f / 30f;
+        if (distance <= 25)
+            dt = RLConstants.simulationTickFrequency;
         for (float t = 0; t < 7 /*max*/; t += dt) {
             this.step(new ControlsOutput().withThrottle(1), dt);
 
             distance -= this.velocity.mul(dt).magnitude();
             if (distance <= 0)
                 return;
+            if (distance <= 25)
+                dt = RLConstants.simulationTickFrequency;
         }
     }
 }

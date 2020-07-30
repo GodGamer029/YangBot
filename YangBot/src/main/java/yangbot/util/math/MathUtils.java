@@ -20,6 +20,12 @@ public class MathUtils {
         return a.mul(1.0f - t).add(b.mul(t));
     }
 
+    public static float minAbs(float val, float min) {
+        assert min >= 0;
+
+        return Math.signum(val) * Math.min(min, Math.abs(val));
+    }
+
     public static double clip(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
     }

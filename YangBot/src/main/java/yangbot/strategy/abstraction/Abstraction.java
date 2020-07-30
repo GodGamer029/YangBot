@@ -3,7 +3,7 @@ package yangbot.strategy.abstraction;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 
-// High Level Maneuvers that are (usually) too complex to be simulated
+// High Level Maneuvers that are (usually) too complex to be simulated, but contain little strategic code
 public abstract class Abstraction {
 
     private boolean isDone = false;
@@ -22,7 +22,7 @@ public abstract class Abstraction {
 
         final RunState runState = stepInternal(dt, controlsOutput);
 
-        if (runState == RunState.DONE)
+        if (runState.isDone())
             this.isDone = true;
         return runState;
     }
@@ -39,6 +39,11 @@ public abstract class Abstraction {
 
     public enum RunState {
         CONTINUE,
-        DONE
+        DONE,
+        FAILED;
+
+        public boolean isDone() {
+            return this == DONE || this == FAILED;
+        }
     }
 }

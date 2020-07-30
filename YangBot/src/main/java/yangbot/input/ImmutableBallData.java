@@ -61,4 +61,9 @@ public class ImmutableBallData {
     public BallData makeMutable() {
         return new BallData(this);
     }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "(position=" + this.position + ",velocity=" + this.velocity + ",angularVelocity=" + this.angularVelocity + ",t=" + this.elapsedSeconds + ")";
+    }
 }

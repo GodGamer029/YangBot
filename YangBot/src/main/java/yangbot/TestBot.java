@@ -67,19 +67,18 @@ public class TestBot implements Bot {
                 this.timer = 0.0f;
                 this.state = State.INIT;
 
-                final Vector3 startPos = new Vector3(-966, -4814, 34.98);
+                final Vector3 startPos = new Vector3(400, RLConstants.goalDistance + 500, 20);
                 //final Vector3 startTangent = new Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, 0).normalized(); //
-                final Vector3 startTangent = new Vector3(-0.96f, 0.29f, -0.01f).normalized();
+                final Vector3 startTangent = new Vector3(-0.5f, -1f, 0).normalized();
 
-                //final float startSpeed = (float)Math.random() * 1200f + 200; //
+                float startSpeed = (float) 0; //
                 RLBotDll.setGameState(new GameState()
-                        .withGameInfoState(new GameInfoState().withGameSpeed(0.1f))
+                        .withGameInfoState(new GameInfoState().withGameSpeed(1f))
                         .withCarState(controlCar.playerIndex, new CarState().withPhysics(new PhysicsState()
                                 .withLocation(startPos.toDesiredVector())
-                                //.withVelocity(startTangent.mul(startSpeed).toDesiredVector())
-                                .withVelocity(new Vector3(-988f, 374f, 320.35f).toDesiredVector())
+                                .withVelocity(startTangent.mul(startSpeed).toDesiredVector())
                                 .withRotation(Matrix3x3.lookAt(startTangent, new Vector3(0, 0, 1)).toEuler().toDesiredRotation())
-                                .withAngularVelocity(new Vector3(0.01f, -0.01f, 0.98f).toDesiredVector())
+                                .withAngularVelocity(new Vector3().toDesiredVector())
                         ).withBoostAmount(100f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
                                 .withLocation(new DesiredVector3(-1514f, -5020f, 625f))
@@ -93,11 +92,9 @@ public class TestBot implements Bot {
                 break;
             }
             case INIT: {
-                if (timer > 0.5f)
-                    state = State.RESET;
-                if (timer > 10f) {
-                    var end = new Vector3(Math.random() * 6000 - 3000, Math.random() * 8000 - 4000, 17);
-                    //var end = new Vector3(-1653, 2083, 17);
+                if (timer > 0.1f) {
+                    //var end = new Vector3(Math.random() * 6000 - 3000, Math.random() * 8000 - 4000, 17);
+                    var end = new Vector3(1653, 4083, 17);
 
                     var plan = new EpicMeshPlanner()
                             .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
@@ -110,15 +107,17 @@ public class TestBot implements Bot {
 
                     this.state = State.RUN;
                 }
-/*
+
+
+                break;
+            }
+            case RUN: {
+
                 this.path.draw(renderer);
                 if (!this.path.isDone())
                     this.path.step(dt, output);
                 if (this.path.isDone())
-                    this.state = State.YEET;*/
-                break;
-            }
-            case RUN: {
+                    this.state = State.YEET;
 
                 if (this.trail.size() >= 298)
                     this.trail.remove();

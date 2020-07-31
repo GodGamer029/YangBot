@@ -45,10 +45,10 @@ public class GetOutOfGoalSegment extends PathSegment {
         boolean canJustDriveOut = false;
         final var goal = new Vector2(0, (RLConstants.goalDistance - 100) * Math.signum(startPos.y));
 
-        if (tangent2d.dot(new Vector2(0, -Math.signum(startPos.y))) > 0 && startPos.z < RLConstants.carElevation + 50/* not upside down */) { // roughly driving the right direction (out)
+        if (tangent2d.dot(new Vector2(0, -Math.signum(startPos.y))) > 0 && startPos.z < RLConstants.carElevation + 50/* not upside down */ && Math.abs(startTangent.z) < 0.1f) { // roughly driving the right direction (out)
             // Determine if the car will drive out of the goal on its own
 
-            float xBoundary = RLConstants.goalCenterToPost - 150;
+            float xBoundary = RLConstants.goalCenterToPost - 120;
             final var leftBoundary = new Line2(goal.add(xBoundary * 1, 0), goal.add(xBoundary * 1, 2000));
             final var rightBoundary = new Line2(goal.add(xBoundary * -1, 0), goal.add(xBoundary * -1, 2000));
             final var goalLine = new Line2(goal.sub(xBoundary, 0), goal.add(xBoundary, 0));
@@ -137,14 +137,14 @@ public class GetOutOfGoalSegment extends PathSegment {
             this.endSpeed = 100;
         }
 
-        this.endTangent = new Vector3(0, -Math.signum(this.endPos.y), 0);
+        this.endTangent = this.endPos.sub(this.stopPos).withZ(0).normalized();
 
         this.dodgeManeuver = new DodgeManeuver();
         this.dodgeManeuver.duration = CarData.getJumpHoldDurationForTotalAirTime(timeNeededForTurn + jumpTolerance, -RLConstants.gravity.z);
         this.dodgeManeuver.delay = 999;
 
         this.state = State.STOP;
-        //System.out.println("no shortcut taken");
+        //System.out.println(GameData.current().getCarData().playerIndex+": no shortcut taken "+startPos+" "+startTangent+" "+startSpeed+" "+targetPos);
     }
 
     private Vector3 makeEndPos(Vector3 startPos, Vector3 targetPos) {

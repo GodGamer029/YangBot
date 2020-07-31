@@ -7,6 +7,7 @@ import yangbot.cpp.YangBotCppInterop;
 import yangbot.path.navmesh.Graph;
 import yangbot.path.navmesh.Navigator;
 import yangbot.strategy.abstraction.DriveStrikeAbstraction;
+import yangbot.util.Tuple;
 import yangbot.util.io.LEDataInputStream;
 import yangbot.util.io.PortReader;
 import yangbot.util.lut.ArrayLutTable;
@@ -89,12 +90,24 @@ public class MainClass {
         {
             outerPanel.setLayout(new BoxLayout(outerPanel, BoxLayout.Y_AXIS));
 
-            var philosophy1 = new JTextArea("I don't know about philosophy, i just use a lot of trial & error and whatever works");
+            List<Tuple<String, String>> coolQuotes = new ArrayList<>();
+            coolQuotes.add(new Tuple<>("I don't know about philosophy, i just use a lot of trial & error and whatever works", "- Marvin, 17/Dec/2018"));
+            coolQuotes.add(new Tuple<>("\"I have a spider in my PC that hunts bugs in it\" \"Literally debugging\"", "- Stew, 31/Jul/2020"));
+            coolQuotes.add(new Tuple<>("Skycrafter: \"Yes but what if there isn't any bug\"\nWill: \"Hahahaha\"", "- 31/Jul/2020"));
+            coolQuotes.add(new Tuple<>("two yangbots in a rule 1 is called a yin yang", "- Eastvillage 29/Jul/2020"));
+            coolQuotes.add(new Tuple<>("just dont be there", "- LieAlgebraCow everytime he reviews bots"));
+            coolQuotes.add(new Tuple<>("Our bots are about to get better, Watch them climb the (imaginary) ranked ladder as rocket league goes free to play", "- L0laapk3 when free-to-play was announced"));
+
+            coolQuotes.add(new Tuple<>("There is a 1/" + (coolQuotes.size() + 1) + " chance of you seeing this text!", "- Today"));
+
+            var chosen = coolQuotes.get(new Random(System.currentTimeMillis()).nextInt(coolQuotes.size()));
+
+            var philosophy1 = new JTextArea(chosen.getKey());
             philosophy1.setEditable(false);
             philosophy1.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             philosophy1.setFont(new Font("Gabriola", Font.PLAIN, 20));
             philosophy1.setBorder(new EmptyBorder(10, 10, 0, 10));
-            var philosophy2 = new JTextArea("- Marvin, 12/17/2018");
+            var philosophy2 = new JTextArea(chosen.getValue());
             philosophy2.setEditable(false);
             philosophy2.setFont(new Font("Bahnschrift", Font.ITALIC, 12));
             philosophy2.setBorder(new EmptyBorder(0, 10, 10, 10));

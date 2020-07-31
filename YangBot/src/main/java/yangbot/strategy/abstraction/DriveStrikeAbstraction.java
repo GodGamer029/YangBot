@@ -74,16 +74,7 @@ public class DriveStrikeAbstraction extends Abstraction {
         this.customGrader = grader;
     }
 
-    public DriveStrikeAbstraction(@NotNull Grader customGrader) {
-        this.state = State.STRIKE;
-
-        this.strikeDodge = new DodgeManeuver();
-        this.strikeDodge.delay = 0.4f;
-        this.strikeDodge.duration = 0.2f;
-
-        this.customGrader = customGrader;
-    }
-
+    // Run methods over and over again to bait the runtime into optimizing them
     public static void prepJit() {
         var simCar = new CarData(new Vector3(0, 0, 30), new Vector3(0, 0, 200), new Vector3(), Matrix3x3.identity());
         var rng = ThreadLocalRandom.current();
@@ -315,9 +306,9 @@ public class DriveStrikeAbstraction extends Abstraction {
                                         {
                                             assert simContact != null;
                                             var rel = simContact.sub(simCar.position); // car -> contact
-                                            float localContactF = (float) rel.dot(simCar.hitbox.getOrientation().forward());
+                                            float localContactF = rel.dot(simCar.hitbox.getOrientation().forward());
                                             rel = simCar.hitbox.removeOffset(rel); // hitbox center -> contact
-                                            float localHitboxContactZ = (float) simCar.hitbox.getOrientation().up().dot(rel);
+                                            float localHitboxContactZ = simCar.hitbox.getOrientation().up().dot(rel);
 
                                             final var wheelInfo = car.wheelInfo;
                                             final var frontAxle = wheelInfo.get(1, 0);

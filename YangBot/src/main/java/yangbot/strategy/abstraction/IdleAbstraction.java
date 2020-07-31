@@ -28,6 +28,7 @@ public class IdleAbstraction extends Abstraction {
     public float minIdleDistance = 2000;
     public float maxIdleDistance = RLConstants.arenaLength * 0.55f;
     public float forceRetreatTimeout = 0;
+    public float targetSpeed = DriveManeuver.max_throttle_speed;
 
     private SegmentedPath currentPath = null;
     private Vector3 pathTarget = new Vector3(0, 0, -999999);
@@ -136,7 +137,7 @@ public class IdleAbstraction extends Abstraction {
             }
 
             // Draw
-            if (true) {
+            if (false) {
                 for (int i = 0; i < yGrid.length; i++) {
                     float yPos = yIndexToAbs.apply(i);
                     float val = 1 - MathUtils.clip(MathUtils.remap(yGrid[i], lowestYDist, highestYDist, 0, 1), 0, 1);
@@ -330,9 +331,11 @@ public class IdleAbstraction extends Abstraction {
             this.lastPathBuild = car.elapsedSeconds;
             this.pathTarget = idleTarget;
 
-            float targetArrivalSpeed = DriveManeuver.max_throttle_speed;
+            float targetArrivalSpeed = this.targetSpeed;
             if (Math.abs(idleTarget.y) > RLConstants.goalDistance * 0.8f)
-                targetArrivalSpeed = 900; // We don't want to faceplant the goal wall
+                targetArrivalSpeed = Math.min(targetArrivalSpeed, 900); // We don't want to faceplant the goal wall
+
+            targetArrivalSpeed = MathUtils.clip(targetArrivalSpeed, 200, CarData.MAX_VELOCITY);
 
             var pathOptional = new EpicMeshPlanner()
                     .withStart(car)

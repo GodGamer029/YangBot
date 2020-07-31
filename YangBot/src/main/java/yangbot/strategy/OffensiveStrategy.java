@@ -108,13 +108,14 @@ public class OffensiveStrategy extends Strategy {
 
         final float MAX_HEIGHT_GROUND_SHOT = 230f + BallData.COLLISION_RADIUS * 0.65f;
         final float MAX_HEIGHT_DOUBLEJUMP = 500;
+        final float MIN_HEIGHT_AERIAL = 500;
         final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
 
         if (car.boost > 10) {
             var aerialStrikeFrames = YangBallPrediction.from(ballPrediction.getFramesBetweenRelative(0.3f, 3.5f)
                     .stream()
-                    .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * frame.relativeTime * 0.6f)) == -teamSign) // Ball is closer to enemy goal than to own
-                    .filter((frame) -> (frame.ballData.position.z >= MAX_HEIGHT_DOUBLEJUMP && frame.ballData.position.z < MAX_HEIGHT_AERIAL)
+                    .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * Math.max(0, frame.relativeTime * 0.6f - 0.1f))) == -teamSign) // Ball is closer to enemy goal than to own
+                    .filter((frame) -> (frame.ballData.position.z >= MIN_HEIGHT_AERIAL && frame.ballData.position.z < MAX_HEIGHT_AERIAL)
                             && !frame.ballData.makeMutable().isInAnyGoal())
                     .collect(Collectors.toList()), ballPrediction.tickFrequency);
 
@@ -125,7 +126,7 @@ public class OffensiveStrategy extends Strategy {
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 3.5f)
                 .stream()
                 .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * Math.max(0, frame.relativeTime * 0.6f - 0.1f))) == -teamSign) // Ball is closer to enemy goal than to own
-                .filter((frame) -> (frame.ballData.position.z <= MAX_HEIGHT_GROUND_SHOT /*|| (allowWallHits && RLConstants.isPosNearWall(frame.ballData.position.flatten(), BallData.COLLISION_RADIUS * 1.5f))*/))
+                .filter((frame) -> (frame.ballData.position.z <= MAX_HEIGHT_GROUND_SHOT))
                 .collect(Collectors.toList());
 
         if (strikeableFrames.size() == 0) {
@@ -254,6 +255,7 @@ public class OffensiveStrategy extends Strategy {
         final YangBallPrediction ballPrediction = gameData.getBallPrediction();
         this.state = State.INVALID;
         this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt();
+        this.idleAbstraction.targetSpeed = DriveManeuver.max_throttle_speed;
 
         // Check if ball will go in our goal
         if (Math.signum(ball.position.y) == teamSign) { // our half
@@ -286,6 +288,7 @@ public class OffensiveStrategy extends Strategy {
         this.lastAdvice = rotationAdvice;
         switch (rotationAdvice) {
             case PREPARE_FOR_PASS:
+                this.idleAbstraction.targetSpeed = 900;
             case IDLE: {
                 if (car.position.flatten().distance(ball.position.flatten()) > 2000) {
                     if (this.planGoForBoost())

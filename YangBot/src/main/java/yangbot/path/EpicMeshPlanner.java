@@ -29,7 +29,7 @@ public class EpicMeshPlanner {
     private boolean ballAvoidanceNecessary = false;
     private CarData carSim = null;
     private boolean allowOptimize = true;
-    private boolean allowFullSend = true; // Enable boost, even when arrival speed < 1400
+    private boolean allowFullSend = false; // Enable boost, even when arrival speed < 1400
     private float arrivalTime = -1, arrivalSpeed = DriveManeuver.max_throttle_speed;
     private PathCreationStrategy pathCreationStrategy;
     private List<Tuple<Vector3, Vector3>> additionalPoints;
@@ -127,6 +127,7 @@ public class EpicMeshPlanner {
         Optional<SegmentedPath> currentPath;
         switch (this.pathCreationStrategy) {
             case SIMPLE: {
+                assert !this.allowFullSend;
                 List<Curve.ControlPoint> controlPoints = new ArrayList<>();
                 // Construct Path
                 {
@@ -141,6 +142,7 @@ public class EpicMeshPlanner {
             }
             case NAVMESH: {
                 assert this.additionalPoints.size() == 0;
+                assert !this.allowFullSend;
                 var curveOptional = YangBotJNAInterop.findPath(this.startPos, this.startTangent, this.endPos, this.endTangent, 20);
                 if (curveOptional.isEmpty() || curveOptional.get().length <= 0)
                     currentPath = Optional.empty();
@@ -150,6 +152,7 @@ public class EpicMeshPlanner {
             }
             case JAVA_NAVMESH: {
                 assert this.additionalPoints.size() == 0;
+                assert !this.allowFullSend;
                 var nav = new Navigator(Navigator.PathAlgorithm.BELLMANN_FORD);
                 nav.analyzeSurroundings(this.startPos, this.startTangent);
                 var curve = nav.pathTo(this.startTangent, this.endPos, this.endTangent, 20);
@@ -191,7 +194,7 @@ public class EpicMeshPlanner {
                         illegalSpeed = 0;
 
                     // 1 if we can keep all speed, 0 if we should throttle down to 1100
-                    float allowance = MathUtils.remapClip(turnAngle, 0, (float) (70.f * (Math.PI / 180)), 1f, 0);
+                    float allowance = MathUtils.remapClip(turnAngle, 0, (float) (70.f * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0 : 0.3f);
 
                     float targetSpeed = 1100 + illegalSpeed * allowance;
                     //System.out.println("Allowance: "+allowance+" target: "+targetSpeed);
@@ -200,7 +203,7 @@ public class EpicMeshPlanner {
                     if (turn.tangentPoint != null)
                         builder.add(turn);
                 }
-                builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), this.endPos, this.arrivalSpeed, this.arrivalTime));
+                builder.add(new StraightLineSegment(builder.getCurrentPosition(), builder.getCurrentSpeed(), this.endPos, this.arrivalSpeed, this.arrivalTime, this.allowFullSend));
 
                 currentPath = Optional.of(builder.build());
                 break;

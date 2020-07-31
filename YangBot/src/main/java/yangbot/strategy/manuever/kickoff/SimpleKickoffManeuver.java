@@ -20,8 +20,6 @@ public class SimpleKickoffManeuver extends Maneuver {
     private static final boolean SLOWKICKOFF = false;
     private Vector3 targetPos;
     private DriveStrikeAbstraction driveStrikeAbstraction;
-    private boolean discoveredGoer = false;
-    private EpicMeshPlanner planner;
     private boolean dontJump = false;
 
     @Override
@@ -33,7 +31,7 @@ public class SimpleKickoffManeuver extends Maneuver {
         timer += dt;
 
         if (ball.position.flatten().magnitude() > 5) {
-            if (this.dodgeManeuver.isDone() || timeoutTimer > 0.2) {
+            if (this.dodgeManeuver == null || this.dodgeManeuver.isDone() || timeoutTimer > 0.2) {
                 this.setIsDone(true);
                 return;
             } else
@@ -76,7 +74,6 @@ public class SimpleKickoffManeuver extends Maneuver {
                                 .withArrivalSpeed(1900);
                         this.targetPos = endPos;
 
-                        this.planner = planner;
                         this.dontJump = true;
 
                         this.path = planner.plan().get();

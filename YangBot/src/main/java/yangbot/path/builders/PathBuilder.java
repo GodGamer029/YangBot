@@ -98,7 +98,7 @@ public class PathBuilder {
                             var flipSegment = new FlipSegment(straight.getStartPos(), straight.getStartTangent(), startSpeed);
 
                             optimizedSegments.add(flipSegment);
-                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos(), straight.arrivalSpeed, straight.arrivalTime));
+                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos(), straight.arrivalSpeed, straight.arrivalTime, straight.allowBoost));
                             continue;
                         }
                     }

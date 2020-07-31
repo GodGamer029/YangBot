@@ -15,6 +15,7 @@ public abstract class BakeablePathSegment extends PathSegment {
     private float timeEstimate = -1;
     protected float arrivalTime = -1;
     protected float arrivalSpeed = -1;
+    protected boolean allowBoost = false;
 
     protected BakeablePathSegment(float startSpeed, float endSpeed, float arrivalTime) {
         super(startSpeed);
@@ -76,7 +77,7 @@ public abstract class BakeablePathSegment extends PathSegment {
     public final @NotNull Curve bake(int maxSamples) {
         if (this.bakedPath == null) {
             this.bakedPath = this.bakeInternal(maxSamples);
-            this.timeEstimate = this.bakedPath.calculateMaxSpeeds(MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY), this.arrivalSpeed < 0 ? CarData.MAX_VELOCITY : this.arrivalSpeed, false/*automatically turns true if arrival speed needs boost*/);
+            this.timeEstimate = this.bakedPath.calculateMaxSpeeds(MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY), this.arrivalSpeed < 0 ? CarData.MAX_VELOCITY : this.arrivalSpeed, this.allowBoost/*automatically turns true if arrival speed needs boost*/);
         }
 
         return this.bakedPath;

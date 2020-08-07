@@ -26,4 +26,13 @@ public class BallTouch {
         this.playerIndex = touch.playerIndex();
         this.team = touch.team();
     }
+
+    public BallTouch(Vector3 position, Vector3 normal, float gameSeconds) {
+        this.position = position;
+        this.normal = normal;
+        this.playerName = "";
+        this.gameSeconds = gameSeconds;
+        this.playerIndex = -1;
+        this.team = -1;
+    }
 }

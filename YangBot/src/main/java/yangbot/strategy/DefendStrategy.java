@@ -156,8 +156,8 @@ public class DefendStrategy extends Strategy {
 
         this.strikeAbstraction = new DriveStrikeAbstraction(validPath, new DefensiveGrader());
         this.strikeAbstraction.arrivalTime = arrivalTime;
-        this.strikeAbstraction.maxJumpDelay = 0.6f;
-        this.strikeAbstraction.jumpDelayStep = 0.15f;
+        this.strikeAbstraction.strikeAbstraction.maxJumpDelay = 0.6f;
+        this.strikeAbstraction.strikeAbstraction.jumpDelayStep = 0.15f;
         this.strikeAbstraction.originalTargetBallPos = targetBallPos;
 
         float zDiff = targetBallPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
@@ -166,8 +166,8 @@ public class DefendStrategy extends Strategy {
         else
             this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
 
-        this.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
-        this.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
+        this.strikeAbstraction.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
+        this.strikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
 
         this.state = State.FOLLOW_PATH_STRIKE;
         if (debug)
@@ -197,7 +197,6 @@ public class DefendStrategy extends Strategy {
 
         int teamSign = car.team * 2 - 1;
 
-        final float MAX_HEIGHT_GROUND_SHOT = 230f + BallData.COLLISION_RADIUS * 0.65f;
         final float MAX_HEIGHT_DOUBLEJUMP = 500;
         final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
 
@@ -226,7 +225,7 @@ public class DefendStrategy extends Strategy {
                     return;
 
                 var groundFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
-                        .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_GROUND_SHOT)
+                        .filter((frame) -> frame.ballData.position.z < DriveStrikeAbstraction.MAX_STRIKE_HEIGHT)
                         .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
                 if (this.planGroundIntercept(groundFrames, false))
@@ -270,7 +269,7 @@ public class DefendStrategy extends Strategy {
                     }
 
                     var groundFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
-                            .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_GROUND_SHOT)
+                            .filter((frame) -> frame.ballData.position.z < DriveStrikeAbstraction.MAX_STRIKE_HEIGHT)
                             .collect(Collectors.toList()), framesBeforeAreaEnter.tickFrequency);
 
                     if (this.planGroundIntercept(groundFrames, false))
@@ -288,7 +287,7 @@ public class DefendStrategy extends Strategy {
                 final float carToOwnGoalDist = (float) car.position.flatten().distance(ownGoal);
                 framesBeforeGoal = YangBallPrediction.from(framesBeforeGoal.frames.stream()
                         // Reachable on z axis
-                        .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_GROUND_SHOT)
+                        .filter((frame) -> frame.ballData.position.z < DriveStrikeAbstraction.MAX_STRIKE_HEIGHT)
 
                         // car is closer to goal than ball (Hitting away from goal)
                         .map((frame) -> new Tuple<>(frame, frame.ballData.position.flatten().distance(ownGoal)))

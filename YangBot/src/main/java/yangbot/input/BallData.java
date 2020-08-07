@@ -17,7 +17,7 @@ import java.util.List;
 
 public class BallData {
     public static final float DRAG = -0.0305f;
-    public static final float MAX_VELOCITY = 4000.0f;
+    public static final float MAX_VELOCITY = 6000.0f;
     public static final float MAX_ANGULAR = 6.0f;
 
     public static final float RADIUS = 91.25f;
@@ -29,7 +29,7 @@ public class BallData {
     public Vector3 position;
     public Vector3 velocity;
     public Vector3 angularVelocity;
-    public final BallTouch latestTouch;
+    public BallTouch latestTouch;
     public boolean hasBeenTouched;
     public float elapsedSeconds = 0;
 
@@ -210,13 +210,16 @@ public class BallData {
 
         final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
 
-        if (contactPoint.sub(this.position).magnitude() < COLLISION_RADIUS + tolerance) {
+        Vector3 normal = contactPoint.sub(this.position);
+        if (normal.magnitude() < COLLISION_RADIUS + tolerance) {
 
             this.hasBeenTouched = true;
 
+            this.latestTouch = new BallTouch(contactPoint, normal, this.elapsedSeconds);
+
             final Vector3 carPosition = car.position;
 
-            final Matrix3x3 L_ball = Matrix3x3.antiSym(contactPoint.sub(this.position));
+            final Matrix3x3 L_ball = Matrix3x3.antiSym(normal);
             final Matrix3x3 L_car = Matrix3x3.antiSym(contactPoint.sub(carPosition));
             Vector3 physImpulse = new Vector3();
 

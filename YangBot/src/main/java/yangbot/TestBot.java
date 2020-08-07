@@ -11,10 +11,12 @@ import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
+import yangbot.strategy.abstraction.DriveStrikeAbstraction;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
+import yangbot.util.lut.LutMaker;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
@@ -33,6 +35,7 @@ public class TestBot implements Bot {
 
     private SegmentedPath path;
     private DodgeManeuver dodgeManeuver;
+    private LutMaker lutMaker = new LutMaker();
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -46,13 +49,17 @@ public class TestBot implements Bot {
 
         lastTick = input.gameInfo.secondsElapsed();
 
+
         final CarData carBoi = input.car;
         final BallData realBall = input.ball;
         final BallData ball = realBall.makeImmutable().makeMutable();
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != carBoi.team).findFirst().orElse(carBoi);
 
         final AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
-        GameData.current().update(carBoi, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+        GameData.current().update(controlCar, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+        if (true) {
+            return lutMaker.processInput();
+        }
         final YangBallPrediction ballPrediction = GameData.current().getBallPrediction();
         drawDebugLines(input, controlCar);
         ControlsOutput output = new ControlsOutput();
@@ -71,18 +78,21 @@ public class TestBot implements Bot {
                 //final Vector3 startTangent = new Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, 0).normalized(); //
                 final Vector3 startTangent = new Vector3(-0.5f, -1f, 0).normalized();
 
+                var simCar = new CarData(new Vector3(), new Vector3(), new Vector3(), Matrix3x3.lookAt(new Vector3(0, 1, 1).normalized(), new Vector3(0, 0, 1)));
+                System.out.println(simCar.hitbox.permutatePoint(simCar.position, 1, 0, 0));
+
                 float startSpeed = (float) 0; //
                 RLBotDll.setGameState(new GameState()
                         .withGameInfoState(new GameInfoState().withGameSpeed(1f))
-                        .withCarState(controlCar.playerIndex, new CarState().withPhysics(new PhysicsState()
+                        .withCarState(controlCar.playerIndex, new CarState()/*.withPhysics(new PhysicsState()
                                 .withLocation(startPos.toDesiredVector())
                                 .withVelocity(startTangent.mul(startSpeed).toDesiredVector())
                                 .withRotation(Matrix3x3.lookAt(startTangent, new Vector3(0, 0, 1)).toEuler().toDesiredRotation())
                                 .withAngularVelocity(new Vector3().toDesiredVector())
-                        ).withBoostAmount(100f))
+                        )*/.withBoostAmount(100f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(-1514f, -5020f, 625f))
-                                .withVelocity(new DesiredVector3(-129f, 3.93f, -308f))
+                                .withLocation(new DesiredVector3(0f, 0f, DriveStrikeAbstraction.MAX_STRIKE_HEIGHT))
+                                .withVelocity(new DesiredVector3(0f, 0f, 0f))
                                 .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                         ))
                         .buildPacket());
@@ -92,7 +102,7 @@ public class TestBot implements Bot {
                 break;
             }
             case INIT: {
-                if (timer > 0.1f) {
+                if (timer > 20f) {
                     //var end = new Vector3(Math.random() * 6000 - 3000, Math.random() * 8000 - 4000, 17);
                     var end = new Vector3(1653, 4083, 17);
 

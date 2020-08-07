@@ -106,7 +106,6 @@ public class OffensiveStrategy extends Strategy {
         // Make sure we don't hit the ball back to our goal
         //assert Math.signum(ball.position.y - car.position.y) == -teamSign : "We should be in front of the ball, not ahead car: " + car.position + " ball: " + ball.position;
 
-        final float MAX_HEIGHT_GROUND_SHOT = 230f + BallData.COLLISION_RADIUS * 0.65f;
         final float MAX_HEIGHT_DOUBLEJUMP = 500;
         final float MIN_HEIGHT_AERIAL = 500;
         final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
@@ -126,7 +125,7 @@ public class OffensiveStrategy extends Strategy {
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.15f, 3.5f)
                 .stream()
                 .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * Math.max(0, frame.relativeTime * 0.6f - 0.1f))) == -teamSign) // Ball is closer to enemy goal than to own
-                .filter((frame) -> (frame.ballData.position.z <= MAX_HEIGHT_GROUND_SHOT))
+                .filter((frame) -> (frame.ballData.position.z <= DriveStrikeAbstraction.MAX_STRIKE_HEIGHT))
                 .collect(Collectors.toList());
 
         if (strikeableFrames.size() == 0) {
@@ -242,8 +241,8 @@ public class OffensiveStrategy extends Strategy {
 
         System.out.println("Setting jumpBeforeStrikeDelay=" + this.strikeAbstraction.jumpBeforeStrikeDelay + " zDiff=" + zDiff + " ballTargetZ=" + ballAtTargetPos.z + " carZ=" + car.position.z);
 
-        this.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
-        this.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
+        this.strikeAbstraction.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
+        this.strikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
     }
 
     @Override

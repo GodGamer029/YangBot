@@ -37,6 +37,7 @@ public class DodgeManeuver extends Maneuver {
     public Matrix3x3 preorientOrientation = null;
     private TurnManeuver turnManeuver = null;
     private boolean didLeaveOutFrame = false;
+    public boolean reportProblems = true;
 
     public DodgeManeuver() {
         this.turnManeuver = new TurnManeuver();
@@ -79,7 +80,7 @@ public class DodgeManeuver extends Maneuver {
             dodge_time = delay;
 
         if (timer >= dodge_time && !car.doubleJumped) {
-            if (!this.didLeaveOutFrame)
+            if (!this.didLeaveOutFrame && reportProblems)
                 System.out.println(car.playerIndex + ": Warning: didn't leave out jump frame timer=" + timer + " dodgetime=" + dodge_time);
             Vector2 direction_local = null;
             if ((target == null && direction == null) || (target != null && direction != null))

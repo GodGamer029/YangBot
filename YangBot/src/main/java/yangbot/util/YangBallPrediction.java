@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class YangBallPrediction {
@@ -43,6 +44,55 @@ public class YangBallPrediction {
         this.frames = frames;
         this.tickFrequency = tickFrequency;
         this.tickRate = Math.round(1 / tickFrequency);
+    }
+
+    public static YangBallPrediction merge(YangBallPrediction one, YangBallPrediction two) {
+        if (one.frames.size() == 0)
+            return two;
+        if (two.frames.size() == 0)
+            return one;
+        List<YangPredictionFrame> newFrames = new ArrayList<>(Math.max(one.frames.size(), two.frames.size()));
+
+        float targetDt = Math.min(one.tickFrequency, two.tickFrequency);
+        int targetRate = Math.round(1 / targetDt);
+        assert targetRate == 120 || targetRate == 60 : targetDt + " " + targetRate;
+
+        Function<YangPredictionFrame, Integer> frameToTick = (YangPredictionFrame f) -> Math.round(f.relativeTime / targetDt);
+
+        int i1 = 0, i2 = 0;
+        int f1 = frameToTick.apply(one.frames.get(0)), f2 = frameToTick.apply(two.frames.get(0));
+
+        boolean update1 = false, update2 = false;
+        while (i1 < one.frames.size() || i2 < two.frames.size()) {
+            if (f1 == f2) { // Same frame twice, advance both
+                newFrames.add(one.frames.get(i1));
+                update1 = update2 = true;
+            } else if (f1 < f2) { // Work on f1 first
+                newFrames.add(one.frames.get(i1));
+                update1 = true;
+            } else {// Work on f2 first
+                newFrames.add(two.frames.get(i2));
+                update2 = true;
+            }
+
+            if (update1) {
+                update1 = false;
+                i1++;
+                if (i1 >= one.frames.size())
+                    f1 = i1 = Integer.MAX_VALUE;
+                else
+                    f1 = frameToTick.apply(one.frames.get(i1));
+            }
+            if (update2) {
+                update2 = false;
+                i2++;
+                if (i2 >= two.frames.size())
+                    f2 = i2 = Integer.MAX_VALUE;
+                else
+                    f2 = frameToTick.apply(two.frames.get(i2));
+            }
+        }
+        return YangBallPrediction.from(newFrames, 1f / targetRate);
     }
 
     public static YangBallPrediction from(List<YangPredictionFrame> frames, float tickFrequency) {
@@ -91,6 +141,10 @@ public class YangBallPrediction {
         }
 
         throw new IllegalStateException("Ball Prediction Type '" + ballPredictionType.name() + "' not recognized");
+    }
+
+    public boolean isEmpty() {
+        return this.frames.isEmpty();
     }
 
     public void draw(AdvancedRenderer renderer, Color color, float length) {

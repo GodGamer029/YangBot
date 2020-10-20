@@ -7,8 +7,6 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.DefensiveGrader;
 import yangbot.path.EpicMeshPlanner;
-import yangbot.path.builders.SegmentedPath;
-import yangbot.path.builders.segments.CurveSegment;
 import yangbot.strategy.abstraction.AerialAbstraction;
 import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
 import yangbot.strategy.abstraction.GetBoostAbstraction;
@@ -22,8 +20,11 @@ import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class DefendStrategy extends Strategy {
@@ -52,7 +53,10 @@ public class DefendStrategy extends Strategy {
         return true;
     }
 
-    private boolean planAerialIntercept(YangBallPrediction ballPrediction, boolean debug) {
+    private Optional<StrikeInfo> planAerialIntercept(YangBallPrediction ballPrediction, boolean debug) {
+        if (ballPrediction.isEmpty())
+            return Optional.empty();
+
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
         final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * RLConstants.goalDistance);
@@ -66,6 +70,9 @@ public class DefendStrategy extends Strategy {
                 break;
 
             final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
+            if (interceptFrame.ballData.isInAnyGoal())
+                break;
+
             final Vector3 ballPos = interceptFrame.ballData.position;
             final var carToBall = ballPos.sub(car.position).normalized();
             final var goalToBall = ballPos.sub(ownGoal.withZ(100)).normalized();
@@ -75,104 +82,96 @@ public class DefendStrategy extends Strategy {
             // We should arrive at the ball a bit early to catch it
             boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
             if (isPossible) {
-                this.aerialAbstraction = new AerialAbstraction();
-                this.aerialAbstraction.targetPos = targetPos;
-                this.aerialAbstraction.targetOrientPos = ballPos;
-                this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
-                this.state = State.AERIAL;
-                return true;
+                return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.AERIAL, (o) -> {
+                    this.aerialAbstraction = new AerialAbstraction();
+                    this.aerialAbstraction.targetPos = targetPos;
+                    this.aerialAbstraction.targetOrientPos = ballPos;
+                    this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
+                    this.state = State.AERIAL;
+                }));
             }
 
             t = interceptFrame.relativeTime;
             t += RLConstants.simulationTickFrequency * 4; // 15 ticks / s
         } while (t < ballPrediction.relativeTimeOfLastFrame());
 
-        return false;
+        return Optional.empty();
     }
 
-    private boolean planGroundIntercept(YangBallPrediction ballPrediction, boolean debug) {
+    private Optional<StrikeInfo> planGroundIntercept(YangBallPrediction ballPrediction, boolean debug) {
+        if (ballPrediction.isEmpty())
+            return Optional.empty();
+
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
-
-        if (car.position.z > 50) {
-            if (debug)
-                System.out.println("Car too high up");
-            return false;
-        }
-
         final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * RLConstants.goalDistance);
-        SegmentedPath validPath = null;
-        float arrivalTime = 0;
-        Vector3 targetBallPos = null;
 
         float t = 0;
 
         // Path finder
-        do {
-            final Optional<YangBallPrediction.YangPredictionFrame> interceptFrameOptional = ballPrediction.getFrameAfterRelativeTime(t);
+        while (t < ballPrediction.relativeTimeOfLastFrame()) {
+            final Optional<YangBallPrediction.YangPredictionFrame> interceptFrameOptional = ballPrediction.getFrameAtRelativeTime(t);
             if (interceptFrameOptional.isEmpty())
                 break;
-
             final YangBallPrediction.YangPredictionFrame interceptFrame = interceptFrameOptional.get();
+
+            t = interceptFrame.relativeTime;
+            t += RLConstants.simulationTickFrequency * 4; // 15 ticks / s
+
+            if (interceptFrame.ballData.isInAnyGoal())
+                break;
+
+            if (interceptFrame.ballData.velocity.magnitude() > 4000)
+                continue;
+
             final Vector3 targetPos = interceptFrame.ballData.position;
             final Vector3 endTangent = new Vector3(targetPos.flatten().sub(ownGoal).normalized().mul(2).add(targetPos.flatten().sub(car.position.flatten()).normalized()).normalized(), 0);
             final Vector3 endPos = targetPos.withZ(car.position.z).sub(endTangent.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
 
-            var pathPlanner = new EpicMeshPlanner()
-                    .withStart(car, 10)
+            var pathOptional = new EpicMeshPlanner()
+                    .withStart(car)
                     .withEnd(endPos, endTangent)
-                    //.withBallAvoidance(true, car, interceptFrame.absoluteTime, true)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(CarData.MAX_VELOCITY)
                     .allowOptimize(car.boost < 30)
-                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH);
-            var pathOptional = pathPlanner.plan();
+                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                    .plan();
 
-            if (pathOptional.isPresent()) {
-                boolean isValid = true;
+            if (pathOptional.isEmpty())
+                continue;
 
-                if (pathOptional.get().getCurrentPathSegment().get() instanceof CurveSegment && ((CurveSegment) pathOptional.get().getCurrentPathSegment().get()).getBakedPath().tangentAt(-1).dot(car.forward()) < 0)
-                    isValid = false;
-                else if (pathOptional.get().getEndTangent().dot(targetPos.flatten().sub(ownGoal).normalized().withZ(0)) < 0)
-                    isValid = false;
+            var currentPath = pathOptional.get();
 
-                if (isValid) {
-                    float timeEstimate = pathOptional.get().getTotalTimeEstimate();
-                    if (timeEstimate < interceptFrame.relativeTime && interceptFrame.relativeTime - timeEstimate < 0.3f) {
-                        validPath = pathOptional.get();
-                        arrivalTime = interceptFrame.absoluteTime;
-                        targetBallPos = targetPos;
-                        break;
-                    }
-                }
+            if (currentPath.getEndTangent().dot(targetPos.flatten().sub(ownGoal).normalized().withZ(0)) < 0)
+                continue;
+
+            float timeEstimate = currentPath.getTotalTimeEstimate();
+            if (timeEstimate <= interceptFrame.relativeTime) {
+                return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.DODGE, (o) -> {
+                    this.state = State.FOLLOW_PATH_STRIKE;
+
+                    DriveDodgeStrikeAbstraction dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath, new DefensiveGrader());
+                    dodgeStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;
+                    dodgeStrikeAbstraction.originalTargetBallPos = targetPos;
+
+                    float zDiff = targetPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
+                    if (zDiff < 5)
+                        dodgeStrikeAbstraction.jumpBeforeStrikeDelay = 0.25f;
+                    else
+                        dodgeStrikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
+
+                    dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay = Math.max(0.6f, dodgeStrikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
+                    dodgeStrikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
+
+                    if (debug)
+                        dodgeStrikeAbstraction.debugMessages = true;
+
+                    this.strikeAbstraction = dodgeStrikeAbstraction;
+                }));
             }
+        }
 
-            t = interceptFrame.relativeTime;
-            t += RLConstants.simulationTickFrequency * 4; // 15 ticks / s
-        } while (t < ballPrediction.relativeTimeOfLastFrame());
-
-        if (validPath == null)
-            return false;
-
-        this.strikeAbstraction = new DriveDodgeStrikeAbstraction(validPath, new DefensiveGrader());
-        this.strikeAbstraction.arrivalTime = arrivalTime;
-        this.strikeAbstraction.strikeAbstraction.maxJumpDelay = 0.6f;
-        this.strikeAbstraction.strikeAbstraction.jumpDelayStep = 0.15f;
-        this.strikeAbstraction.originalTargetBallPos = targetBallPos;
-
-        float zDiff = targetBallPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
-        if (zDiff < 5)
-            this.strikeAbstraction.jumpBeforeStrikeDelay = 0.25f;
-        else
-            this.strikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
-
-        this.strikeAbstraction.strikeAbstraction.maxJumpDelay = Math.max(0.6f, this.strikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
-        this.strikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (this.strikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
-
-        this.state = State.FOLLOW_PATH_STRIKE;
-        if (debug)
-            this.strikeAbstraction.debugMessages = true;
-        return true;
+        return Optional.empty();
     }
 
     @Override
@@ -200,9 +199,13 @@ public class DefendStrategy extends Strategy {
         final float MAX_HEIGHT_DOUBLEJUMP = 500;
         final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
 
+        YangBallPrediction aerialFrames = YangBallPrediction.empty();
+        YangBallPrediction dodgeFrames = YangBallPrediction.empty();
+        YangBallPrediction chipFrames = YangBallPrediction.empty();
+
         // Getting scored on
         {
-            Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.getFramesBeforeRelative(4f)
+            Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.getFramesBeforeRelative(3.5f)
                     .stream()
                     .filter((f) -> (int) Math.signum(f.ballData.position.y) == teamSign && f.ballData.makeMutable().isInOwnGoal(teamSign))
                     .findFirst();
@@ -216,23 +219,21 @@ public class DefendStrategy extends Strategy {
                     return;
                 }
 
-                var aerialFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
-                        .filter((frame) -> frame.relativeTime < 3.5f)
-                        .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_DOUBLEJUMP)
-                        .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
+                if (car.boost > 10) {
+                    var newAerialFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
+                            .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_DOUBLEJUMP)
+                            .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
-                if (this.planAerialIntercept(aerialFrames, false))
-                    return;
+                    aerialFrames = YangBallPrediction.merge(aerialFrames, newAerialFrames);
+                }
 
-                var groundFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
-                        .filter((frame) -> frame.ballData.position.z < DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT)
-                        .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
+                {
+                    var newDodgeFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
+                            .filter((frame) -> frame.ballData.position.z < DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT)
+                            .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
-                if (this.planGroundIntercept(groundFrames, false))
-                    return;
-
-                this.state = State.IDLE;
-                return;
+                    dodgeFrames = YangBallPrediction.merge(dodgeFrames, newDodgeFrames);
+                }
             }
         }
 
@@ -251,7 +252,6 @@ public class DefendStrategy extends Strategy {
                     .filter((f) -> f.ballData.position.z < 1000 && defendArea.contains(f.ballData.position.flatten()))
                     .findFirst();
 
-
             if (ballInDefendAreaFrame.isPresent()) {
                 final YangBallPrediction.YangPredictionFrame frameAreaEnter = ballInDefendAreaFrame.get();
 
@@ -259,21 +259,18 @@ public class DefendStrategy extends Strategy {
                 if (framesBeforeAreaEnter.frames.size() > 0) {
 
                     if (car.boost > 10) {
-                        var aerialFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
-                                .filter((frame) -> frame.relativeTime < 3.5f)
+                        var newAerialFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
                                 .filter((frame) -> frame.ballData.position.z < MAX_HEIGHT_AERIAL && frame.ballData.position.z > MAX_HEIGHT_DOUBLEJUMP)
                                 .collect(Collectors.toList()), framesBeforeAreaEnter.tickFrequency);
 
-                        if (this.planAerialIntercept(aerialFrames, false))
-                            return;
+                        aerialFrames = YangBallPrediction.merge(aerialFrames, newAerialFrames);
                     }
 
-                    var groundFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
+                    var newDodgeFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
                             .filter((frame) -> frame.ballData.position.z < DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT)
                             .collect(Collectors.toList()), framesBeforeAreaEnter.tickFrequency);
 
-                    if (this.planGroundIntercept(groundFrames, false))
-                        return;
+                    dodgeFrames = YangBallPrediction.merge(dodgeFrames, newDodgeFrames);
                 }
             }
         }
@@ -302,42 +299,57 @@ public class DefendStrategy extends Strategy {
                        })*/
                         .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
-                if (framesBeforeGoal.frames.size() > 0 && this.planGroundIntercept(framesBeforeGoal, false))
-                    return;
+                dodgeFrames = YangBallPrediction.merge(dodgeFrames, framesBeforeGoal);
+                chipFrames = YangBallPrediction.merge(chipFrames, framesBeforeGoal);
             }
+        }
 
-            if (this.planGoForBoost())
+        List<StrikeInfo> possibleStrikes = new ArrayList<>();
+        var airStrike = this.planAerialIntercept(aerialFrames, false);
+        airStrike.ifPresent(possibleStrikes::add);
+
+        var dodgeStrike = this.planGroundIntercept(dodgeFrames, false);
+        dodgeStrike.ifPresent(possibleStrikes::add);
+
+        if (possibleStrikes.isEmpty()) {
+            if (car.position.flatten().distance(ownGoal) < ball.position.flatten().distance(ownGoal) && this.planGoForBoost())
                 return;
-
-            this.state = State.IDLE; // We are in a defensive position
+            this.state = State.IDLE;
             return;
         }
-        this.state = State.IDLE;
+
+        possibleStrikes
+                .stream()
+                .map(s -> {
+                    float val = s.timeAtStrike - car.elapsedSeconds;
+
+                    switch (s.strikeType) {
+                        case CHIP:
+                            val *= 0.9f;
+                            val -= 0.3f;
+                            break;
+                    }
+
+                    return new Tuple<>(s, val);
+                })
+                .min(Comparator.comparingDouble(Tuple::getValue))
+                .map(Tuple::getKey).get()
+                .execute();
+
+        assert this.state != State.INVALID;
     }
 
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
         assert !this.reevaluateStrategy(4f) : this.state.name();
+        assert this.state != State.INVALID : "Invalid state!";
 
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
         switch (this.state) {
-            case AERIAL: {
-
-                if (this.reevaluateStrategy(3.5f))
-                    return; // Aerial shouldn't exceed this duration anyways
-
-                this.aerialAbstraction.draw(renderer);
-                this.aerialAbstraction.step(dt, controlsOutput);
-                if (this.aerialAbstraction.isDone() && this.reevaluateStrategy(0f))
-                    return;
-
-                break;
-            }
             case GET_BOOST: {
-
                 if (this.boostAbstraction.canInterrupt() && this.reevaluateStrategy(this.ballTouchInterrupt))
                     return;
 
@@ -348,9 +360,23 @@ public class DefendStrategy extends Strategy {
 
             }
             break;
+            case AERIAL: {
+                if (this.reevaluateStrategy(3.5f))
+                    return; // Aerial shouldn't exceed this duration anyways
+
+                if (this.aerialAbstraction.arrivalTime - car.elapsedSeconds > 0.3f && this.reevaluateStrategy(ballTouchInterrupt))
+                    return;
+
+                this.aerialAbstraction.draw(renderer);
+                this.aerialAbstraction.step(dt, controlsOutput);
+                if (this.aerialAbstraction.isDone() && this.reevaluateStrategy(0f))
+                    return;
+
+                break;
+            }
             case FOLLOW_PATH_STRIKE: {
 
-                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(3f))
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(3.5f))
                     return;
 
                 if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt))
@@ -363,22 +389,22 @@ public class DefendStrategy extends Strategy {
 
                 break;
             }
-            case BALLCHASE: {
-                if (this.reevaluateStrategy(0.05f) || this.reevaluateStrategy(this.ballTouchInterrupt))
-                    return;
-                DefaultStrategy.smartBallChaser(dt, controlsOutput);
-                break;
-            }
             case IDLE: {
-                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.1f : 2f))
+                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.1f : 2.5f))
                     return;
 
-                if (this.idleAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt, 0.05f))
+                if (this.idleAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt, 0.1f))
                     return;
 
                 this.idleAbstraction.step(dt, controlsOutput);
                 if (this.idleAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
+                break;
+            }
+            case BALLCHASE: {
+                if (this.reevaluateStrategy(0.05f) || this.reevaluateStrategy(this.ballTouchInterrupt))
+                    return;
+                DefaultStrategy.smartBallChaser(dt, controlsOutput);
                 break;
             }
             default:
@@ -401,9 +427,30 @@ public class DefendStrategy extends Strategy {
         INVALID,
         AERIAL,
         GET_BOOST,
-        ROTATE,
         FOLLOW_PATH_STRIKE,
         BALLCHASE,
         IDLE
+    }
+
+    private static class StrikeInfo {
+        public final float timeAtStrike;
+        public final StrikeInfo.StrikeType strikeType;
+        private final Consumer<Object> executor;
+
+        private StrikeInfo(float timeAtStrike, StrikeInfo.StrikeType strikeType, Consumer<Object> executor) {
+            this.timeAtStrike = timeAtStrike;
+            this.strikeType = strikeType;
+            this.executor = executor;
+        }
+
+        public void execute() {
+            this.executor.accept(null);
+        }
+
+        enum StrikeType {
+            AERIAL,
+            DODGE,
+            CHIP
+        }
     }
 }

@@ -47,7 +47,7 @@ public class OffensiveStrategy extends Strategy {
             return false;
         }
 
-        this.state = OffensiveStrategy.State.GET_BOOST;
+        this.state = State.GET_BOOST;
         RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_NeedBoost);
         return true;
     }
@@ -72,8 +72,10 @@ public class OffensiveStrategy extends Strategy {
 
             final Vector3 ballPos = interceptFrame.ballData.position;
             final var carToBall = ballPos.sub(car.position).normalized();
-            final var goalToBall = ballPos.sub(ownGoal.withZ(100)).normalized().add(enemyGoal.withZ(100).sub(ballPos).normalized()).normalized();
-            final Vector3 targetOffset = carToBall.mul(1.5f).add(goalToBall).normalized();
+            final var goalToBall = (ballPos.sub(ownGoal.withZ(100)).normalized())
+                    .add(enemyGoal.withZ(100).sub(ballPos).normalized())
+                    .normalized();
+            final Vector3 targetOffset = carToBall.add(goalToBall).normalized();
             final Vector3 targetPos = ballPos.sub(targetOffset.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent() * 0.95f - 10));
 
             // We should arrive at the ball a bit early to catch it
@@ -107,21 +109,20 @@ public class OffensiveStrategy extends Strategy {
         assert goalCenterToPostDistance > 100; // Could fail with smaller goals
         assert enemyGoal.x == 0; // Could fail with custom goals
         final Line2 enemyGoalLine = new Line2(enemyGoal.sub(goalCenterToPostDistance, 0), enemyGoal.add(goalCenterToPostDistance, 0));
-        final Vector3 startPosition = car.position.add(car.velocity.mul(RLConstants.tickFrequency * 2));
-        final Vector3 startTangent = car.forward().mul(3).add(car.velocity.normalized()).normalized();
 
         // Path finder
         while (t < maxT) {
             final Optional<YangBallPrediction.YangPredictionFrame> interceptFrameOptional = strikePrediction.getFrameAtRelativeTime(t);
             if (interceptFrameOptional.isEmpty())
                 break;
+            final var interceptFrame = interceptFrameOptional.get();
 
+            t = interceptFrame.relativeTime;
             if (t > 1.5f) // Speed it up, not as important
                 t += RLConstants.simulationTickFrequency * 4; // 15hz
             else // default
                 t += RLConstants.simulationTickFrequency * 2; // 30hz
 
-            final var interceptFrame = interceptFrameOptional.get();
             if (interceptFrame.ballData.isInAnyGoal())
                 break;
 
@@ -136,11 +137,11 @@ public class OffensiveStrategy extends Strategy {
             Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
             ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
 
-            final Vector3 carToDriveTarget = ballHitTarget.sub(startPosition).normalized();
+            final Vector3 carToDriveTarget = ballHitTarget.sub(car.position).normalized();
             final Vector3 endTangent = carToDriveTarget.mul(4).add(ballTargetToGoalTarget).withZ(0).normalized();
 
             var currentPathOptional = new EpicMeshPlanner()
-                    .withStart(startPosition, startTangent)
+                    .withStart(car)
                     .withEnd(ballHitTarget, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(2300)
@@ -351,7 +352,7 @@ public class OffensiveStrategy extends Strategy {
         possibleStrikes
                 .stream()
                 .map(s -> {
-                    float val = s.timeAtStrike;
+                    float val = s.timeAtStrike - car.elapsedSeconds;
 
                     switch (s.strikeType) {
                         case CHIP:
@@ -449,23 +450,9 @@ public class OffensiveStrategy extends Strategy {
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
         final int teamSign = car.getTeamSign();
-        final Vector2 ownGoal = new Vector2(0, teamSign * (RLConstants.goalDistance + 100));
 
         switch (this.state) {
-            case GO_BACK_SOMEHOW: {
-
-                DriveManeuver.steerController(controlsOutput, car, ownGoal.withZ(0));
-                DriveManeuver.speedController(dt, controlsOutput, (float) car.forward().dot(car.velocity), DriveManeuver.max_throttle_speed * 0.9f, CarData.MAX_VELOCITY, 0.04f, false);
-
-                if (!car.hasWheelContact && this.reevaluateStrategy(0))
-                    return;
-                if (this.reevaluateStrategy(0.1f) || this.reevaluateStrategy(ballTouchInterrupt))
-                    return;
-
-            }
-            break;
             case GET_BOOST: {
-
                 if (this.boostAbstraction.canInterrupt() && this.reevaluateStrategy(this.ballTouchInterrupt))
                     return;
 
@@ -476,16 +463,16 @@ public class OffensiveStrategy extends Strategy {
 
             }
             break;
-            case IDLE: {
+            case AERIAL: {
+                if (this.reevaluateStrategy(3.5f))
+                    return; // Aerial shouldn't exceed this duration anyways
 
-                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.1f : 2.5f))
+                if (this.aerialAbstraction.arrivalTime - car.elapsedSeconds > 0.3f && this.reevaluateStrategy(ballTouchInterrupt))
                     return;
 
-                if (this.idleAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt, 0.1f))
-                    return;
-
-                this.idleAbstraction.step(dt, controlsOutput);
-                if (this.idleAbstraction.isDone() && this.reevaluateStrategy(0))
+                this.aerialAbstraction.draw(renderer);
+                this.aerialAbstraction.step(dt, controlsOutput);
+                if (this.aerialAbstraction.isDone() && this.reevaluateStrategy(0f))
                     return;
 
             }
@@ -504,32 +491,16 @@ public class OffensiveStrategy extends Strategy {
 
             }
             break;
-            case DRIVE_AT_POINT_WITHPATH: {
-                if (!car.hasWheelContact && this.drivePath.shouldBeOnGround() && this.reevaluateStrategy(0.05f))
+            case IDLE: {
+
+                if (this.reevaluateStrategy(this.idleAbstraction.canInterrupt() ? 0.1f : 2.5f))
                     return;
 
-                if (this.reevaluateStrategy(this.drivePath.canInterrupt() ? 0.1f : 1.8f))
+                if (this.idleAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt, 0.1f))
                     return;
 
-                if (this.drivePath == null && this.reevaluateStrategy(0))
-                    return;
-
-                this.drivePath.draw(renderer);
-                if (this.drivePath.step(dt, controlsOutput) && this.reevaluateStrategy(0))
-                    return;
-
-            }
-            break;
-            case AERIAL: {
-                if (this.reevaluateStrategy(3.5f))
-                    return; // Aerial shouldn't exceed this duration anyways
-
-                if (this.aerialAbstraction.arrivalTime - car.elapsedSeconds > 0.3f && this.reevaluateStrategy(ballTouchInterrupt))
-                    return;
-
-                this.aerialAbstraction.draw(renderer);
-                this.aerialAbstraction.step(dt, controlsOutput);
-                if (this.aerialAbstraction.isDone() && this.reevaluateStrategy(0f))
+                this.idleAbstraction.step(dt, controlsOutput);
+                if (this.idleAbstraction.isDone() && this.reevaluateStrategy(0))
                     return;
 
             }
@@ -551,9 +522,7 @@ public class OffensiveStrategy extends Strategy {
         IDLE,
         DRIBBLE,
         FOLLOW_PATH_STRIKE,
-        GO_BACK_SOMEHOW,
         GET_BOOST,
-        DRIVE_AT_POINT_WITHPATH,
         INVALID,
         AERIAL
     }

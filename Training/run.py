@@ -8,12 +8,21 @@ from rlbottraining.common_exercises.dribbling import Dribbling
 from rlbot.matchconfig.match_config import PlayerConfig, Team
 import gold_goalie
 from gold_goalie import GoldBallRollingToGoalie
-from custom_shot import CustomHookShot
+
+from importlib import reload
+import os
+
+def get_shot():
+    import custom_shot
+    
+    return custom_shot.CustomHookShot('Try')
+
+get_shot()
+
 def make_default_playlist():
     exercises =  [
-        GoldBallRollingToGoalie('Try')
+        get_shot()
     ]
-    
 
     for exercise in exercises:
         exercise.match_config.player_configs = [

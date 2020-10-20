@@ -4,6 +4,7 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
+import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
@@ -33,9 +34,10 @@ public class GetOutOfGoalSegment extends PathSegment {
     private float timeForJump = 1;
     private float t = 0;
 
-    public GetOutOfGoalSegment(Vector3 startPos, Vector3 startTangent, float startSpeed, Vector3 targetPos) {
-        super(startSpeed);
-        this.startPos = startPos;
+    public GetOutOfGoalSegment(PathBuilder builder, Vector3 targetPos) {
+        super(builder);
+        this.startPos = builder.getCurrentPosition();
+        var startTangent = builder.getCurrentTangent();
 
         if (Math.abs(startPos.y) <= RLConstants.goalDistance - 100 || Math.abs(startPos.x) > RLConstants.goalCenterToPost + 50)
             return;

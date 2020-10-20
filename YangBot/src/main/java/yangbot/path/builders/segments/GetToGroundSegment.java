@@ -4,14 +4,15 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
+import yangbot.path.builders.PathBuilder;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
 // TODO: use navmesh
 public class GetToGroundSegment extends AtbaSegment {
 
-    public GetToGroundSegment(Vector3 startPos, float startSpeed) {
-        super(startPos, startSpeed, startPos.withZ(RLConstants.carElevation - 1));
+    public GetToGroundSegment(PathBuilder b) {
+        super(b, b.getCurrentPosition().withZ(RLConstants.carElevation - 1));
     }
 
     @Override

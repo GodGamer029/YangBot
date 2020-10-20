@@ -22,39 +22,35 @@ w.addItem(g)
 names = ["INSPEED", "ENDANGLE", "TOTALTICKS", "DRIFTTICKS", "OUTSPEED", "OUTOFFSETX", "OUTOFFSETY"]
 rows = [0, 4, 1]
 
-data = np.genfromtxt('turn.drift.txt', skip_header=1)
-'''
-allRows = np.arange(0, 7)
-skippedRows, cunt = np.unique(np.append(allRows, rows), return_counts=True)
+def loadData(str):
+    data = np.genfromtxt(str, skip_header=1)
 
-skippedRows = skippedRows[cunt == 1]
-skippedRows = sorted(skippedRows)[::-1]
+    driftyBoi = np.reshape(data[:, rows[0]], (data.shape[0], 1))
+    driftyBoi = np.insert(driftyBoi, 1, data[:, rows[1]], axis=1)
+    driftyBoi = np.insert(driftyBoi, 2, data[:, rows[2]], axis=1)
 
-
-for row in skippedRows:
-    driftyBoi = np.delete(driftyBoi, row, 1)
-'''
-
-driftyBoi = np.reshape(data[:, rows[0]], (data.shape[0], 1))
-driftyBoi = np.insert(driftyBoi, 1, data[:, rows[1]], axis=1)
-driftyBoi = np.insert(driftyBoi, 2, data[:, rows[2]], axis=1)
+    #normalize data
+    driftyBoi[:, 0] /= np.max(np.abs(driftyBoi[:, 0]))
+    driftyBoi[:, 1] /= np.max(np.abs(driftyBoi[:, 1]))
+    driftyBoi[:, 2] /= np.max(np.abs(driftyBoi[:, 2]))
 
 
-print(driftyBoi)
+    driftColor = np.reshape(driftyBoi[:, 2], (driftyBoi.shape[0], 1))
 
+    driftColor = np.insert(driftColor, [1], [0.5, 1, 1], axis=1)
 
-driftyBoi[:, 0] /= np.max(np.abs(driftyBoi[:, 0]))
-driftyBoi[:, 1] /= np.max(np.abs(driftyBoi[:, 1]))
-driftyBoi[:, 2] /= np.max(np.abs(driftyBoi[:, 2]))
+    return (driftyBoi, driftColor)
 
+oldData, oldColor = loadData('turn.drift.txt')
+newData, newColor = loadData('turn.drift2.txt')
+newColor[:, 2] = 0
+newColor[:, 1] = 1 - newColor[:, 0]
 
-driftColor = np.reshape(driftyBoi[:, 2], (driftyBoi.shape[0], 1))
-#driftColorG = np.reshape(driftyBoi[:, 1], (driftyBoi.shape[0], 1))
+driftyBoi = np.append(oldData, newData, axis=0)
+driftColor = np.append(oldColor, newColor, axis=0)
 
-driftColor = np.insert(driftColor, [1], [0.5, 1, 1], axis=1)
-print(driftyBoi)
 #(0.5, 0.5, 1, 1)
-p1 = gl.GLScatterPlotItem(pos=driftyBoi, color=driftColor, size=2)
+p1 = gl.GLScatterPlotItem(pos=driftyBoi, color=driftColor, size=5)
 p1.scale(10, 10, 10)
 w.addItem(p1)
 

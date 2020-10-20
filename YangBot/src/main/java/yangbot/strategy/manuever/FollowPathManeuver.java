@@ -15,8 +15,8 @@ public class FollowPathManeuver extends Maneuver {
     public Curve path = null;
     public float arrivalTime = -1;
     public float arrivalSpeed = -1;
-    float expected_error;
-    float expected_speed;
+    //float expected_error;
+    //float expected_speed;
     public DriveManeuver driveManeuver;
     public boolean allowBackwardsDriving = false;
     public float speedReactionTime = 0.04f;
@@ -26,6 +26,82 @@ public class FollowPathManeuver extends Maneuver {
     }
 
     private float closeToDestTimeout = 0;
+
+    public static float distanceError(float s0, float T, float dt, float v0, float vT, float aT, Curve path) {
+        int num_steps = (int) (T / dt);
+        float s = s0;
+        float v = v0;
+        float v_prev = v0;
+
+        for (int i = 0; i < num_steps; i++) {
+            float t = (((float) i) / ((float) num_steps)) * T;
+            float v_ideal = MathUtils.interpolateQuadratic(v0, vT, aT, t, T);
+            float v_limit = CarData.MAX_VELOCITY;
+            if (path != null)
+                v_limit = path.maxSpeedAt(s - v_prev * dt);
+
+            v_prev = v;
+            v = Math.min(v_ideal, v_limit);
+
+            s -= 0.5f * (v + v_prev) * dt;
+        }
+
+        return s;
+    }
+
+    public static float determineSpeedPlan(float distToTarget, float T, float dt, float v0, float vf, Curve path) {
+
+        float a = DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(vf);
+        float error = distanceError(distToTarget, T, dt, v0, vf, a, path);
+
+        float a_old = -DriveManeuver.brake_acceleration;
+
+        float error_old = distanceError(distToTarget, T, dt, v0, vf, a_old, path);
+
+        // try to find the right arrival acceleration
+        // using a few iterations of secant method
+        for (int i = 0; i < 16; i++) {
+            if (Math.abs(error) < 0.5f || Float.isInfinite(a) || Float.isNaN(error)) break;
+
+            float new_a = (a_old * error - a * error_old) / (error - error_old);
+
+            a_old = a;
+
+            a = new_a;
+
+            error_old = error;
+            error = distanceError(distToTarget, T, dt, v0, vf, a, path);
+        }
+
+        //expected_error = error;
+        var expected_speed = MathUtils.interpolateQuadratic(v0, vf, a, 0.04f, T);
+
+        return expected_speed;
+    }
+
+    public float getDistanceOffPath(CarData car) {
+        float currentPos = this.path.findNearest(car.position);
+        return (float) car.position.flatten().distance(this.path.pointAt(currentPos).flatten());
+    }
+
+    public void draw(AdvancedRenderer renderer, CarData car) {
+        float currentPos = this.path.findNearest(car.position);
+        float distanceOffPath = this.getDistanceOffPath(car);
+        final float timeUntilArrival = Math.max(this.arrivalTime - car.elapsedSeconds, 0.01f);
+        float perc = 100 - (100 * currentPos / this.path.length);
+        int yPos = 560;
+        renderer.drawString2d(String.format("Speed %.1f", currentPos / timeUntilArrival), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        if (this.arrivalTime > 0)
+            renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs)", timeUntilArrival, this.arrivalTime), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        else
+            renderer.drawString2d(String.format("Speed %.1fs", car.velocity.magnitude()), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        //renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
+        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+    }
 
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
@@ -67,7 +143,7 @@ public class FollowPathManeuver extends Maneuver {
             final float timeUntilArrival = Math.max(this.arrivalTime - car.elapsedSeconds, T_min);
 
             if (arrivalSpeed != -1) {
-                driveManeuver.minimumSpeed = determineSpeedPlan(pathDistanceFromTarget, timeUntilArrival, dt, car);
+                driveManeuver.minimumSpeed = determineSpeedPlan(pathDistanceFromTarget, timeUntilArrival, dt, car.forwardSpeed(), this.arrivalSpeed, this.path);
                 driveManeuver.maximumSpeed = driveManeuver.minimumSpeed + 5;
             } else {
                 driveManeuver.minimumSpeed = pathDistanceFromTarget / timeUntilArrival;
@@ -115,85 +191,5 @@ public class FollowPathManeuver extends Maneuver {
 
         driveManeuver.reaction_time = speedReactionTime;
         driveManeuver.step(dt, controlsOutput);
-    }
-
-    public float getDistanceOffPath(CarData car) {
-        float currentPos = this.path.findNearest(car.position);
-        return (float) car.position.flatten().distance(this.path.pointAt(currentPos).flatten());
-    }
-
-    public void draw(AdvancedRenderer renderer, CarData car) {
-        float currentPos = this.path.findNearest(car.position);
-        float distanceOffPath = this.getDistanceOffPath(car);
-        final float timeUntilArrival = Math.max(this.arrivalTime - car.elapsedSeconds, 0.01f);
-        float perc = 100 - (100 * currentPos / this.path.length);
-        int yPos = 560;
-        renderer.drawString2d(String.format("Speed %.1f", currentPos / timeUntilArrival), Color.WHITE, new Point(500, yPos += 20), 1, 1);
-        renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, yPos += 20), 1, 1);
-        renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, yPos += 20), 1, 1);
-        if (this.arrivalTime > 0)
-            renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs)", timeUntilArrival, this.arrivalTime), Color.WHITE, new Point(500, yPos += 40), 2, 2);
-        else
-            renderer.drawString2d(String.format("Speed %.1fs", car.velocity.magnitude()), Color.WHITE, new Point(500, yPos += 40), 2, 2);
-        //renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
-        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
-        renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
-        renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, yPos += 40), 2, 2);
-    }
-
-    public float distanceError(float s0, float T, float dt, float v0, float vT, float aT) {
-        int num_steps = (int) (T / dt);
-        float s = s0;
-        float v = v0;
-        float v_prev = v0;
-
-        for (int i = 0; i < num_steps; i++) {
-            float t = (((float) i) / ((float) num_steps)) * T;
-            float v_ideal = MathUtils.interpolateQuadratic(v0, vT, aT, t, T);
-            float v_limit = path.maxSpeedAt(s - v_prev * dt);
-
-            v_prev = v;
-            v = Math.min(v_ideal, v_limit);
-
-            s -= 0.5f * (v + v_prev) * dt;
-        }
-
-        return s;
-    }
-
-    public float determineSpeedPlan(float s, float T, float dt, CarData car) {
-        float v0 = (float) car.velocity.magnitude();
-        float vf = arrivalSpeed;
-
-        float a = DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(vf);
-        float error = distanceError(s, T, dt, v0, vf, a);
-
-        float a_old = -DriveManeuver.brake_acceleration;
-
-        float error_old = distanceError(s, T, dt, v0, vf, a_old);
-
-        // try to find the right arrival acceleration
-        // using a few iterations of secant method
-        for (int i = 0; i < 16; i++) {
-            if (Math.abs(error) < 0.5f || Float.isInfinite(a) || Float.isNaN(error)) break;
-
-            float new_a = (a_old * error - a * error_old) / (error - error_old);
-
-            a_old = a;
-            a = new_a;
-
-            error_old = error;
-            error = distanceError(s, T, dt, v0, vf, a);
-        }
-
-        expected_error = error;
-        expected_speed = MathUtils.interpolateQuadratic(v0, vf, a, 0.04f, T);
-
-        return expected_speed;
-    }
-
-    @Override
-    public CarData simulate(CarData car) {
-        return null;
     }
 }

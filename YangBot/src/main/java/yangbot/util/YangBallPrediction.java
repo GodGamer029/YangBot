@@ -128,10 +128,20 @@ public class YangBallPrediction {
         }
     }
 
+    public YangPredictionFrame lastFrame() {
+        assert this.frames.size() > 0;
+        return this.frames.get(this.frames.size() - 1);
+    }
+
+    public YangPredictionFrame firstFrame() {
+        assert this.frames.size() > 0;
+        return this.frames.get(0);
+    }
+
     public float relativeTimeOfLastFrame() {
         if (this.frames.size() == 0)
             return -1;
-        return this.frames.get(this.frames.size() - 1).relativeTime;
+        return this.lastFrame().relativeTime;
     }
 
     public YangBallPrediction trim(float relativeStartTime, float relativeEndTime) {

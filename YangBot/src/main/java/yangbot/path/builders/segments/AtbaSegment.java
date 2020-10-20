@@ -3,6 +3,7 @@ package yangbot.path.builders.segments;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
@@ -16,9 +17,9 @@ public class AtbaSegment extends PathSegment {
     protected Vector3 endPos;
     protected float targetSpeed = -1;
 
-    public AtbaSegment(Vector3 startPos, float startSpeed, Vector3 endPos) {
-        super(startSpeed);
-        this.startPos = startPos;
+    public AtbaSegment(PathBuilder b, Vector3 endPos) {
+        super(b);
+        this.startPos = b.getCurrentPosition();
         this.endPos = endPos;
     }
 

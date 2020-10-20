@@ -47,7 +47,9 @@ public class AerialAbstraction extends Abstraction {
                 if (deltaXLocal.x < 0)
                     angle = (float) Math.atan2(deltaXLocal.y, -deltaXLocal.x);
 
-                controls.withSteer(MathUtils.clip(angle, -1f, 1f));
+                float /*D*/ ang = simCar.angularVelocity.dot(simCar.up());
+
+                controls.withSteer(MathUtils.clip(3 * (angle - 0.4f * ang), -1f, 1f));
 
                 // Only alter velocity if we are aligned, or our velocity is too high
                 if (Math.abs(angle) < Math.PI * 0.2f || (simCar.velocity.magnitude() > 1800 && Math.abs(angle) < Math.PI * 0.5f && Math.abs(deltaXLocal.x) > 800))
@@ -96,7 +98,9 @@ public class AerialAbstraction extends Abstraction {
                 if (deltaXLocal.x < 0)
                     angle = (float) Math.atan2(deltaXLocal.y, -deltaXLocal.x);
 
-                controlsOutput.withSteer(MathUtils.clip(angle, -1f, 1f));
+                float /*D*/ ang = car.angularVelocity.dot(car.up());
+
+                controlsOutput.withSteer(MathUtils.clip(3 * (angle - 0.4f * ang), -1f, 1f));
 
                 // Only alter velocity if we are aligned, or our velocity is too high
                 if (Math.abs(angle) < Math.PI * 0.2f || (car.velocity.magnitude() > 1800 && Math.abs(angle) < Math.PI * 0.5f && Math.abs(deltaXLocal.x) > 800))
@@ -129,7 +133,7 @@ public class AerialAbstraction extends Abstraction {
     public void draw(AdvancedRenderer renderer) {
         var car = GameData.current().getCarData();
         renderer.drawString2d("State: " + this.state.name(), Color.WHITE, new Point(400, 300), 2, 2);
-        var bean = AerialManeuver.getDeltaX(car, new Vector3(), arrivalTime).mul(-1);
+        var bean = AerialManeuver.getDeltaX(car, new Vector3(), arrivalTime, 0.2f - this.aerialManeuver.doubleJump.timer).mul(-1);
         renderer.drawCentered3dCube(Color.RED, bean, 50);
         renderer.drawCentered3dCube(Color.RED, bean, 120);
 
@@ -143,6 +147,10 @@ public class AerialAbstraction extends Abstraction {
         //float D = car.angularVelocity.dot(car.orientation).z;
         //renderer.drawString2d("D: "+D, Color.WHITE, new Point(400, 330), 2, 2);
         renderer.drawLine3d(Color.RED, car.position, car.position.add(deltaX.normalized().mul(100)));
+        var lookPos = this.targetPos;
+        if (this.targetOrientPos != null)
+            lookPos = this.targetOrientPos;
+        renderer.drawLine3d(Color.BLUE, car.position, car.position.add(lookPos.sub(this.targetPos.sub(deltaX)).normalized().mul(100)));
     }
 
     enum State {

@@ -342,9 +342,20 @@ public class IdleAbstraction extends Abstraction {
                     .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
                     .withArrivalSpeed(targetArrivalSpeed)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                    .snapToBoost()
                     .plan();
 
-            this.currentPath = pathOptional.get();
+            if (pathOptional.isEmpty()) {
+                System.out.println("We have no path! " + car.position + " to " + idleTarget);
+                var simplePath = new EpicMeshPlanner()
+                        .withStart(car)
+                        .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
+                        .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.ATBA_YANGPATH)
+                        .plan();
+                this.currentPath = simplePath.get();
+            } else {
+                this.currentPath = pathOptional.get();
+            }
         }
 
         //renderer.drawCentered3dCube(Color.YELLOW, this.pathTarget, 50);

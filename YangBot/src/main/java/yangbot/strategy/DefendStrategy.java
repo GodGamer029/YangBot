@@ -10,7 +10,7 @@ import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
 import yangbot.path.builders.segments.CurveSegment;
 import yangbot.strategy.abstraction.AerialAbstraction;
-import yangbot.strategy.abstraction.DriveStrikeAbstraction;
+import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
 import yangbot.strategy.abstraction.GetBoostAbstraction;
 import yangbot.strategy.abstraction.IdleAbstraction;
 import yangbot.strategy.manuever.DodgeManeuver;
@@ -31,7 +31,7 @@ public class DefendStrategy extends Strategy {
     private State state = State.INVALID;
     private static float xDefendDist = RLConstants.goalCenterToPost + 400;
     private static float yDefendDist = RLConstants.goalDistance * 0.4f;
-    private DriveStrikeAbstraction strikeAbstraction;
+    private DriveDodgeStrikeAbstraction strikeAbstraction;
     private BallTouchInterrupt ballTouchInterrupt = null;
     private IdleAbstraction idleAbstraction = new IdleAbstraction();
     private AerialAbstraction aerialAbstraction;
@@ -154,7 +154,7 @@ public class DefendStrategy extends Strategy {
         if (validPath == null)
             return false;
 
-        this.strikeAbstraction = new DriveStrikeAbstraction(validPath, new DefensiveGrader());
+        this.strikeAbstraction = new DriveDodgeStrikeAbstraction(validPath, new DefensiveGrader());
         this.strikeAbstraction.arrivalTime = arrivalTime;
         this.strikeAbstraction.strikeAbstraction.maxJumpDelay = 0.6f;
         this.strikeAbstraction.strikeAbstraction.jumpDelayStep = 0.15f;
@@ -225,7 +225,7 @@ public class DefendStrategy extends Strategy {
                     return;
 
                 var groundFrames = YangBallPrediction.from(framesBeforeGoal.frames.stream()
-                        .filter((frame) -> frame.ballData.position.z < DriveStrikeAbstraction.MAX_STRIKE_HEIGHT)
+                        .filter((frame) -> frame.ballData.position.z < DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT)
                         .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
                 if (this.planGroundIntercept(groundFrames, false))
@@ -269,7 +269,7 @@ public class DefendStrategy extends Strategy {
                     }
 
                     var groundFrames = YangBallPrediction.from(framesBeforeAreaEnter.frames.stream()
-                            .filter((frame) -> frame.ballData.position.z < DriveStrikeAbstraction.MAX_STRIKE_HEIGHT)
+                            .filter((frame) -> frame.ballData.position.z < DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT)
                             .collect(Collectors.toList()), framesBeforeAreaEnter.tickFrequency);
 
                     if (this.planGroundIntercept(groundFrames, false))
@@ -287,7 +287,7 @@ public class DefendStrategy extends Strategy {
                 final float carToOwnGoalDist = (float) car.position.flatten().distance(ownGoal);
                 framesBeforeGoal = YangBallPrediction.from(framesBeforeGoal.frames.stream()
                         // Reachable on z axis
-                        .filter((frame) -> frame.ballData.position.z < DriveStrikeAbstraction.MAX_STRIKE_HEIGHT)
+                        .filter((frame) -> frame.ballData.position.z < DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT)
 
                         // car is closer to goal than ball (Hitting away from goal)
                         .map((frame) -> new Tuple<>(frame, frame.ballData.position.flatten().distance(ownGoal)))
@@ -350,7 +350,7 @@ public class DefendStrategy extends Strategy {
             break;
             case FOLLOW_PATH_STRIKE: {
 
-                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(2.5f))
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(3f))
                     return;
 
                 if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt))

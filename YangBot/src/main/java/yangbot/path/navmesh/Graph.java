@@ -178,6 +178,7 @@ public class Graph {
                 final float old_weight = bestWeights[destination];
 
                 if (new_weight < old_weight) {
+
                     bestParents[destination] = source;
                     bestWeights[destination] = new_weight;
                     visited[destination / nbits] |= (one << (destination % nbits));
@@ -201,8 +202,8 @@ public class Graph {
     }
 
     public static class Edge {
-        final int src, dst;
-        final float weight;
+        public final int src, dst;
+        public final float weight;
 
         public Edge(int src, int dst, float weight) {
             this.src = src;

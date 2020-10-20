@@ -6,7 +6,7 @@ import rlbot.manager.BotManager;
 import yangbot.cpp.YangBotCppInterop;
 import yangbot.path.navmesh.Graph;
 import yangbot.path.navmesh.Navigator;
-import yangbot.strategy.abstraction.DriveStrikeAbstraction;
+import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
 import yangbot.util.Tuple;
 import yangbot.util.io.LEDataInputStream;
 import yangbot.util.io.PortReader;
@@ -97,6 +97,7 @@ public class MainClass {
             coolQuotes.add(new Tuple<>("two yangbots in a rule 1 is called a yin yang", "- Eastvillage 29/Jul/2020"));
             coolQuotes.add(new Tuple<>("just dont be there", "- LieAlgebraCow everytime he reviews bots"));
             coolQuotes.add(new Tuple<>("Our bots are about to get better, Watch them climb the (imaginary) ranked ladder as rocket league goes free to play", "- L0laapk3 when free-to-play was announced"));
+            coolQuotes.add(new Tuple<>("\"it's the most sophisticated bot I've ever made\" \"now the only problem is that it doesn't do anything after kickoff\"", "- GooseFairy, 19/Oct/2020"));
 
             coolQuotes.add(new Tuple<>("There is a 1/" + (coolQuotes.size() + 1) + " chance of you seeing this text!", "- Today"));
 
@@ -245,7 +246,7 @@ public class MainClass {
                     // Basically the code pasted from LEDataInputStream
                     edges.add(new Graph.Edge(((allData[i] & 255) + ((allData[i + 1] & 255) << 8) + ((allData[i + 2] & 255) << 16) + ((allData[i + 3] & 255) << 24)),
                             ((allData[i + 4] & 255) + ((allData[i + 5] & 255) << 8) + ((allData[i + 6] & 255) << 16) + ((allData[i + 7] & 255) << 24)),
-                            Float.intBitsToFloat((allData[i + 8] & 255)) + ((allData[i + 9] & 255) << 8) + ((allData[i + 10] & 255) << 16) + ((allData[i + 11] & 255) << 24)));
+                            Float.intBitsToFloat((allData[i + 8] & 255) + ((allData[i + 9] & 255) << 8) + ((allData[i + 10] & 255) << 16) + ((allData[i + 11] & 255) << 24))));
                 }
             }
             log.fine("Read NAV_GRAPH(" + edges.size() + ") " + (System.currentTimeMillis() - ms) + "ms");
@@ -294,7 +295,7 @@ public class MainClass {
             var log = Logger.getLogger("JitPrep");
             log.info("Jitting hot code paths...");
 
-            DriveStrikeAbstraction.prepJit();
+            DriveDodgeStrikeAbstraction.prepJit();
             log.info("Jitting done.");
         } catch (Throwable e) {
             e.printStackTrace();

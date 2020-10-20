@@ -3,7 +3,7 @@ package yangbot.strategy.manuever.kickoff;
 import yangbot.input.*;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.strategy.abstraction.DriveStrikeAbstraction;
+import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.util.math.vector.Matrix3x3;
@@ -19,7 +19,7 @@ public class SimpleKickoffManeuver extends Maneuver {
     private DodgeManeuver dodgeManeuver = null;
     private static final boolean SLOWKICKOFF = false;
     private Vector3 targetPos;
-    private DriveStrikeAbstraction driveStrikeAbstraction;
+    private DriveDodgeStrikeAbstraction driveStrikeAbstraction;
     private boolean dontJump = false;
 
     @Override

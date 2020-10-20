@@ -166,14 +166,14 @@ public class CarData {
     }
 
     public static float driveTorqueUp(ControlsOutput in, float velocityForward, float angularUp) {
-        final float v_f = (float) velocityForward;
-        final float w_u = (float) angularUp;
+        final float v_f = velocityForward;
+        final float w_u = angularUp;
 
         return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
     }
 
     public float forwardSpeed() {
-        return (float) this.velocity.dot(this.forward());
+        return this.velocity.dot(this.forward());
     }
 
     public int getTeamSign() {

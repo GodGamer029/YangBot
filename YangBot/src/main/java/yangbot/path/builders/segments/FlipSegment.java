@@ -3,6 +3,7 @@ package yangbot.path.builders.segments;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
@@ -26,8 +27,12 @@ public class FlipSegment extends PathSegment {
     private static final float startTolerance = 0.05f;
     private static final float endTolerance = 0.1f;
 
-    public FlipSegment(Vector3 startPos, Vector3 startTangent, float startSpeed) {
-        super(startSpeed);
+    public FlipSegment(PathBuilder builder) {
+        this(builder.getCurrentPosition(), builder.getCurrentTangent(), builder.getCurrentSpeed(), builder.getCurrentBoost());
+    }
+
+    public FlipSegment(Vector3 startPos, Vector3 startTangent, float startSpeed, float startBoost) {
+        super(startSpeed, startBoost);
         assert startPos.z < 100;
         this.startPos = startPos;
         this.startTangent = startTangent;
@@ -71,7 +76,7 @@ public class FlipSegment extends PathSegment {
         var startPos = straightSegment.getStartPos().add(straightSegment.getStartTangent().mul(startSpeed).mul(0.15f));
         if (startPos.z > 50)
             return false;
-        var flipSegment = new FlipSegment(startPos, straightSegment.getStartTangent(), startSpeed + 20);
+        var flipSegment = new FlipSegment(startPos, straightSegment.getStartTangent(), startSpeed + 20, 0);
         // Did we overshoot?
         var flipEndPos = flipSegment.endPos.add(startTangent.mul(flipSegment.endSpeed * endTolerance));
         var tangent = straightSegment.getEndPos().sub(flipEndPos).normalized();

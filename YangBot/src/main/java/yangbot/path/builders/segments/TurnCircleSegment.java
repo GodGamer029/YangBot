@@ -26,15 +26,15 @@ public class TurnCircleSegment extends BakeablePathSegment {
     private final float ccw; // clockwise or counterclockwise
     private float circleRadius;
 
-    public TurnCircleSegment(Physics2D start, float circleRadius, Vector2 endPos) {
-        super(start.forwardSpeed(), MathUtils.clip(DriveManeuver.maxTurningSpeed(1 / circleRadius), 200, DriveManeuver.max_throttle_speed), -1);
+    public TurnCircleSegment(Physics2D start, float circleRadius, Vector2 endPos, float startBoost) {
+        super(start.forwardSpeed(), startBoost, MathUtils.clip(DriveManeuver.maxTurningSpeed(1 / circleRadius), 200, DriveManeuver.max_throttle_speed), -1);
 
         this.circleRadius = circleRadius;
         this.endPos = endPos;
         this.startPos = start.position;
         this.startTangent = start.forward();
         float speed = start.forwardSpeed();
-        this.turnCircleStartPos = this.startPos.add(this.startTangent.mul(speed * 0.08f)); // give the car enough time to steer and get angular velocity up, this is especially important in cases like this where we steer at the max. turning circle
+        this.turnCircleStartPos = this.startPos.add(this.startTangent.mul(speed * 0.08f)); // give the car enough time to steer and get angular velocity up, this is especially important in cases like this where we steer at the max turning circle
 
         var startToEnd = endPos.sub(turnCircleStartPos).normalized();
         var correctionAngle = start.forward().correctionAngle(startToEnd);

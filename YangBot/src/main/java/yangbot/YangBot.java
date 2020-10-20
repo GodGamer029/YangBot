@@ -48,6 +48,7 @@ public class YangBot implements Bot {
             renderer = new DummyRenderer(this.playerIndex);
 
         final GameData gameData = GameData.current();
+
         CarData car = input.car;
         BallData ball = input.ball;
         {
@@ -154,7 +155,7 @@ public class YangBot implements Bot {
         AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
 
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
-        if (false) {
+        if (true) {
             renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
         }
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
@@ -194,7 +195,7 @@ public class YangBot implements Bot {
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
 
         AdvancedRenderer r;
-        if (playerIndex == 0 || playerIndex == 3)
+        if (playerIndex == 0 || playerIndex == 3 || true)
             r = AdvancedRenderer.forBotLoop(this);
         else {
             r = new DummyRenderer(this.playerIndex);

@@ -1,6 +1,7 @@
 package yangbot.path.builders.segments;
 
 import yangbot.input.ControlsOutput;
+import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DriftControllerManeuver;
 import yangbot.util.AdvancedRenderer;
@@ -21,23 +22,23 @@ public class DriftSegment extends PathSegment {
     private final float endSpeed;
     private final boolean isEasySlide;
 
-    public DriftSegment(Vector3 startPosition, Vector3 startTangent, Vector3 endTangent, float startSpeed) {
-        super(startSpeed);
+    public DriftSegment(PathBuilder builder, Vector3 endTangent) {
+        super(builder);
         //System.out.println("Init drift: "+startPosition + " " + startTangent + " " + endTangent + " " + startSpeed);
         this.endTangent = endTangent;
-        this.startPos = startPosition;
-        this.startTangent = startTangent;
+        this.startPos = builder.getCurrentPosition();
+        this.startTangent = builder.getCurrentTangent();
 
         this.driftControllerManeuver = new DriftControllerManeuver();
         this.driftControllerManeuver.targetDirection = endTangent.normalized();
 
-        assert startPosition.z < 100;
+        assert startPos.z < 100;
 
         final float angle = (float) Math.abs(startTangent.flatten().normalized().angleBetween(endTangent.flatten().normalized()) * (180f / Math.PI));
         isEasySlide = angle < 80;
 
-        var powerslide = PowerslideUtil.getPowerslide(startSpeed, startPosition.flatten(), startTangent.flatten().normalized(), endTangent.flatten().normalized());
-        this.endPos = powerslide.finalPos.withZ(startPosition.z).add(endTangent.withZ(0).mul(15));
+        var powerslide = PowerslideUtil.getPowerslide(startSpeed, startPos.flatten(), startTangent.flatten().normalized(), endTangent.flatten().normalized());
+        this.endPos = powerslide.finalPos.withZ(startPos.z).add(endTangent.withZ(0).mul(15));
         this.totalTraversalTime = powerslide.time;
         this.endSpeed = powerslide.finalSpeed;
     }

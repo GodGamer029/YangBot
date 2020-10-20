@@ -19,6 +19,7 @@ public class GameData {
     protected List<CarData> allCars = null;
     protected float gravityZ = -650;
     protected float dt = 1 / 60f;
+    protected GameInfoData gameInfoData = null;
     protected AdvancedRenderer advancedRenderer = null;
     private int botIndex = 0;
     private static final Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
@@ -48,6 +49,7 @@ public class GameData {
         this.allCars = allCars;
         this.allCars.forEach((c) -> c.getPlayerInfo().update(c));
         this.gravityZ = gameInfo.worldGravityZ();
+        this.gameInfoData = new GameInfoData(gameInfo);
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = YangBallPrediction.get();

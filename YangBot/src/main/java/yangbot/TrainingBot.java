@@ -23,6 +23,7 @@ public class TrainingBot implements Bot {
     private State state = State.RESET;
     private Strategy currentPlan = null;
     private Vector3 lastBallPos = new Vector3();
+    private float timer = 0;
 
     public TrainingBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -35,13 +36,14 @@ public class TrainingBot implements Bot {
 
     private ControlsOutput processInput(DataPacket input) {
         float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency);
-
+        timer += dt;
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         CarData car = input.car;
 
         BallData ball = input.ball;
         if (ball.position.distance(lastBallPos) > Math.max(700, ball.velocity.mul(0.5f).magnitude())) {
             System.out.println("#################");
+            timer = 0;
             state = State.RESET;
         }
         lastBallPos = ball.position;
@@ -55,9 +57,15 @@ public class TrainingBot implements Bot {
 
         switch (state) {
             case RESET:
-                currentPlan = new DefaultStrategy();
-                currentPlan.planStrategy();
-                state = State.RUN;
+                if (timer >= RLConstants.tickFrequency * 4) {
+                    currentPlan = new DefaultStrategy();
+                    currentPlan.planStrategy();
+                    state = State.RUN;
+                    System.out.println("Ball: p=" + ball.position + " v=" + ball.velocity);
+                    System.out.println("Car: p=" + car.position);
+                    timer = 0;
+                }
+
                 break;
             case RUN:
                 int i = 0;

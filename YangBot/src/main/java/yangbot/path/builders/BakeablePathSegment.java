@@ -17,12 +17,16 @@ public abstract class BakeablePathSegment extends PathSegment {
     protected float arrivalSpeed = -1;
     protected boolean allowBoost = false;
 
-    protected BakeablePathSegment(float startSpeed, float endSpeed, float arrivalTime) {
-        super(startSpeed);
+    protected BakeablePathSegment(float startSpeed, float startBoost, float endSpeed, float arrivalTime) {
+        super(startSpeed, startBoost);
         this.followPathManeuver = new FollowPathManeuver();
         this.followPathManeuver.arrivalTime = -1;
         this.arrivalSpeed = endSpeed;
         this.arrivalTime = arrivalTime;
+    }
+
+    protected BakeablePathSegment(PathBuilder builder, float endSpeed, float arrivalTime) {
+        this(builder.getCurrentSpeed(), builder.getCurrentBoost(), endSpeed, arrivalTime);
     }
 
     @Override

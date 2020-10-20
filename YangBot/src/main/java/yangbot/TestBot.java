@@ -11,12 +11,11 @@ import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.strategy.abstraction.DriveStrikeAbstraction;
+import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
-import yangbot.util.lut.LutMaker;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
@@ -35,7 +34,6 @@ public class TestBot implements Bot {
 
     private SegmentedPath path;
     private DodgeManeuver dodgeManeuver;
-    private LutMaker lutMaker = new LutMaker();
 
     public TestBot(int playerIndex) {
         this.playerIndex = playerIndex;
@@ -56,10 +54,8 @@ public class TestBot implements Bot {
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != carBoi.team).findFirst().orElse(carBoi);
 
         final AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
-        GameData.current().update(controlCar, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
-        if (true) {
-            return lutMaker.processInput();
-        }
+        GameData.current().update(carBoi, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+
         final YangBallPrediction ballPrediction = GameData.current().getBallPrediction();
         drawDebugLines(input, controlCar);
         ControlsOutput output = new ControlsOutput();
@@ -91,8 +87,8 @@ public class TestBot implements Bot {
                                 .withAngularVelocity(new Vector3().toDesiredVector())
                         )*/.withBoostAmount(100f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
-                                .withLocation(new DesiredVector3(0f, 0f, DriveStrikeAbstraction.MAX_STRIKE_HEIGHT))
-                                .withVelocity(new DesiredVector3(0f, 0f, 0f))
+                                .withLocation(new DesiredVector3(0f, 0f, DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT))
+                                .withVelocity(new DesiredVector3(0f, 0f, -5f))
                                 .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                         ))
                         .buildPacket());
@@ -102,22 +98,28 @@ public class TestBot implements Bot {
                 break;
             }
             case INIT: {
-                if (timer > 20f) {
+                if (timer > 1f || this.path == null || this.path.isDone()) {
+
                     //var end = new Vector3(Math.random() * 6000 - 3000, Math.random() * 8000 - 4000, 17);
-                    var end = new Vector3(1653, 4083, 17);
+                    var end = controlCar.position;
 
                     var plan = new EpicMeshPlanner()
-                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
-                            .withStart(controlCar)
-                            .withEnd(end, controlCar.position.normalized().mul(-1))
+                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.JAVA_NAVMESH)
+                            .withStart(carBoi)
+                            .withEnd(end, new Vector3(0, 1, 0))
                             .withArrivalSpeed(2300)
                             //.withEnd(new Vector3(Math.random() * 2000 - 1000, Math.random() * 2000 - 1000, 17), controlCar.position.normalized().mul(-1))
                             .plan();
+
+                    if (plan.isEmpty())
+                        return output;
                     this.path = plan.get();
 
-                    this.state = State.RUN;
+                    this.timer = 0;
+                    //this.state = State.RUN;
                 }
-
+                this.path.draw(renderer);
+                this.path.step(dt, output);
 
                 break;
             }
@@ -198,6 +200,7 @@ public class TestBot implements Bot {
             return new ControlsOutput();
 
         if (!packet.gameInfo().isRoundActive()) {
+            this.timer = 0;
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
             return new ControlsOutput();
         }

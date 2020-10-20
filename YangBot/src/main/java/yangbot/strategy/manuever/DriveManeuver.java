@@ -4,6 +4,7 @@ import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
+import yangbot.util.Tuple;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
@@ -19,12 +20,38 @@ public class DriveManeuver extends Maneuver {
     public Vector3 target = null;
     public float minimumSpeed = 1400f;
     public float maximumSpeed = CarData.MAX_VELOCITY;
-    //public static ArrayList<List<Float>> speeds = new ArrayList<>();
-    //public static ArrayList<Float> times = new ArrayList<>();
     public boolean allowBoost = true;
 
+    public DriveManeuver() {
+    }
+
+    public DriveManeuver(Vector3 driveTarget) {
+        this.target = driveTarget;
+    }
+
+    public static Tuple<Float /*arrival time*/, Float/*end speed*/> driveArriveAt(float v0, float s, float T, boolean allowBoost) {
+        assert v0 >= 0;
+        v0 = MathUtils.clip(v0, 0, CarData.MAX_VELOCITY);
+        float dt = RLConstants.simulationTickFrequency;
+        ControlsOutput controlsOutput = new ControlsOutput();
+        float t = 0;
+        while (s > 0) {
+            float targetSpeed = s / (T - t);
+            if (t >= T)
+                targetSpeed = CarData.MAX_VELOCITY;
+
+            DriveManeuver.speedController(dt, controlsOutput, v0, targetSpeed, targetSpeed, 0.04f, allowBoost);
+            v0 += CarData.driveForceForward(controlsOutput, v0, 0, 0) * dt;
+            v0 = MathUtils.clip(v0, 0, CarData.MAX_VELOCITY);
+            s -= v0 * dt;
+            t += dt;
+        }
+
+        return new Tuple<>(t, v0);
+    }
+
     public static float maxDistance(float currentSpeed, float time) {
-        final float drivingSpeed = RLConstants.tickRate <= 60 ? 1238.3954f : 1235.0f;
+        final float drivingSpeed = 1235.0f;
 
         if (time <= 0)
             return 0;
@@ -45,6 +72,15 @@ public class DriveManeuver extends Maneuver {
             dist += newSpeed * dt;
         }
         return dist;
+    }
+
+    public void setSpeed(float speed) {
+        this.minimumSpeed = this.maximumSpeed = speed;
+    }
+
+    public void setSpeed(float min, float max) {
+        this.minimumSpeed = min;
+        this.maximumSpeed = max;
     }
 
     public static float maxTurningSpeed(float curvature) { // Curvature -> Max speed
@@ -170,7 +206,7 @@ public class DriveManeuver extends Maneuver {
 
         steerController(controlsOutput, car, this.target);
         float steerSlowdown = car.slowdownForceFromSteering(controlsOutput.getSteer()); // include steering slowdown so that we don't brake too much
-        speedController(dt, controlsOutput, (float) car.velocity.dot(car.forward()) + steerSlowdown * dt, this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost);
+        speedController(dt, controlsOutput, car.forwardSpeed() + steerSlowdown * dt, this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost);
 
         if (car.position.sub(target).magnitude() < 100.f)
             this.setIsDone(true);

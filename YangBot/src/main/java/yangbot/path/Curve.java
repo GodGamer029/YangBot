@@ -109,7 +109,7 @@ public class Curve {
 
             for (int j = 0; j < (numSubSegments + is_last); j++) {
                 float t = ((float) j) / ((float) numSubSegments);
-                // place more control points at the beginning, there is a bug in here that fucks up the first control point, so we getter place the second one close after the first one, because the second one is fine
+                // place more control points toward the beginning, there is a bug in here that fucks up the first control point, so we getter place the second one close after the first one, because the second one is fine
                 if (t > 0 && t < 1 && i == 0)
                     t = MathUtils.remapClip((float) (1f / (1f + Math.exp(-fac * (t - 1)))), interpStart, interpEnd, 0, 1);
 

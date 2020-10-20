@@ -17,7 +17,7 @@ public class AerialManeuver extends Maneuver {
     public Vector3 target = null;
     public Matrix3x3 target_orientation = null;
     private boolean jumping = true;
-    private final DodgeManeuver doubleJump;
+    public final DodgeManeuver doubleJump;
     private final TurnManeuver turnManuver;
 
     private static final float j_speed = DodgeManeuver.speed;
@@ -33,6 +33,10 @@ public class AerialManeuver extends Maneuver {
     }
 
     public static Vector3 getDeltaX(CarData car, Vector3 target, float arrivalTime) {
+        return getDeltaX(car, target, arrivalTime, -1);
+    }
+
+    public static Vector3 getDeltaX(CarData car, Vector3 target, float arrivalTime, float jdur) {
         final GameData gameData = GameData.current();
         final Vector3 gravity = gameData.getGravity();
 
@@ -42,10 +46,13 @@ public class AerialManeuver extends Maneuver {
                 .add(car.velocity.mul(T))
                 .add(gravity.mul(T * T * 0.5f));
 
-        if (car.hasWheelContact) {
-            float tau = j_duration;
+        if (car.hasWheelContact || jdur > 0) {
+            if (jdur == -1)
+                jdur = j_duration;
+            float tau = MathUtils.clip(jdur, 0, 0.2f);
 
-            xf = xf.add(car.up().mul(j_speed * T));
+            if (jdur == j_duration)
+                xf = xf.add(car.up().mul(j_speed * T));
             xf = xf.add(car.up().mul(j_acceleration * tau * (T - 0.5f * tau)));
             xf = xf.add(car.up().mul(j_speed * (T - tau)));
         } else if (!car.doubleJumped) {
@@ -99,7 +106,7 @@ public class AerialManeuver extends Maneuver {
         Vector3 delta_x = target.sub(xf);
         Vector3 direction = delta_x.normalized();
 
-        if (delta_x.magnitude() > reorient_distance || (this.arrivalTime - car.elapsedSeconds > 0.4f && delta_x.magnitude() > 5)) {
+        if (delta_x.magnitude() > reorient_distance || (this.arrivalTime - car.elapsedSeconds > 0.6f && delta_x.magnitude() > 5)) {
             this.turnManuver.target = Matrix3x3.lookAt(direction, new Vector3(0, 0, 1));
         } else {
             if (target_orientation == null || Math.abs(target_orientation.det() - 1f) < 0.01f) {
@@ -108,7 +115,7 @@ public class AerialManeuver extends Maneuver {
                 this.turnManuver.target = target_orientation;
             }
         }
-        if (this.doubleJump.timer < 0.1f && this.arrivalTime - car.elapsedSeconds > 0.7f)
+        if (this.doubleJump.timer < 0.15f && this.arrivalTime - car.elapsedSeconds > 0.4f)
             this.turnManuver.target = Matrix3x3.roofTo(direction, new Vector3(0, 0, 1));
 
         turnManuver.step(dt, null);
@@ -130,12 +137,16 @@ public class AerialManeuver extends Maneuver {
         }
 
         if (car.forward().angle(direction) < ((this.jumping ? 2 : 1) * angle_threshold)) {
-            if (delta_x.magnitude() > throttle_distance) {
+            float s = delta_x.dot(car.forward());
+
+            float boostDt = 0.03f; // TODO: find whether we have already gone over the min boost usage time and lower this to 1/120
+            float delta_v = s / T;
+            if (delta_v > (2 * (AerialManeuver.boost_acceleration + AerialManeuver.throttle_acceleration) * boostDt)) {
                 controlsOutput.withBoost(true);
                 controlsOutput.withThrottle(0);
             } else {
                 controlsOutput.withBoost(false);
-                controlsOutput.withThrottle(0.5f * throttle_acceleration * T * T);
+                controlsOutput.withThrottle(MathUtils.clip(delta_v / (2 * throttle_acceleration * dt), -1, 1));
             }
         } else {
             controlsOutput.withBoost(false);
@@ -166,8 +177,6 @@ public class AerialManeuver extends Maneuver {
 
         var dir = deltaX.normalized();
 
-        float turnAngle = (float) dir.angle(car.forward());
-
         float turnTime; // bad estimate
         {
             var simTurn = new TurnManeuver();
@@ -177,7 +186,7 @@ public class AerialManeuver extends Maneuver {
             turnTime = MathUtils.clip(simTurn.simulate(car).elapsedSeconds, 0.05f, 1.5f);
         }
 
-        float timeBoostStart = turnTime + 0.1f; // We don't really start orienting at the start
+        float timeBoostStart = turnTime + 0.15f; // We don't really start orienting at the start
         if (timeBoostStart > T)
             return false;
 
@@ -189,7 +198,7 @@ public class AerialManeuver extends Maneuver {
         var velocityEstimate = vf.add(dir.mul(boost_acceleration * (timeBoostStop - timeBoostStart)));
         float boostEstimate = (timeBoostStop - timeBoostStart) * CarData.BOOST_CONSUMPTION;
 
-        boolean isPossible = velocityEstimate.magnitude() < CarData.MAX_VELOCITY - 100 && // max speed
+        boolean isPossible = velocityEstimate.magnitude() < CarData.MAX_VELOCITY - 50 && // max speed
                 boostEstimate < maxBoostUse * 0.95f &&                      // boost use
                 ratio < 0.975f;                                               // acceleration possible
 

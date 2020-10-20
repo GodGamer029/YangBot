@@ -58,6 +58,10 @@ public class ImmutableBallData {
         return this.latestTouch;
     }
 
+    public boolean isInAnyGoal() {
+        return Math.abs(this.position.y) > BallData.RADIUS + RLConstants.goalDistance;
+    }
+
     public BallData makeMutable() {
         return new BallData(this);
     }

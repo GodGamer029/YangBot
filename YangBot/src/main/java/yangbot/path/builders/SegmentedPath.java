@@ -23,24 +23,13 @@ public class SegmentedPath {
     private Vector3 endTangent = new Vector3(), endPos = new Vector3();
     private float t = 0;
 
-    public static SegmentedPath from(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed) {
-        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, arrivalTime, arrivalSpeed)));
-    }
-
-    public static SegmentedPath from(Curve c, float startSpeed) {
-        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed)));
-    }
-
-    public List<PathSegment> getSegmentList() {
-        return segmentList;
-    }
-
     public SegmentedPath(List<PathSegment> segments) {
         this.segmentList = Collections.unmodifiableList(segments);
         this.segmentList.forEach(seg -> {
             if (seg instanceof BakeablePathSegment)
                 ((BakeablePathSegment) seg).bake(MAX_SAMPLES);
 
+            seg.setStartTime(arrivalTime + GameData.current().getCarData().elapsedSeconds);
             arrivalTime += seg.getTimeEstimate();
         });
         if (this.segmentList.size() > 0) {
@@ -50,12 +39,29 @@ public class SegmentedPath {
         }
     }
 
+    public static SegmentedPath from(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed) {
+        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, arrivalTime, arrivalSpeed, 0)));
+    }
+
+    public static SegmentedPath from(Curve c, float startSpeed) {
+        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, 0)));
+    }
+
+    public List<PathSegment> getSegmentList() {
+        return segmentList;
+    }
+
     public boolean canInterrupt() {
         if (this.currentSegment >= this.segmentList.size())
             return true; // Already done
 
         var current = this.segmentList.get(this.currentSegment);
         return current.canInterrupt();
+    }
+
+    public PathSegment getLastPathSegment() {
+        assert this.segmentList.size() > 0;
+        return this.segmentList.get(this.segmentList.size() - 1);
     }
 
     public Optional<PathSegment> getCurrentPathSegment() {
@@ -90,19 +96,21 @@ public class SegmentedPath {
 
         var curSeg = this.getCurrentPathSegment();
         if (curSeg.isPresent()) {
-
             renderer.drawString2d("Seg: " + curSeg.get().getClass().getSimpleName() + " (" + (this.currentSegment + 1) + "/" + this.segmentList.size() + ", canInterrupt=" + curSeg.get().canInterrupt() + ")", Color.WHITE, new Point(400, 400), 2, 2);
             renderer.drawString2d("Arrival: " + ((this.arrivalTime + this.startTime) - GameData.current().getCarData().elapsedSeconds), Color.WHITE, new Point(400, 450), 2, 2);
             renderer.drawString2d("Speed: " + GameData.current().getCarData().forwardSpeed(), Color.WHITE, new Point(400, 490), 1, 1);
             renderer.drawString2d("StartSpeed: " + curSeg.get().getStartSpeed(), Color.WHITE, new Point(400, 510), 1, 1);
             renderer.drawString2d("EndSpeed: " + curSeg.get().getEndSpeed(), Color.WHITE, new Point(400, 530), 1, 1);
             renderer.drawString2d("T estimate: " + curSeg.get().getTimeEstimate(), Color.WHITE, new Point(400, 550), 1, 1);
-
         }
     }
 
     public Vector3 getEndTangent() {
         return this.endTangent;
+    }
+
+    public float getEndSpeed() {
+        return this.getLastPathSegment().getEndSpeed();
     }
 
     public boolean isDone() {

@@ -17,14 +17,17 @@ public class PathBuilder {
 
     private final List<PathSegment> pathSegments;
     private final Physics3D start;
+    private final float startBoost;
     private boolean optimize = false;
 
     public PathBuilder(CarData start) {
         this.start = start.toPhysics3d();
+        this.startBoost = (float) start.boost;
         this.pathSegments = new ArrayList<>();
     }
 
-    public PathBuilder(Physics3D start) {
+    public PathBuilder(Physics3D start, float startBoost) {
+        this.startBoost = startBoost;
         this.start = start;
         this.pathSegments = new ArrayList<>();
     }
@@ -57,6 +60,12 @@ public class PathBuilder {
         return this.pathSegments.get(this.pathSegments.size() - 1).getEndSpeed();
     }
 
+    public float getCurrentBoost() {
+        if (this.pathSegments.size() == 0)
+            return this.startBoost;
+        return this.pathSegments.get(this.pathSegments.size() - 1).getEndBoost();
+    }
+
     public Physics2D getCurrentPhysics() {
         return new Physics2D(this.getCurrentPosition().flatten(), this.getCurrentTangent().flatten().mul(this.getCurrentSpeed()), Matrix2x2.fromRotation((float) this.getCurrentTangent().flatten().angle()));
     }
@@ -80,25 +89,29 @@ public class PathBuilder {
             segmentQueue.addAll(this.pathSegments);
 
             float firstSpeed = this.getSpeedBeforeSegment(0);
+            float firstBoost = this.startBoost;
             while (segmentQueue.size() > 0) {
                 var startSpeed = firstSpeed;
                 if (optimizedSegments.size() > 0)
                     startSpeed = optimizedSegments.get(optimizedSegments.size() - 1).getEndSpeed();
+                var startBoost = firstBoost;
+                if (optimizedSegments.size() > 0)
+                    startBoost = optimizedSegments.get(optimizedSegments.size() - 1).getEndBoost();
 
                 var segment = segmentQueue.remove();
 
                 if (segment instanceof StraightLineSegment) {
                     var straight = (StraightLineSegment) segment;
 
-                    if (startSpeed > 700 && startSpeed < 2100) {
+                    if (startSpeed > 900 && startSpeed < 2100) {
                         if (FlipSegment.canReplace(straight, startSpeed)) {
                             /*System.out.println("Replaced straight segment at "+optimizedSegments.size()+" speed "+startSpeed);
                             if(optimizedSegments.size() > 0)
                                 System.out.println("Segment before was: "+optimizedSegments.get(optimizedSegments.size() - 1).getClass().getSimpleName());*/
-                            var flipSegment = new FlipSegment(straight.getStartPos(), straight.getStartTangent(), startSpeed);
+                            var flipSegment = new FlipSegment(straight.getStartPos(), straight.getStartTangent(), startSpeed, startBoost);
 
                             optimizedSegments.add(flipSegment);
-                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos(), straight.arrivalSpeed, straight.arrivalTime, straight.allowBoost));
+                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos(), straight.arrivalSpeed, straight.arrivalTime, straight.allowBoost, flipSegment.getEndBoost()));
                             continue;
                         }
                     }

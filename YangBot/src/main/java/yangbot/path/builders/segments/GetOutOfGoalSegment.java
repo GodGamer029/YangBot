@@ -151,7 +151,7 @@ public class GetOutOfGoalSegment extends PathSegment {
 
     private Vector3 makeEndPos(Vector3 startPos, Vector3 targetPos) {
         final var goal = new Vector2(0, (RLConstants.goalDistance - 60) * Math.signum(startPos.y));
-        final var goalLine = new Line2(goal.sub(RLConstants.goalCenterToPost * 0.7f, 0), goal.add(RLConstants.goalCenterToPost * 0.7f, 0));
+        final var goalLine = new Line2(goal.sub(RLConstants.goalCenterToPost * 0.9f - 30, 0), goal.add(RLConstants.goalCenterToPost * 0.9f - 30, 0));
         Vector2 endPos;
 
         if (!targetPos.isZero() && Math.abs(targetPos.y) < RLConstants.goalDistance - 100) {

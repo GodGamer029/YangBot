@@ -134,7 +134,7 @@ public class OffensiveStrategy extends Strategy {
             final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 
-            Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
+            Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getAverageHitboxExtent()));
             ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
 
             final Vector3 carToDriveTarget = ballHitTarget.sub(car.position).normalized();
@@ -167,7 +167,7 @@ public class OffensiveStrategy extends Strategy {
                         dodgeStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;
                         dodgeStrikeAbstraction.originalTargetBallPos = targetBallPos;
 
-                        float zDiff = targetBallPos.z - 0.5f * BallData.COLLISION_RADIUS - car.position.z;
+                        float zDiff = targetBallPos.z - 0.3f * BallData.COLLISION_RADIUS - car.position.z;
                         if (zDiff < 5)
                             dodgeStrikeAbstraction.jumpBeforeStrikeDelay = 0.25f;
                         else
@@ -190,14 +190,13 @@ public class OffensiveStrategy extends Strategy {
         final CarData car = gameData.getCarData();
         int teamSign = car.getTeamSign();
         final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 1000));
-        float maxT = strikePrediction.relativeTimeOfLastFrame() - RLConstants.simulationTickFrequency * 2;
+        float maxT = strikePrediction.relativeTimeOfLastFrame();
         float t = strikePrediction.firstFrame().relativeTime;
 
         final float goalCenterToPostDistance = RLConstants.goalCenterToPost - BallData.COLLISION_RADIUS * 2 - 50 /* tolerance */;
         assert goalCenterToPostDistance > 100; // Could fail with smaller goals
         assert enemyGoal.x == 0; // Could fail with custom goals
         final Line2 enemyGoalLine = new Line2(enemyGoal.sub(goalCenterToPostDistance, 0), enemyGoal.add(goalCenterToPostDistance, 0));
-
 
         // Path finder
         while (t < maxT) {

@@ -25,7 +25,7 @@ public class IdleAbstraction extends Abstraction {
     public boolean doBothPredictionAndCurrent = true;
     // Y-Distance from ball when idle
     // These may be scaled down, if too close to own goa l
-    public float minIdleDistance = 2000;
+    public float minIdleDistance = 3000;
     public float maxIdleDistance = RLConstants.arenaLength * 0.55f;
     public float forceRetreatTimeout = 0;
     public float targetSpeed = DriveManeuver.max_throttle_speed;
@@ -231,7 +231,7 @@ public class IdleAbstraction extends Abstraction {
             }
 
             // Draw
-            if (true) {
+            if (false) {
                 float yPos = yIndexToAbs.apply(lowestYSpot);
                 for (int i = 0; i < xGrid.length; i++) {
                     float xPos = xIndexToAbs.apply(i);
@@ -272,7 +272,7 @@ public class IdleAbstraction extends Abstraction {
             this.forceRetreatTimeout -= dt;
 
         // Use position of the ball in x seconds
-        float futureBallPosDelay = 0.4f;
+        float futureBallPosDelay = 0.6f;
         // If the ball is up high retreat, because this bot is too bad to hit them anyways
         futureBallPosDelay += MathUtils.remapClip(ball.position.z, 400, 2000, 0.05f, 0.4f);
 
@@ -342,7 +342,7 @@ public class IdleAbstraction extends Abstraction {
                     .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
                     .withArrivalSpeed(targetArrivalSpeed)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
-                    .snapToBoost()
+                    .snapToBoost(150)
                     .plan();
 
             if (pathOptional.isEmpty()) {

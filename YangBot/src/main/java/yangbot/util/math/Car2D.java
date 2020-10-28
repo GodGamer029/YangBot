@@ -1,21 +1,22 @@
 package yangbot.util.math;
 
+import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
 import yangbot.input.RLConstants;
-import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.math.vector.Vector2;
 
 public class Car2D {
     public Vector2 position, velocity, tangent;
-    public float time, angularVelocity;
+    public float time, angularVelocity, boost;
 
-    public Car2D(Vector2 position, Vector2 velocity, Vector2 tangent, float angularVelocity, float time) {
+    public Car2D(Vector2 position, Vector2 velocity, Vector2 tangent, float angularVelocity, float time, float boost) {
         this.position = position;
         this.velocity = velocity;
         this.tangent = tangent;
         this.angularVelocity = angularVelocity;
         this.time = time;
+        this.boost = boost;
     }
 
     public void step(ControlsOutput input, float dt) {
@@ -26,11 +27,22 @@ public class Car2D {
         final float v_l = velocity.dot(right);
         final float w_u = angularVelocity;
 
+        if (input.holdBoost()) {
+            this.boost -= CarData.BOOST_CONSUMPTION * dt;
+            if (this.boost < 0) {
+                this.boost = 0;
+                input.withBoost(false);
+            }
+        }
+
         Vector2 force = tangent.mul(driveForceForward(input, v_f, v_l, w_u))/*.add(right.mul(driveForceLeft(in, v_f, v_l, w_u)))*/;
 
         //Vector3 torque = up().mul(driveTorqueUp(in, v_f, w_u));
 
         velocity = velocity.add(force.mul(dt));
+        this.velocity = velocity.mul(
+                Math.min(1, CarData.MAX_VELOCITY / velocity.magnitude())
+        );
         position = position.add(velocity.mul(dt));
 
         //angularVelocity = angularVelocity.add(torque.mul(dt));
@@ -38,11 +50,10 @@ public class Car2D {
     }
 
     private float driveForceForward(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
-        final float driving_speed = 1450.0f;
+        final float driving_speed = DriveManeuver.max_throttle_speed;
         final float braking_force = -3500.0f;
         final float coasting_force = -525.0f;
         final float throttle_threshold = 0.05f;
-        final float throttle_force = 1550.0f;
         final float max_speed = 2275.0f;
         final float min_speed = 3.0f;
         final float braking_threshold = -0.001f;
@@ -54,11 +65,11 @@ public class Car2D {
             if (velocityForward < 0.0f)
                 return -braking_force;
             else {
-                if (velocityForward < driving_speed)
-                    return max_speed - velocityForward;
+                if (velocityForward < DriveManeuver.max_throttle_speed)
+                    return DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
                 else {
                     if (velocityForward < max_speed)
-                        return AerialManeuver.boost_acceleration + turn_damping;
+                        return DriveManeuver.boost_acceleration + turn_damping;
                     else
                         return supersonic_turn_drag * Math.abs(angularUp);
                 }
@@ -77,7 +88,7 @@ public class Car2D {
                     if (Math.abs(velocityForward) > driving_speed) {
                         return turn_damping;
                     } else {
-                        return in.getThrottle() * (throttle_force - Math.abs(velocityForward)) + turn_damping;
+                        return in.getThrottle() * DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
                     }
                 }
             }
@@ -128,25 +139,43 @@ public class Car2D {
         }
     }
 
-    public void simulateDriveDistanceForward(float distance, boolean useBoost) {
-        assert !useBoost : "not implemented";
+    public float simulateDriveTimeForward(float time, boolean useBoost) {
+        if (time <= 0)
+            return 0;
 
-        assert angularVelocity == 0 : "this could get wonky";
+        float distance = 0;
+
+        float dt = 1f / 30f;
+        for (float t = 0; t < time /*max*/; t += dt) {
+            this.step(new ControlsOutput().withThrottle(1).withBoost(useBoost), dt);
+
+            distance += this.velocity.mul(dt).magnitude();
+        }
+        return distance;
+    }
+
+    public boolean simulateDriveDistanceForward(float distance, boolean useBoost) {
+        return this.simulateDriveDistanceForward(distance, useBoost, 7);
+    }
+
+    public boolean simulateDriveDistanceForward(float distance, boolean useBoost, float maxTime) {
+        //assert angularVelocity == 0 : "this could get wonky";
 
         if (distance <= 0)
-            return;
+            return true;
 
         float dt = 1f / 30f;
         if (distance <= 25)
             dt = RLConstants.simulationTickFrequency;
-        for (float t = 0; t < 7 /*max*/; t += dt) {
-            this.step(new ControlsOutput().withThrottle(1), dt);
+        for (float t = 0; t < maxTime /*max*/; t += dt) {
+            this.step(new ControlsOutput().withThrottle(1).withBoost(useBoost), dt);
 
             distance -= this.velocity.mul(dt).magnitude();
             if (distance <= 0)
-                return;
+                return true;
             if (distance <= 25)
                 dt = RLConstants.simulationTickFrequency;
         }
+        return distance <= 0;
     }
 }

@@ -10,7 +10,7 @@ import yangbot.util.math.vector.Vector3;
 
 public class AerialManeuver extends Maneuver {
 
-    public static final float boost_acceleration = 1060.0f;
+    public static final float boost_airthrottle_acceleration = 1060.0f;
     public static final float throttle_acceleration = 66.66667f;
 
     public float arrivalTime = 0.0f;
@@ -141,7 +141,7 @@ public class AerialManeuver extends Maneuver {
 
             float boostDt = 0.03f; // TODO: find whether we have already gone over the min boost usage time and lower this to 1/120
             float delta_v = s / T;
-            if (delta_v > (2 * (AerialManeuver.boost_acceleration + AerialManeuver.throttle_acceleration) * boostDt)) {
+            if (delta_v > (2 * (AerialManeuver.boost_airthrottle_acceleration + AerialManeuver.throttle_acceleration) * boostDt)) {
                 controlsOutput.withBoost(true);
                 controlsOutput.withThrottle(0);
             } else {
@@ -191,11 +191,11 @@ public class AerialManeuver extends Maneuver {
             return false;
 
         float reqAccel = (2 * (float) deltaX.magnitude()) / ((T - timeBoostStart) * (T - timeBoostStart));
-        float ratio = reqAccel / boost_acceleration;
+        float ratio = reqAccel / boost_airthrottle_acceleration;
 
         float timeBoostStop = T - (T - timeBoostStart) * (float) Math.sqrt(1 - MathUtils.clip(ratio, 0, 1));
 
-        var velocityEstimate = vf.add(dir.mul(boost_acceleration * (timeBoostStop - timeBoostStart)));
+        var velocityEstimate = vf.add(dir.mul(boost_airthrottle_acceleration * (timeBoostStop - timeBoostStart)));
         float boostEstimate = (timeBoostStop - timeBoostStart) * CarData.BOOST_CONSUMPTION;
 
         boolean isPossible = velocityEstimate.magnitude() < CarData.MAX_VELOCITY - 50 && // max speed

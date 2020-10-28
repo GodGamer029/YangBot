@@ -21,8 +21,12 @@ public class AdvancedRenderer extends Renderer {
     }
 
     public static AdvancedRenderer forBotLoop(final Bot bot) {
-        botLoopMap.computeIfAbsent(bot.getIndex(), AdvancedRenderer::new);
-        return botLoopMap.get(bot.getIndex());
+        return forBotIndex(bot.getIndex());
+    }
+
+    public static AdvancedRenderer forBotIndex(int index) {
+        botLoopMap.computeIfAbsent(index, AdvancedRenderer::new);
+        return botLoopMap.get(index);
     }
 
     public void startPacket() {

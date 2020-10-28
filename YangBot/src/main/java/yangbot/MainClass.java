@@ -3,6 +3,7 @@ package yangbot;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.MatchSettings;
 import rlbot.manager.BotManager;
+import rlbot.pyinterop.SocketServer;
 import yangbot.cpp.YangBotCppInterop;
 import yangbot.path.navmesh.Graph;
 import yangbot.path.navmesh.Navigator;
@@ -23,60 +24,78 @@ import java.io.ObjectInputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.logging.*;
 import java.util.stream.Collectors;
 
 public class MainClass {
 
     private static final Integer DEFAULT_PORT = 19265;
-    public static BotType BOT_TYPE = BotType.PRODUCTION;
+    public static BotType BOT_TYPE = BotType.PROD;
+    private static int portUsed = DEFAULT_PORT;
+    private static BotManager botManager = null;
+
+    private static boolean navigatorLoaded = false;
+    private static boolean jitPrepped = false;
+    private static boolean loggerInitialized = false;
+    private static boolean infoBoxOpen = false;
+    private static boolean rluLoaded = false;
+    private static boolean lutLoaded = false;
 
     public static void main(String[] args) {
-        System.out.println("I am running Java v" + System.getProperty("java.version"));
-        Locale.setDefault(Locale.US);
-        Logger rootLogger = LogManager.getLogManager().getLogger("");
-        rootLogger.setLevel(Level.FINE);
-        for (Handler h : rootLogger.getHandlers()) {
-            h.setLevel(Level.FINE);
-            h.setFilter(record -> record.getSourceClassName().startsWith("yangbot"));
-            h.setFormatter(new SimpleFormatter() {
-                @Override
-                public synchronized String format(LogRecord lr) {
-                    return String.format("[%1$tT] [%2$-7s] (%4$s:%5$s): %3$s %n", new Date(lr.getMillis()), lr.getLevel().getName(), lr.getMessage(), lr.getLoggerName(), lr.getSourceMethodName());
-                }
-            });
-        }
-
-        final Logger log = Logger.getLogger("MainClass");
+        BotType botType = BotType.PROD;
 
         if (args.length > 0) {
             System.out.println(Arrays.toString(args));
             if (args[0].equalsIgnoreCase("training"))
-                BOT_TYPE = BotType.TRAINING;
+                botType = BotType.TRAINING;
             else if (args[0].equalsIgnoreCase("test"))
-                BOT_TYPE = BotType.TEST;
+                botType = BotType.TEST;
             else if (args[0].equalsIgnoreCase("trainingtest"))
-                BOT_TYPE = BotType.TRAINING_TEST;
-            else if (args[0].equalsIgnoreCase("twitch"))
-                BOT_TYPE = BotType.TWITCH;
+                botType = BotType.TRAINING_TEST;
 
-            if (BOT_TYPE != BotType.PRODUCTION) {
+            if (botType != BotType.PROD) {
                 args[0] = "";
             }
         }
-        log.info("Using Bot type: " + BOT_TYPE);
-        lazyLoadNavigator();
-        lazyLoadRLU();
-        loadLut();
-        BotManager botManager = new BotManager();
-        botManager.setRefreshRate(120);
-        Integer port = PortReader.readPortFromArgs(args).orElseGet(() -> {
-            log.config("Could not read port from args, using default!");
+        portUsed = PortReader.readPortFromArgs(args).orElseGet(() -> {
+            System.out.println("Could not read port from args, using default!");
             return DEFAULT_PORT;
         });
+        setupForBotType(botType, (port, botMgr) -> new YangPythonInterface(portUsed, botMgr), true);
+        setupMessageInfoBox(botManager, portUsed);
+    }
 
-        YangPythonInterface pythonInterface = new YangPythonInterface(port, botManager);
+    public static void setupForBotType(BotType botType, BiFunction<Integer, BotManager, SocketServer> pythonInterfaceSupplier, boolean async) {
+        BOT_TYPE = botType;
+        setupLogger();
+
+        final Logger log = Logger.getLogger("MainClass");
+
+        log.info("Using Bot type: " + botType);
+        if (async) {
+            lazyLoadNavigator();
+            lazyLoadRLU();
+        } else {
+            loadNavigator();
+            loadRLU();
+        }
+
+        loadLut();
+        if (botManager == null) {
+            botManager = new BotManager();
+            botManager.setRefreshRate(120);
+        }
+
+        SocketServer pythonInterface = pythonInterfaceSupplier.apply(portUsed, botManager);
         new Thread(pythonInterface::start).start();
+        //lazyPrepJit();
+    }
+
+    private static void setupMessageInfoBox(BotManager botManager, int port) {
+        if (infoBoxOpen)
+            return;
+        infoBoxOpen = true;
 
         JFrame frame = new JFrame("YangBot");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -98,10 +117,15 @@ public class MainClass {
             coolQuotes.add(new Tuple<>("just dont be there", "- LieAlgebraCow everytime he reviews bots"));
             coolQuotes.add(new Tuple<>("Our bots are about to get better, Watch them climb the (imaginary) ranked ladder as rocket league goes free to play", "- L0laapk3 when free-to-play was announced"));
             coolQuotes.add(new Tuple<>("\"it's the most sophisticated bot I've ever made\" \"now the only problem is that it doesn't do anything after kickoff\"", "- GooseFairy, 19/Oct/2020"));
+            coolQuotes.add(new Tuple<>("\"where am I on braacket?\" \n\"click on 'Next Page'\" \n\"haha\"", "- sorry r0bbi3 30/Dec/2018")); // https://cdn.discordapp.com/attachments/369871532861816833/770727308222136370/unknown.png
+            coolQuotes.add(new Tuple<>("i have nothing useful to contribute but I do have this xkcd", "- whatisaphone 05/Aug/2018"));
+            coolQuotes.add(new Tuple<>("you should drag your professor onto the discord", "- tarehart, out of context 03/Oct/2018"));
+            coolQuotes.add(new Tuple<>("Yeet", "- Cedric, first yeet in the discord 19/May/2018"));
+            coolQuotes.add(new Tuple<>("oof", "- GooseFairy, first oof in the discord 05/Oct/2017"));
 
             coolQuotes.add(new Tuple<>("There is a 1/" + (coolQuotes.size() + 1) + " chance of you seeing this text!", "- Today"));
 
-            var chosen = coolQuotes.get(new Random(System.currentTimeMillis()).nextInt(coolQuotes.size()));
+            var chosen = coolQuotes.get(new Random(System.currentTimeMillis() / 250).nextInt(coolQuotes.size()));
 
             var philosophy1 = new JTextArea(chosen.getKey());
             philosophy1.setEditable(false);
@@ -129,7 +153,7 @@ public class MainClass {
 
                     dataPanel.add(new JLabel("Listening on port " + port), BorderLayout.CENTER);
 
-                    botsRunning = new JLabel("Bots running: ");
+                    botsRunning = new JLabel("Bots running (" + BOT_TYPE.name() + "): ");
                     dataPanel.add(botsRunning, BorderLayout.CENTER);
                 }
                 panel.add(dataPanel, BorderLayout.CENTER);
@@ -158,7 +182,7 @@ public class MainClass {
                         .map(i -> "#" + i)
                         .collect(Collectors.joining(", "));
             }
-            botsRunning.setText("Bots running: " + botsStr);
+            botsRunning.setText("Bots running (" + BOT_TYPE.name() + "): " + botsStr);
         };
 
         ActionListener mapSettingsListener = f -> {
@@ -174,45 +198,38 @@ public class MainClass {
 
         new Timer(1000, botIndexListener).start();
         new Timer(1000, mapSettingsListener).start();
-        lazyPrepJit();
+    }
 
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-        }
-        /*
-        var actionServerPort = DEFAULT_PORT + 1;
-
-            new Thread(() -> {
-                new SpringApplication(Swagger2SpringBoot.class).run("--server.port="+actionServerPort);
-            }).start();
-
-            new Thread(() -> {
-                var apiClient = new ApiClient();
-                apiClient.setBasePath("http://127.0.0.1:7307");
-                var registerApi = new RegisterApi(apiClient);
-                while (true) {
-                    try {
-                        var registration = new ActionServerRegistration().baseUrl("http://127.0.0.1:"+actionServerPort);
-                        var response = registerApi.registerActionServer(registration);
-                        System.out.println("Action server registration gave "+response.getCode()+" - "+response.getMessage());
-                    } catch (Exception e) {
-                        // Eat the exception
-                    } finally {
-                        try{
-                            Thread.sleep(10000);
-                        }catch (Exception e){ }
-                    }
+    private static void setupLogger() {
+        if (loggerInitialized)
+            return;
+        loggerInitialized = true;
+        System.out.println("I am running Java v" + System.getProperty("java.version"));
+        Locale.setDefault(Locale.US);
+        Logger rootLogger = LogManager.getLogManager().getLogger("");
+        rootLogger.setLevel(Level.FINE);
+        for (Handler h : rootLogger.getHandlers()) {
+            h.setLevel(Level.FINE);
+            h.setFilter(record -> record.getSourceClassName().startsWith("yangbot"));
+            h.setFormatter(new SimpleFormatter() {
+                @Override
+                public synchronized String format(LogRecord lr) {
+                    return String.format("[%1$tT] [%2$-7s] (%4$s:%5$s): %3$s %n", new Date(lr.getMillis()), lr.getLevel().getName(), lr.getMessage(), lr.getLoggerName(), lr.getSourceMethodName());
                 }
-            }).start();
-        }*/
+            });
+        }
     }
 
     private static void lazyLoadNavigator() {
+        if (navigatorLoaded)
+            return;
         new Thread(MainClass::loadNavigator).start();
     }
 
     private static void loadNavigator() {
+        if (navigatorLoaded)
+            return;
+        navigatorLoaded = true;
         try {
             var log = Logger.getLogger("NavLoad");
 
@@ -286,6 +303,9 @@ public class MainClass {
     }
 
     private static void lazyPrepJit() {
+        if (jitPrepped)
+            return;
+        jitPrepped = true;
         new Thread(MainClass::prepJit).start();
     }
 
@@ -301,10 +321,10 @@ public class MainClass {
             e.printStackTrace();
         }
     }
-
-    //private static void lazyLoadLut(){ new Thread(MainClass::loadLut).start();}
-
     private static void loadLut() {
+        if (lutLoaded)
+            return;
+        lutLoaded = true;
         try {
             var log = Logger.getLogger("LutLoad");
 
@@ -329,14 +349,23 @@ public class MainClass {
     }
 
     private static void lazyLoadRLU() {
-        new Thread(() -> YangBotCppInterop.init((byte) 0, (byte) 0)).start();
+        if (rluLoaded)
+            return;
+        new Thread(MainClass::loadRLU).start();
     }
 
-    enum BotType {
-        PRODUCTION,
+    private static void loadRLU() {
+        if (rluLoaded)
+            return;
+        rluLoaded = true;
+        YangBotCppInterop.init((byte) 0, (byte) 0);
+    }
+
+    public enum BotType {
+        PROD,
         TEST,
         TRAINING,
         TRAINING_TEST,
-        TWITCH
+        SCENARIO
     }
 }

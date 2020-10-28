@@ -47,7 +47,6 @@ public class TestBot implements Bot {
 
         lastTick = input.gameInfo.secondsElapsed();
 
-
         final CarData carBoi = input.car;
         final BallData realBall = input.ball;
         final BallData ball = realBall.makeImmutable().makeMutable();

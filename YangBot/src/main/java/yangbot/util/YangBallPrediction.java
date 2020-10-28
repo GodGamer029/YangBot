@@ -55,7 +55,7 @@ public class YangBallPrediction {
 
         float targetDt = Math.min(one.tickFrequency, two.tickFrequency);
         int targetRate = Math.round(1 / targetDt);
-        assert targetRate == 120 || targetRate == 60 : targetDt + " " + targetRate;
+        assert targetRate > 50 : targetDt + " " + targetRate;
 
         Function<YangPredictionFrame, Integer> frameToTick = (YangPredictionFrame f) -> Math.round(f.relativeTime / targetDt);
 

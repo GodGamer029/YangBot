@@ -1,8 +1,10 @@
-package yangbot.input;
+package yangbot.phystest;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import yangbot.cpp.YangBotCppInterop;
+import yangbot.input.BallData;
+import yangbot.input.CarData;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 

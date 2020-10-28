@@ -76,7 +76,7 @@ public class GetOutOfGoalSegment extends PathSegment {
                 this.endPos = this.makeEndPos(startPos, targetPos);
                 this.endTangent = this.endPos.sub(startPos).normalized();
             }
-            var car2d = new Car2D(startPos.flatten(), tangent2d.mul(startSpeed), tangent2d, 0, 0);
+            var car2d = new Car2D(startPos.flatten(), tangent2d.mul(startSpeed), tangent2d, 0, 0, 0);
             car2d.simulateDriveDistanceForward((float) startPos.flatten().distance(this.endPos.flatten()), false);
             this.endSpeed = (float) car2d.velocity.magnitude();
             this.timeEstimate = car2d.time;
@@ -87,7 +87,7 @@ public class GetOutOfGoalSegment extends PathSegment {
         this.timeEstimate = 0;
         // Slow down
 
-        var car2d = new Car2D(startPos.flatten(), tangent2d.mul(startSpeed), tangent2d, 0, 0);
+        var car2d = new Car2D(startPos.flatten(), tangent2d.mul(startSpeed), tangent2d, 0, 0, 0);
         car2d.simulateGentleFullStop();
         this.timeEstimate += car2d.time;
         if (printTimes)

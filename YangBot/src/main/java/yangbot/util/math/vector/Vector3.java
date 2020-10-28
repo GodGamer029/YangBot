@@ -22,6 +22,11 @@ public class Vector3 extends rlbot.vector.Vector3 {
         this(o.x, o.y, o.z);
     }
 
+    public Vector3(float[] arr) {
+        this(arr[0], arr[1], arr[2]);
+        assert arr.length == 3;
+    }
+
     public Vector3() {
         this(0, 0, 0);
     }
@@ -257,6 +262,10 @@ public class Vector3 extends rlbot.vector.Vector3 {
 
     public String toString(int decimalPlaces) {
         return this.getClass().getSimpleName() + String.format("(x=%." + decimalPlaces + "f;y=%." + decimalPlaces + "f;z=%." + decimalPlaces + "f)", x, y, z);
+    }
+
+    public String toYangEncodedString() {
+        return String.format("(%.2f,%.2f,%.2f)", x, y, z);
     }
 
     public float min() {

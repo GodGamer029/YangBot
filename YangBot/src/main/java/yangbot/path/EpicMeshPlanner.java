@@ -58,7 +58,7 @@ public class EpicMeshPlanner {
     }
 
     public EpicMeshPlanner snapToBoost() {
-        this.snapToBoostDist = 50;
+        this.snapToBoostDist = 150;
         return this;
     }
 

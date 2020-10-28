@@ -14,7 +14,7 @@ public class YangPythonInterface extends SocketServer {
     protected Bot initBot(int index, String botName, int team) {
         if (botName.startsWith("YangBot")) {
             switch (MainClass.BOT_TYPE) {
-                case PRODUCTION:
+                case PROD:
                     return new YangBot(index);
                 case TEST:
                     return new TestBot(index);
@@ -22,18 +22,8 @@ public class YangPythonInterface extends SocketServer {
                     return new TrainingBot(index);
                 case TRAINING_TEST:
                     return new TrainingTestBot(index);
-                case TWITCH: {
-                    var bot = new YangBotTwitch(index);
-                    //StandardActionHandler.registerActionEntity(botName, bot);
-                    //return bot;
-                }
             }
             throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
-        }
-        if (botName.startsWith("YangBotTwitch") && MainClass.BOT_TYPE == MainClass.BotType.TWITCH) {
-            var bot = new YangBotTwitch(index);
-            //StandardActionHandler.registerActionEntity(botName, bot);
-            //return bot;
         }
         throw new IllegalArgumentException("Unknown Bot Name: " + botName);
     }

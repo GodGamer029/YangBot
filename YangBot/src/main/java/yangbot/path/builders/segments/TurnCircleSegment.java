@@ -34,7 +34,12 @@ public class TurnCircleSegment extends BakeablePathSegment {
         this.startPos = start.position;
         this.startTangent = start.forward();
         float speed = start.forwardSpeed();
-        this.turnCircleStartPos = this.startPos.add(this.startTangent.mul(speed * 0.08f)); // give the car enough time to steer and get angular velocity up, this is especially important in cases like this where we steer at the max turning circle
+
+        float steerDirection = (float) Math.signum(start.forward().correctionAngle(endPos.sub(this.startPos).normalized()));
+
+        // give the car enough time to steer and get angular velocity up, this is especially important in cases like this where we steer at the max turning circle
+        // do some vodoo magic with angular velocity to determine if we even need this
+        this.turnCircleStartPos = this.startPos.add(this.startTangent.mul(speed * MathUtils.remapClip(steerDirection == Math.signum(start.angularVelocity) ? Math.abs(start.angularVelocity) : 0, 0, 2, 0.08f, 2 * RLConstants.tickFrequency)));
 
         var startToEnd = endPos.sub(turnCircleStartPos).normalized();
         var correctionAngle = start.forward().correctionAngle(startToEnd);

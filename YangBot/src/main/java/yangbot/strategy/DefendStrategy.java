@@ -13,6 +13,7 @@ import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.Area2;
+import yangbot.util.math.Line2;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
@@ -45,6 +46,7 @@ public class DefendStrategy extends Strategy {
             return false;
         }
 
+        System.out.println("Getting myself some boost!");
         this.state = State.GET_BOOST;
         RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_NeedBoost);
         return true;
@@ -103,6 +105,8 @@ public class DefendStrategy extends Strategy {
         final CarData car = gameData.getCarData();
         final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * RLConstants.goalDistance);
 
+        final Line2 ownGoalLine = new Line2(ownGoal.sub(RLConstants.goalCenterToPost, 0), ownGoal.add(RLConstants.goalCenterToPost, 0));
+
         float t = 0;
 
         // Path finder
@@ -122,8 +126,29 @@ public class DefendStrategy extends Strategy {
                 continue;
 
             final Vector3 targetPos = interceptFrame.ballData.position;
-            final Vector3 endTangent = new Vector3(targetPos.flatten().sub(ownGoal).normalized().mul(2).add(targetPos.flatten().sub(car.position.flatten()).normalized()).normalized(), 0);
+
+            {
+                float zDiff = targetPos.z - 0.7f * BallData.COLLISION_RADIUS - car.position.z;
+                float jumpDelay;
+                if (zDiff < 5)
+                    jumpDelay = 0.25f;
+                else
+                    jumpDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
+
+                if (interceptFrame.relativeTime < jumpDelay)
+                    continue;
+            }
+
+            final Vector3 endTangent = new Vector3(
+                    targetPos.flatten().sub(ownGoal).normalized().mul(2)
+                            .add(targetPos.flatten().sub(car.position.flatten()).normalized())
+                            .normalized()
+                    , 0);
             final Vector3 endPos = targetPos.withZ(car.position.z).sub(endTangent.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
+
+            if (endTangent.flatten().normalized().dot(ownGoal.sub(endPos.flatten())) > 0 /*facing goal*/ && ownGoalLine.getIntersectionPointWithInfOtherLine(new Line2(endPos.flatten(), endPos.add(endTangent).flatten())).isPresent()) {
+                continue;
+            }
 
             var pathOptional = new EpicMeshPlanner()
                     .withStart(car)
@@ -139,7 +164,7 @@ public class DefendStrategy extends Strategy {
 
             var currentPath = pathOptional.get();
 
-            if (currentPath.getEndTangent().dot(targetPos.flatten().sub(ownGoal).normalized().withZ(0)) < 0)
+            if (currentPath.getEndTangent().dot(targetPos.flatten().sub(ownGoal).normalized().withZ(0)) < -0.5f)
                 continue;
 
             float timeEstimate = currentPath.getTotalTimeEstimate();
@@ -156,6 +181,8 @@ public class DefendStrategy extends Strategy {
                         dodgeStrikeAbstraction.jumpBeforeStrikeDelay = 0.25f;
                     else
                         dodgeStrikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
+
+                    System.out.println("Setting jumpBeforeStrikeDelay=" + dodgeStrikeAbstraction.jumpBeforeStrikeDelay + " zDiff=" + zDiff + " ballTargetZ=" + targetPos.z + " carZ=" + car.position.z);
 
                     dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay = Math.max(0.6f, dodgeStrikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
                     dodgeStrikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
@@ -286,6 +313,8 @@ public class DefendStrategy extends Strategy {
         YangBallPrediction dodgeFrames = YangBallPrediction.empty();
         YangBallPrediction chipFrames = YangBallPrediction.empty();
 
+        boolean isConceding = false;
+
         // Getting scored on
         {
             Optional<YangBallPrediction.YangPredictionFrame> firstConcedingGoalFrame = ballPrediction.getFramesBeforeRelative(3.5f)
@@ -294,6 +323,7 @@ public class DefendStrategy extends Strategy {
                     .findFirst();
 
             if (firstConcedingGoalFrame.isPresent()) { // We getting scored on
+                isConceding = true;
                 final YangBallPrediction.YangPredictionFrame frameConceding = firstConcedingGoalFrame.get();
 
                 YangBallPrediction framesBeforeGoal = ballPrediction.getBeforeRelative(frameConceding.relativeTime);
@@ -332,7 +362,7 @@ public class DefendStrategy extends Strategy {
 
             Optional<YangBallPrediction.YangPredictionFrame> ballInDefendAreaFrame = ballPrediction.getFramesBeforeRelative(3f)
                     .stream()
-                    .filter((f) -> f.ballData.position.z < 1000 && defendArea.contains(f.ballData.position.flatten()))
+                    .filter((f) -> f.ballData.position.z < 1300 && defendArea.contains(f.ballData.position.flatten()))
                     .findFirst();
 
             if (ballInDefendAreaFrame.isPresent()) {
@@ -374,12 +404,6 @@ public class DefendStrategy extends Strategy {
                         .filter((frameTup) -> Math.signum(frameTup.getValue() - carToOwnGoalDist) == 1)
                         .map(Tuple::getKey)
 
-                        /*.filter((frame) -> {
-                           var ballData = frame.ballData;
-                           float yDist = Math.abs(car.position.y - ballData.position.y);
-                           float xDist = Math.abs(car.position.x - ballData.position.x);
-                           return yDist > xDist * 0.65f;
-                       })*/
                         .collect(Collectors.toList()), framesBeforeGoal.tickFrequency);
 
                 dodgeFrames = YangBallPrediction.merge(dodgeFrames, framesBeforeGoal);
@@ -398,7 +422,7 @@ public class DefendStrategy extends Strategy {
         chipStrike.ifPresent(possibleStrikes::add);
 
         if (possibleStrikes.isEmpty()) {
-            if (car.position.flatten().distance(ownGoal) < ball.position.flatten().distance(ownGoal) && this.planGoForBoost())
+            if (!isConceding && car.position.flatten().distance(ownGoal) < ball.position.flatten().distance(ownGoal) && this.planGoForBoost())
                 return;
             this.state = State.IDLE;
             return;

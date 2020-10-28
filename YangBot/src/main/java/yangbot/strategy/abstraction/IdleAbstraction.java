@@ -25,7 +25,7 @@ public class IdleAbstraction extends Abstraction {
     public boolean doBothPredictionAndCurrent = true;
     // Y-Distance from ball when idle
     // These may be scaled down, if too close to own goa l
-    public float minIdleDistance = 3000;
+    public float minIdleDistance = 1200;
     public float maxIdleDistance = RLConstants.arenaLength * 0.55f;
     public float forceRetreatTimeout = 0;
     public float targetSpeed = DriveManeuver.max_throttle_speed;
@@ -137,7 +137,7 @@ public class IdleAbstraction extends Abstraction {
             }
 
             // Draw
-            if (false) {
+            if (true) {
                 for (int i = 0; i < yGrid.length; i++) {
                     float yPos = yIndexToAbs.apply(i);
                     float val = 1 - MathUtils.clip(MathUtils.remap(yGrid[i], lowestYDist, highestYDist, 0, 1), 0, 1);
@@ -148,7 +148,7 @@ public class IdleAbstraction extends Abstraction {
 
                     float ySize = (effectiveMaxIdleDistance - effectiveMinIdleDistance) / (yGrid.length - 1);
 
-                    renderer.drawCentered3dCube(col, new Vector3(localCar.position.x, yPos, 50), new Vector3(10, ySize, 200));
+                    renderer.drawCentered3dCube(col, new Vector3(localCar.position.x, yPos, 50), new Vector3(10, ySize, 100));
                     //renderer.drawString3d(String.format("%.5f", yGrid[i]), Color.WHITE, new Vector3(localCar.position.x, yPos, 200), 1, 1);
                 }
             }
@@ -326,7 +326,7 @@ public class IdleAbstraction extends Abstraction {
                 MathUtils.clip(preferredIdlingY, -maxY, maxY),
                 RLConstants.carElevation);
 
-        if (this.currentPath == null || (this.currentPath.canInterrupt() && (idleTarget.distance(this.pathTarget) > 600 || car.elapsedSeconds - this.lastPathBuild > 0.5f))) {
+        if (this.currentPath == null || (this.currentPath.canInterrupt() && (idleTarget.distance(this.pathTarget) > 500 || car.elapsedSeconds - this.lastPathBuild > 0.5f))) {
 
             this.lastPathBuild = car.elapsedSeconds;
             this.pathTarget = idleTarget;
@@ -342,7 +342,7 @@ public class IdleAbstraction extends Abstraction {
                     .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
                     .withArrivalSpeed(targetArrivalSpeed)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
-                    .snapToBoost(150)
+                    .snapToBoost(200)
                     .plan();
 
             if (pathOptional.isEmpty()) {

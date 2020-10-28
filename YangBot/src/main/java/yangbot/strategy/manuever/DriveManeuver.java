@@ -66,7 +66,7 @@ public class DriveManeuver extends Maneuver {
                 if (newSpeed < drivingSpeed)
                     force = CarData.MAX_VELOCITY - newSpeed;
                 else if (newSpeed < CarData.MAX_VELOCITY)
-                    force = AerialManeuver.boost_acceleration;
+                    force = AerialManeuver.boost_airthrottle_acceleration;
             }
             newSpeed += force * dt;
             dist += newSpeed * dt;
@@ -142,13 +142,13 @@ public class DriveManeuver extends Maneuver {
         float input = Math.max(0, Math.min(1410, Math.abs(v)));
 
         for (int i = 0; i < (n - 1); i++) {
-            if (values[i][0] <= input && input < values[i + 1][0]) {
+            if (values[i][0] <= input && input <= values[i + 1][0]) {
                 float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
         }
 
-        return -1.0f;
+        return values[values.length - 1][1];
     }
 
     public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime, boolean allowBoost) {

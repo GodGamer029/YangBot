@@ -226,36 +226,13 @@ public class CarData {
         return this.orientation.forward();
     }
 
-    public Physics2D toPhysics2d() {
-        return new Physics2D(this.position.flatten(), this.velocity.flatten(), this.orientation.flatten());
-    }
-
-    public Physics3D toPhysics3d() {
-        return new Physics3D(this.position, this.velocity, this.orientation);
-    }
-
-    public Car2D toCar2D() {
-        return new Car2D(this.position.flatten(), this.velocity.flatten(), this.forward().flatten(), (float) this.up().dot(angularVelocity), this.elapsedSeconds);
-    }
-
-    // https://www.wolframalpha.com/input/?i=solve+291.66+%2B+1458.33+d+-+g+x+%3D+0+for+x
-    public static float getTimeForMaxJumpHeight(float duration, float gravity) {
-        assert gravity < 0;
-        assert duration > 0 && duration <= 0.2f;
-
-        return (3 * (9722 + 48611 * duration)) / (-100 * gravity);
-    }
-
     public static float driveForceForward(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
-        final float driving_speed = 1450.0f;
+        final float driving_speed = DriveManeuver.max_throttle_speed;
         final float braking_force = -3500.0f;
         final float coasting_force = -525.0f;
         final float throttle_threshold = 0.05f;
-        final float throttle_force = 1550.0f;
         final float max_speed = 2275.0f;
         final float min_speed = 10.0f;
-        final float boost_force = 1500.0f;
-        final float steering_torque = 25.75f;
         final float braking_threshold = -0.001f;
         final float supersonic_turn_drag = -98.25f;
 
@@ -273,10 +250,10 @@ public class CarData {
                 return -braking_force;
             else {
                 if (v_f < driving_speed)
-                    return max_speed - v_f;
+                    return DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
                 else {
                     if (v_f < max_speed)
-                        return AerialManeuver.boost_acceleration + turn_damping;
+                        return DriveManeuver.boost_acceleration + turn_damping;
                     else
                         return supersonic_turn_drag * Math.abs(w_u);
                 }
@@ -295,11 +272,31 @@ public class CarData {
                     if (Math.abs(v_f) > driving_speed) {
                         return turn_damping;
                     } else {
-                        return in.getThrottle() * (throttle_force - Math.abs(v_f)) + turn_damping;
+                        return in.getThrottle() * DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
                     }
                 }
             }
         }
+    }
+
+    public Physics3D toPhysics3d() {
+        return new Physics3D(this.position, this.velocity, this.orientation);
+    }
+
+    public Physics2D toPhysics2d() {
+        return new Physics2D(this.position.flatten(), this.velocity.flatten(), this.orientation.flatten(), this.angularVelocity.dot(this.up()));
+    }
+
+    // https://www.wolframalpha.com/input/?i=solve+291.66+%2B+1458.33+d+-+g+x+%3D+0+for+x
+    public static float getTimeForMaxJumpHeight(float duration, float gravity) {
+        assert gravity < 0;
+        assert duration > 0 && duration <= 0.2f;
+
+        return (3 * (9722 + 48611 * duration)) / (-100 * gravity);
+    }
+
+    public Car2D toCar2D() {
+        return new Car2D(this.position.flatten(), this.velocity.flatten(), this.forward().flatten(), (float) this.up().dot(angularVelocity), this.elapsedSeconds, (float) this.boost);
     }
 
     public static float driveForceLeft(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
@@ -400,7 +397,7 @@ public class CarData {
 
         Vector3 rpy = new Vector3(in.getRoll(), in.getPitch(), in.getYaw());
         if (in.holdBoost() && boost > 0) {
-            this.velocity = this.velocity.add(this.forward().mul((AerialManeuver.boost_acceleration + AerialManeuver.throttle_acceleration) * dt));
+            this.velocity = this.velocity.add(this.forward().mul((AerialManeuver.boost_airthrottle_acceleration + AerialManeuver.throttle_acceleration) * dt));
             boost--;
         } else {
             this.velocity = this.velocity.add(this.forward().mul(in.getThrottle() * AerialManeuver.throttle_acceleration * dt));

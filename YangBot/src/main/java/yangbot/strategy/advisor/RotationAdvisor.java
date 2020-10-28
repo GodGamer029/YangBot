@@ -1,6 +1,7 @@
 package yangbot.strategy.advisor;
 
 import yangbot.input.*;
+import yangbot.util.PosessionUtil;
 import yangbot.util.Tuple;
 import yangbot.util.math.vector.Vector2;
 
@@ -45,12 +46,30 @@ public class RotationAdvisor {
         final ImmutableBallData ballData = gameData.getBallData();
 
         if (isAheadOfBall(localCar, ballData)) {
+            System.out.println("Ahead of ball");
             // We are ahead of the ball
             return Advice.RETREAT;
         }
 
-        if (teammates.size() <= 1)
+        var possession = PosessionUtil.getPossession(gameData, gameData.getBallPrediction());
+        if (possession.isEmpty()) {
+            // mate has posession
+        } else {
+            // value
+        }
+
+        if (teammates.size() <= 1) {
+            System.out.println("Posession: " + (possession.isEmpty() ? "empty" : possession.get()));
+            if (possession.isEmpty() || possession.get() <= -0.1f) {
+
+                return Advice.RETREAT;
+            }
+
+            if (possession.get() < 0.2f) // Enemy has more posession
+                return Advice.IDLE;
             return Advice.ATTACK;
+        }
+
 
         long numberOfCarsAbleToDefend = teammates.stream()
                 .filter(c -> !isAheadOfBall(c, ballData))

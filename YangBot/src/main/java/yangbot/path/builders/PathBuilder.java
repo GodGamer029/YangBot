@@ -67,7 +67,7 @@ public class PathBuilder {
     }
 
     public Physics2D getCurrentPhysics() {
-        return new Physics2D(this.getCurrentPosition().flatten(), this.getCurrentTangent().flatten().mul(this.getCurrentSpeed()), Matrix2x2.fromRotation((float) this.getCurrentTangent().flatten().angle()));
+        return new Physics2D(this.getCurrentPosition().flatten(), this.getCurrentTangent().flatten().mul(this.getCurrentSpeed()), Matrix2x2.fromRotation((float) this.getCurrentTangent().flatten().angle()), 0);
     }
 
     public float getSpeedBeforeSegment(int segment) {

@@ -131,6 +131,18 @@ public class OffensiveStrategy extends Strategy {
 
             final Vector3 targetBallPos = interceptFrame.ballData.position;
 
+            {
+                float zDiff = targetBallPos.z - 0.7f * BallData.COLLISION_RADIUS - car.position.z;
+                float jumpDelay;
+                if (zDiff < 5)
+                    jumpDelay = 0.25f;
+                else
+                    jumpDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
+
+                if (interceptFrame.relativeTime < jumpDelay)
+                    continue;
+            }
+
             final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 

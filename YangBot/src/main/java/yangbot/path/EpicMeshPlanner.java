@@ -190,7 +190,7 @@ public class EpicMeshPlanner {
                 assert this.additionalPoints.size() == 0;
                 assert !this.avoidBall;
 
-                var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1))), this.boostAvailable);
+                var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1)), new Vector3()), this.boostAvailable);
                 if (this.allowOptimize)
                     builder.optimize();
 
@@ -206,7 +206,7 @@ public class EpicMeshPlanner {
                 var neededTangent = this.endPos.sub(builder.getCurrentPosition()).flatten().normalized();
                 float turnAngle = (float) Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent));
                 if (builder.getCurrentSpeed() > 300 && builder.getCurrentSpeed() < 1300 && turnAngle < 90 * (Math.PI / 180) && turnAngle > 30 * (Math.PI / 180) && builder.getCurrentPosition().flatten().distance(this.endPos.flatten()) > 1400) {
-                    var drift = new DriftSegment(builder, this.endPos.sub(builder.getCurrentPosition()).normalized());
+                    var drift = new DriftSegment(builder.getCurrentPhysics3d(), this.endPos.sub(builder.getCurrentPosition()).normalized(), builder.getCurrentBoost());
                     builder.add(drift);
                     neededTangent = this.endPos.sub(builder.getCurrentPosition()).flatten().normalized();
                     turnAngle = (float) Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent));
@@ -225,7 +225,7 @@ public class EpicMeshPlanner {
                     float targetSpeed = 1100 + illegalSpeed * allowance;
                     //System.out.println("Allowance: "+allowance+" target: "+targetSpeed);
 
-                    var turn = new TurnCircleSegment(builder.getCurrentPhysics(), 1 / DriveManeuver.maxTurningCurvature(MathUtils.clip(targetSpeed, 1100, 2000)), this.endPos.flatten(), builder.getCurrentBoost());
+                    var turn = new TurnCircleSegment(builder.getCurrentPhysics(), 1 / DriveManeuver.maxTurningCurvature(MathUtils.clip(targetSpeed, 1100, 2000)), this.endPos.flatten(), builder.getCurrentBoost(), allowFullSend);
                     if (turn.tangentPoint != null)
                         builder.add(turn);
                     else
@@ -243,7 +243,7 @@ public class EpicMeshPlanner {
                 assert this.additionalPoints.size() == 0;
                 assert !this.avoidBall;
 
-                var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1))), this.boostAvailable);
+                var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1)), new Vector3()), this.boostAvailable);
                 if (this.allowOptimize)
                     builder.optimize();
 

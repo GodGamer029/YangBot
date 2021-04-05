@@ -125,6 +125,6 @@ public class RecoverStrategy extends Strategy {
 
     @Override
     public Optional<Strategy> suggestStrategy() {
-        return Optional.of(new DefaultStrategy());
+        return Optional.empty();
     }
 }

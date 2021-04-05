@@ -110,6 +110,11 @@ public class OffensiveStrategy extends Strategy {
         assert enemyGoal.x == 0; // Could fail with custom goals
         final Line2 enemyGoalLine = new Line2(enemyGoal.sub(goalCenterToPostDistance, 0), enemyGoal.add(goalCenterToPostDistance, 0));
 
+        final boolean verboseDebug = false;
+
+        if (verboseDebug)
+            System.out.println("##### start path finder");
+
         // Path finder
         while (t < maxT) {
             final Optional<YangBallPrediction.YangPredictionFrame> interceptFrameOptional = strikePrediction.getFrameAtRelativeTime(t);
@@ -118,6 +123,7 @@ public class OffensiveStrategy extends Strategy {
             final var interceptFrame = interceptFrameOptional.get();
 
             t = interceptFrame.relativeTime;
+
             if (t > 1.5f) // Speed it up, not as important
                 t += RLConstants.simulationTickFrequency * 4; // 15hz
             else // default
@@ -145,8 +151,11 @@ public class OffensiveStrategy extends Strategy {
 
             final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
+            final Vector3 carToBall = targetBallPos.sub(car.position).withZ(0).normalized();
 
-            Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getAverageHitboxExtent()));
+            Vector3 ballHitTarget = targetBallPos.sub(ballTargetToGoalTarget.mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
+
+            //Vector3 ballHitTarget = targetBallPos.sub(carToBall.mul(BallData.COLLISION_RADIUS + car.hitbox.getDiagonalExtent()));
             ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
 
             final Vector3 carToDriveTarget = ballHitTarget.sub(car.position).normalized();
@@ -157,7 +166,8 @@ public class OffensiveStrategy extends Strategy {
                     .withEnd(ballHitTarget, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(2300)
-                    .allowOptimize(car.boost < 30)
+                    .allowFullSend(car.boost > 20)
+                    .allowOptimize(false)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
@@ -172,6 +182,8 @@ public class OffensiveStrategy extends Strategy {
             // Check if path is valid
             {
                 if (currentPath.getTotalTimeEstimate() <= interceptFrame.relativeTime) {
+                    if (verboseDebug)
+                        System.out.println("##### end path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate());
                     return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.DODGE, (o) -> {
                         this.state = State.FOLLOW_PATH_STRIKE;
                         var dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath);
@@ -191,9 +203,21 @@ public class OffensiveStrategy extends Strategy {
                         dodgeStrikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
                         this.strikeAbstraction = dodgeStrikeAbstraction;
                     }));
+                } else if (verboseDebug) {
+                    String s = "continue path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate() + " ";
+                    for (var seg : currentPath.getSegmentList()) {
+                        var est = seg.getTimeEstimate();
+                        s += seg.getClass().getSimpleName() + " est=" + est + " ";
+                    }
+
+                    System.out.println(s);
                 }
+
+
             }
         }
+        if (verboseDebug)
+            System.out.println("##### end path finder");
         return Optional.empty();
     }
 
@@ -271,7 +295,7 @@ public class OffensiveStrategy extends Strategy {
                 continue; // We should be driving at the ball, otherwise the code fails horribly
 
             var relativeVel = currentPath.getEndTangent().mul(currentPath.getEndSpeed()).sub(interceptFrame.ballData.velocity).flatten();
-            if (relativeVel.magnitude() < 1200)
+            if (relativeVel.magnitude() < 1400)
                 continue; // We want boomers, not atbas
 
             // Check if path is valid
@@ -297,7 +321,8 @@ public class OffensiveStrategy extends Strategy {
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
         final int teamSign = car.getTeamSign();
-        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        YangBallPrediction ballPrediction = gameData.getBallPrediction();
+        //ballPrediction = YangBotJNAInterop.getBallPrediction(gameData.getBallData().makeMutable(), RLConstants.tickRate);
 
         /*if (DribbleStrategy.isViable()) {
             this.state = State.DRIBBLE;
@@ -360,7 +385,7 @@ public class OffensiveStrategy extends Strategy {
 
         assert this.state == State.INVALID;
 
-        possibleStrikes
+        var nextStrike = possibleStrikes
                 .stream()
                 .map(s -> {
                     float val = s.timeAtStrike - car.elapsedSeconds;
@@ -375,8 +400,10 @@ public class OffensiveStrategy extends Strategy {
                     return new Tuple<>(s, val);
                 })
                 .min(Comparator.comparingDouble(Tuple::getValue))
-                .map(Tuple::getKey).get()
-                .execute();
+                .map(Tuple::getKey).get();
+
+        nextStrike.execute();
+        //System.out.println("Running "+nextStrike.strikeType.name()+" at state "+ ScenarioUtil.getEncodedGameState(gameData));
 
         assert this.state != State.INVALID;
     }
@@ -423,7 +450,7 @@ public class OffensiveStrategy extends Strategy {
         this.lastAdvice = rotationAdvice;
         switch (rotationAdvice) {
             case PREPARE_FOR_PASS:
-                this.idleAbstraction.targetSpeed = 900;
+                //this.idleAbstraction.targetSpeed = 900;
             case IDLE: {
                 if (car.position.flatten().distance(ball.position.flatten()) > 2000) {
                     if (this.planGoForBoost())

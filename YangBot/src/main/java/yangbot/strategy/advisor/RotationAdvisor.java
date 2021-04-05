@@ -46,7 +46,6 @@ public class RotationAdvisor {
         final ImmutableBallData ballData = gameData.getBallData();
 
         if (isAheadOfBall(localCar, ballData)) {
-            System.out.println("Ahead of ball");
             // We are ahead of the ball
             return Advice.RETREAT;
         }
@@ -59,7 +58,7 @@ public class RotationAdvisor {
         }
 
         if (teammates.size() <= 1) {
-            System.out.println("Posession: " + (possession.isEmpty() ? "empty" : possession.get()));
+            //System.out.println("Posession: " + (possession.isEmpty() ? "empty" : possession.get()));
             if (possession.isEmpty() || possession.get() <= -0.1f) {
 
                 return Advice.RETREAT;

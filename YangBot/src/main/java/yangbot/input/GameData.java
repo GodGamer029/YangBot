@@ -18,6 +18,7 @@ public class GameData {
     protected ImmutableBallData ballData = null;
     protected List<CarData> allCars = null;
     protected float gravityZ = -650;
+    protected float elapsedSeconds = 0;
     protected float dt = 1 / 60f;
     protected GameInfoData gameInfoData = null;
     protected AdvancedRenderer advancedRenderer = null;
@@ -45,6 +46,7 @@ public class GameData {
 
     public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt, AdvancedRenderer advancedRenderer) {
         this.carData = carData;
+        this.elapsedSeconds = carData.elapsedSeconds;
         this.ballData = ballData;
         this.allCars = allCars;
         this.allCars.forEach((c) -> c.getPlayerInfo().update(c));
@@ -61,6 +63,7 @@ public class GameData {
 
     public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
         this.carData = carData;
+        this.elapsedSeconds = carData.elapsedSeconds;
         this.ballData = ballData;
         this.allCars = allCars;
         this.gravityZ = gravity;
@@ -104,5 +107,9 @@ public class GameData {
 
     public int getBotIndex() {
         return this.botIndex;
+    }
+
+    public float getElapsedSeconds() {
+        return elapsedSeconds;
     }
 }

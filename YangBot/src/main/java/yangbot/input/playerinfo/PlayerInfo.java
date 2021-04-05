@@ -25,8 +25,16 @@ public class PlayerInfo {
         this.inactiveShooterUntil = Math.max(this.inactiveShooterUntil, time);
     }
 
+    public void resetInactiveShooter() {
+        this.inactiveRotatorUntil = -1;
+    }
+
     public boolean isActiveRotator() {
         return this.currentCarData.elapsedSeconds > this.inactiveRotatorUntil;
+    }
+
+    public float getInactiveShooterUntil() {
+        return inactiveShooterUntil;
     }
 
     public boolean isActiveShooter() {

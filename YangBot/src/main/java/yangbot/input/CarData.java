@@ -55,7 +55,7 @@ public class CarData {
     public Vector3 angularVelocity;
     public Matrix3x3 orientation;
 
-    public double boost;
+    public float boost;
     public boolean hasWheelContact;
     public float elapsedSeconds;
 
@@ -232,44 +232,37 @@ public class CarData {
         final float coasting_force = -525.0f;
         final float throttle_threshold = 0.05f;
         final float max_speed = 2275.0f;
-        final float min_speed = 10.0f;
+        final float min_speed = 3.0f;
         final float braking_threshold = -0.001f;
         final float supersonic_turn_drag = -98.25f;
 
-        final float v_f = (float) velocityForward;
-        final float v_l = (float) velocityLeft;
-        final float w_u = (float) angularUp;
-
-        final float dir = Math.signum(v_f);
-        final float speed = Math.abs(v_f);
-
-        final float turn_damping = (-0.07186693033945346f * Math.abs(in.getSteer()) + -0.05545323728191764f * Math.abs(w_u) + 0.00062552963716722f * Math.abs(v_l)) * v_f;
+        final float turn_damping = (-0.07186693033945346f * Math.abs(in.getSteer()) + -0.05545323728191764f * Math.abs(angularUp) + 0.00062552963716722f * Math.abs(velocityLeft)) * velocityForward;
 
         if (in.holdBoost()) {
-            if (v_f < 0.0f)
+            if (velocityForward < 0.0f)
                 return -braking_force;
             else {
-                if (v_f < driving_speed)
+                if (velocityForward < driving_speed)
                     return DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
                 else {
-                    if (v_f < max_speed)
+                    if (velocityForward < max_speed)
                         return DriveManeuver.boost_acceleration + turn_damping;
                     else
-                        return supersonic_turn_drag * Math.abs(w_u);
+                        return supersonic_turn_drag * Math.abs(angularUp);
                 }
             }
         } else { // Not boosting
-            if ((in.getThrottle() * Math.signum(v_f) <= braking_threshold) &&
-                    Math.abs(v_f) > min_speed) {
-                return braking_force * Math.signum(v_f);
+            if ((in.getThrottle() * Math.signum(velocityForward) <= braking_threshold) &&
+                    Math.abs(velocityForward) > min_speed) {
+                return braking_force * Math.signum(velocityForward);
                 // not braking
             } else {
                 // coasting
-                if (Math.abs(in.getThrottle()) < throttle_threshold && Math.abs(v_f) > min_speed) {
-                    return coasting_force * Math.signum(v_f) + turn_damping;
+                if (Math.abs(in.getThrottle()) < throttle_threshold && Math.abs(velocityForward) > min_speed) {
+                    return coasting_force * Math.signum(velocityForward) + turn_damping;
                     // accelerating
                 } else {
-                    if (Math.abs(v_f) > driving_speed) {
+                    if (Math.abs(velocityForward) > driving_speed) {
                         return turn_damping;
                     } else {
                         return in.getThrottle() * DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
@@ -280,7 +273,7 @@ public class CarData {
     }
 
     public Physics3D toPhysics3d() {
-        return new Physics3D(this.position, this.velocity, this.orientation);
+        return new Physics3D(this.position, this.velocity, this.orientation, this.angularVelocity);
     }
 
     public Physics2D toPhysics2d() {

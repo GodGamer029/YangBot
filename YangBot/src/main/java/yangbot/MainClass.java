@@ -115,7 +115,7 @@ public class MainClass {
             coolQuotes.add(new Tuple<>("Skycrafter: \"Yes but what if there isn't any bug\"\nWill: \"Hahahaha\"", "- 31/Jul/2020"));
             coolQuotes.add(new Tuple<>("two yangbots in a rule 1 is called a yin yang", "- Eastvillage 29/Jul/2020"));
             coolQuotes.add(new Tuple<>("just dont be there", "- LieAlgebraCow everytime he reviews bots"));
-            coolQuotes.add(new Tuple<>("Our bots are about to get better, Watch them climb the (imaginary) ranked ladder as rocket league goes free to play", "- L0laapk3 when free-to-play was announced"));
+            coolQuotes.add(new Tuple<>("Our bots are about to get better, Watch them climb the ranked ladder as rocket league goes free to play", "- L0laapk3 when free-to-play was announced"));
             coolQuotes.add(new Tuple<>("\"it's the most sophisticated bot I've ever made\" \"now the only problem is that it doesn't do anything after kickoff\"", "- GooseFairy, 19/Oct/2020"));
             coolQuotes.add(new Tuple<>("\"where am I on braacket?\" \n\"click on 'Next Page'\" \n\"haha\"", "- sorry r0bbi3 30/Dec/2018")); // https://cdn.discordapp.com/attachments/369871532861816833/770727308222136370/unknown.png
             coolQuotes.add(new Tuple<>("i have nothing useful to contribute but I do have this xkcd", "- whatisaphone 05/Aug/2018"));
@@ -321,7 +321,8 @@ public class MainClass {
             e.printStackTrace();
         }
     }
-    private static void loadLut() {
+
+    public static void loadLut() {
         if (lutLoaded)
             return;
         lutLoaded = true;

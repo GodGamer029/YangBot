@@ -235,6 +235,13 @@ public class YangBallPrediction {
                 .collect(Collectors.toList());
     }
 
+    public List<YangPredictionFrame> getFramesBeforeAbsolute(float absoluteTime) {
+        return this.frames
+                .stream()
+                .filter((f) -> f.absoluteTime < absoluteTime)
+                .collect(Collectors.toList());
+    }
+
     public YangBallPrediction getBeforeRelative(float relativeTime) {
         return new YangBallPrediction(getFramesBeforeRelative(relativeTime), this.tickFrequency);
     }

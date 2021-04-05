@@ -16,14 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BallData {
-    public static final float DRAG = -0.0305f;
+    public static final float RESTITUTION = 0.6f;
+    public static final float DRAG = -0.031f; //
     public static final float MAX_VELOCITY = 6000.0f;
     public static final float MAX_ANGULAR = 6.0f;
 
     public static final float RADIUS = 91.25f;
     public static final float COLLISION_RADIUS = 93.15f;
-    public static final float MASS = 30f;
-    public static final float INERTIA = 0.4f * MASS * RADIUS * RADIUS;
+    public static final float MASS = 30f; // 30
+    public static final float INERTIA = 0.375f * MASS * RADIUS * RADIUS;
     public static final float MU = 2;
 
     public Vector3 position;
@@ -163,6 +164,59 @@ public class BallData {
         this.elapsedSeconds += dt;
     }
 
+    public void stepCollideGround(float dt) {
+        // https://github.com/samuelpmish/RLUtilities/blob/master/src/simulation/ball.cc#L36
+
+        if (this.position.z <= BallData.COLLISION_RADIUS + 0.001f) {
+            this.velocity = velocity.add(
+                    velocity.mul(BallData.DRAG)
+                            .add(RLConstants.gravity)
+                            .mul(dt));
+
+            // collides
+            var p = this.position.withZ(0);
+            var n = new Vector3(0, 0, 1);
+
+            var L = p.sub(this.position);
+
+            float m_reduced = 1f / ((1f / BallData.MASS) + L.dot(L) / INERTIA);
+
+            var v_perp = n.mul(Math.min(this.velocity.dot(n), 0));
+            var v_para = velocity.sub(v_perp).sub(L.crossProduct(angularVelocity));
+
+            float ratio = (float) Math.max(0, v_perp.magnitude()) / (float) Math.max(v_para.magnitude(), 0.0001f); // 0.0001
+
+            var J_perp = v_perp.mul(-(1f + RESTITUTION) * MASS); // cross of normal
+            var J_para = v_para.mul(-Math.min(1, MU * ratio) * m_reduced);
+            var J = J_perp.add(J_para);
+
+            this.angularVelocity = this.angularVelocity.add(L.crossProduct(J).div(INERTIA));
+            this.velocity = this.velocity.add(J.div(MASS));
+
+            this.position = this.position.add(this.velocity.mul(dt));
+
+            float penetration = COLLISION_RADIUS - this.position.sub(p).dot(n);
+            if (penetration > 0)
+                this.position = this.position.add(n.mul(1.001f * penetration));
+        } else {
+            this.velocity = velocity.add(
+                    velocity.mul(BallData.DRAG)
+                            .add(RLConstants.gravity)
+                            .mul(dt)
+            );
+            this.position = position.add(velocity.mul(dt));
+        }
+
+        this.angularVelocity = angularVelocity.mul(
+                Math.min(1, BallData.MAX_ANGULAR / angularVelocity.magnitude())
+        );
+        this.velocity = velocity.mul(
+                Math.min(1, BallData.MAX_VELOCITY / velocity.magnitude())
+        );
+
+        this.elapsedSeconds += dt;
+    }
+
     public void stepHeatseeket(float dt) {
         int currentState = Math.round(MathUtils.remapClip((float) this.velocity.magnitude(), 3000, 4600, 0, 20));
         float targetVel = MathUtils.remap(currentState, 0, 20, 3000, 4600);
@@ -194,13 +248,13 @@ public class BallData {
 
     public YangBallPrediction makeBallPrediction(float tickFrequency, float length) {
         assert length <= 5;
-        assert tickFrequency >= RLConstants.tickFrequency;
+        assert tickFrequency > 0;
 
         List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
         BallData simBall = new BallData(this);
         for (float t = 0; t <= length; t += tickFrequency) {
             ballDataList.add(new YangBallPrediction.YangPredictionFrame(t + this.elapsedSeconds, t, simBall));
-            simBall.step(tickFrequency);
+            simBall.stepCollideGround(tickFrequency);
         }
         return YangBallPrediction.from(ballDataList, tickFrequency);
     }
@@ -208,7 +262,7 @@ public class BallData {
     public Vector3 collide(CarData car, float tolerance) {
         // https://github.com/samuelpmish/RLUtilities/blob/prerelease/src/simulation/ball.cc#L113
 
-        final Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
+        Vector3 contactPoint = car.hitbox.getClosestPointOnHitbox(car.position, this.position);
 
         Vector3 normal = contactPoint.sub(this.position);
         if (normal.magnitude() < COLLISION_RADIUS + tolerance) {

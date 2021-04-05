@@ -47,12 +47,12 @@ public class GetOutOfGoalSegment extends PathSegment {
         boolean canJustDriveOut = false;
         final var goal = new Vector2(0, (RLConstants.goalDistance - 100) * Math.signum(startPos.y));
 
-        if (tangent2d.dot(new Vector2(0, -Math.signum(startPos.y))) > 0 && startPos.z < RLConstants.carElevation + 50/* not upside down */ && Math.abs(startTangent.z) < 0.1f) { // roughly driving the right direction (out)
+        if (tangent2d.dot(new Vector2(0, -Math.signum(startPos.y))) > 0 && startPos.z < RLConstants.carElevation + 50/* not upside down */ && Math.abs(startTangent.z) < 0.3f) { // roughly driving the right direction (out)
             // Determine if the car will drive out of the goal on its own
 
             float xBoundary = RLConstants.goalCenterToPost - 120;
-            final var leftBoundary = new Line2(goal.add(xBoundary * 1, 0), goal.add(xBoundary * 1, 2000));
-            final var rightBoundary = new Line2(goal.add(xBoundary * -1, 0), goal.add(xBoundary * -1, 2000));
+            final var leftBoundary = new Line2(goal.add(xBoundary * 1, 0), goal.add(xBoundary * 1, 2000 * Math.signum(startPos.y)));
+            final var rightBoundary = new Line2(goal.add(xBoundary * -1, 0), goal.add(xBoundary * -1, 2000 * Math.signum(startPos.y)));
             final var goalLine = new Line2(goal.sub(xBoundary, 0), goal.add(xBoundary, 0));
 
             var carPath = new Line2(startPos.flatten(), startPos.flatten().add(startTangent.flatten().mul(3000)));
@@ -215,6 +215,8 @@ public class GetOutOfGoalSegment extends PathSegment {
                     }
                 } else {
                     this.turnManeuver.step(dt, output);
+                    if (this.turnManeuver.isDone())
+                        output.withThrottle(1);
                 }
             }
             break;

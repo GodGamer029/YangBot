@@ -3,6 +3,7 @@ package yangbot.util;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.GameData;
+import yangbot.util.math.MathUtils;
 
 import java.util.Optional;
 
@@ -26,7 +27,6 @@ public class PosessionUtil {
 
         if (ourTimeToBall.getValue() == null || ourTimeToBall.getValue().playerIndex != gameData.getCarData().playerIndex)
             return Optional.empty(); // mate has possession
-
 
         final MutableTuple<Float, CarData> theirTimeToBall = new MutableTuple<>(999f, null);
 
@@ -66,9 +66,20 @@ public class PosessionUtil {
             dist -= 20; // magic
 
             if (dist <= distDriven)
-                return t;
+                break;
         }
-        return t;
+
+        if (t >= ballPrediction.relativeTimeOfLastFrame() - 0.5f || t >= 3.8f)
+            return ballPrediction.relativeTimeOfLastFrame() + 2;
+
+        var targetBallFrame = ballPrediction.getFrameAtRelativeTime(t).get();
+        float turnTime = MathUtils.remapClip(
+                (float) Math.abs(car.forward().flatten().correctionAngle(targetBallFrame.ballData.position.flatten().sub(car.position.flatten()))),
+                0, (float) Math.PI,
+                0, 1.38f
+        );
+
+        return t + turnTime;
     }
 
 

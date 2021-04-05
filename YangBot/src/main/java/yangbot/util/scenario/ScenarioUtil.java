@@ -27,6 +27,7 @@ public class ScenarioUtil {
             var car = gameData.getCarData();
             sb.append("c(");
 
+            sb.append("b=" + car.boost + ",");
             sb.append("p=" + car.position.toYangEncodedString() + ",");
             sb.append("v=" + car.velocity.toYangEncodedString() + ",");
             sb.append("a=" + car.angularVelocity.toYangEncodedString() + ",");
@@ -48,7 +49,7 @@ public class ScenarioUtil {
 
         sb.append(";");
 
-        return Base64.getEncoder().encodeToString(sb.toString().getBytes());
+        return Base64.getEncoder().withoutPadding().encodeToString(sb.toString().getBytes());
     }
 
     public static GameState encodedGameStateToGameState(String encoded) {
@@ -167,6 +168,7 @@ public class ScenarioUtil {
                             state.withCarState(0, carState);
                             break;
                         case "b":
+
                             state.withBallState(new BallState().withPhysics(physics));
                             break;
                     }

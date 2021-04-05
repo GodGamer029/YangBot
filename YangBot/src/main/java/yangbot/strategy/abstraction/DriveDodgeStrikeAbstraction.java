@@ -105,6 +105,12 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
 
         if (this.originalTargetBallPos != null) {
             renderer.drawCentered3dCube(Color.PINK, this.originalTargetBallPos, BallData.COLLISION_RADIUS * 2);
+
+            //var lolBallPred = YangBotJNAInterop.getBallPrediction(gameData.getBallData().makeMutable(), 120);
+            var predBall = ballPrediction.getFrameAtAbsoluteTime(this.arrivalTime);
+            if (predBall.isPresent()) {
+                renderer.drawCentered3dCube(Color.DARK_GRAY, predBall.get().ballData.position, BallData.COLLISION_RADIUS * 2);
+            }
         }
 
         switch (this.state) {

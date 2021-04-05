@@ -105,7 +105,7 @@ public class FollowPathManeuver extends Maneuver {
 
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
-        final float tReact = 0.35f;
+        final float tReact = 0.25f;
 
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
@@ -119,12 +119,13 @@ public class FollowPathManeuver extends Maneuver {
         if (path.maxSpeeds.length == 0)
             path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, true);
 
-        float currentPredSpeed = Math.max(1, car.forwardSpeed());
-        currentPredSpeed += Math.signum(currentPredSpeed) * car.velocity.dot(car.right());
-        currentPredSpeed = MathUtils.lerp(currentPredSpeed, currentPredSpeed + Math.signum(currentPredSpeed) * 0.04f * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration), 0.5f);
+        float currentPredSpeed = Math.max(1, (float) car.velocity.magnitude());
+        currentPredSpeed += Math.signum(currentPredSpeed) * 3 * RLConstants.tickFrequency * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration);
         currentPredSpeed = MathUtils.clip(currentPredSpeed, 1, CarData.MAX_VELOCITY);
 
-        final float pathDistanceFromTarget = path.findNearest(car.position);
+        CarData simCar = new CarData(car);
+        simCar.smartPrediction(0.1f);
+        final float pathDistanceFromTarget = path.findNearest(simCar.position);
         final float sAhead = pathDistanceFromTarget - Math.max(currentPredSpeed, 300f) * tReact;
 
         if (sAhead < 0) {
@@ -132,9 +133,8 @@ public class FollowPathManeuver extends Maneuver {
             var lastPoint = path.pointAt(0);
             var lastTangent = path.tangentAt(0);
             float leeway = currentPredSpeed * tReact * 1.1f;
-            var lerpPoint = lastPoint.add(lastTangent.mul(Math.min(leeway, -sAhead)));
 
-            driveManeuver.target = lerpPoint;
+            driveManeuver.target = lastPoint.add(lastTangent.mul(Math.min(leeway, -sAhead)));
         } else
             driveManeuver.target = path.pointAt(sAhead);
 

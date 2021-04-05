@@ -48,6 +48,6 @@ public class DribbleStrategy extends Strategy {
 
     @Override
     public Optional<Strategy> suggestStrategy() {
-        return Optional.of(new DefaultStrategy());
+        return Optional.empty();
     }
 }

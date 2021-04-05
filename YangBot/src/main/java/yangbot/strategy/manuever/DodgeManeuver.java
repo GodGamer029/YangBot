@@ -81,7 +81,7 @@ public class DodgeManeuver extends Maneuver {
 
         if (timer >= dodge_time && !car.doubleJumped) {
             if (!this.didLeaveOutFrame && reportProblems)
-                System.out.println(car.playerIndex + ": Warning: didn't leave out jump frame timer=" + timer + " dodgetime=" + dodge_time);
+                System.out.println(car.playerIndex + ": Warning: didn't leave out jump frame timer=" + timer + " dodgetime=" + dodge_time + " duration=" + duration);
             Vector2 direction_local = null;
             if ((target == null && direction == null) || (target != null && direction != null))
                 direction_local = new Vector2();

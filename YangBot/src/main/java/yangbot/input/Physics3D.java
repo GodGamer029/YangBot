@@ -5,13 +5,18 @@ import yangbot.util.math.vector.Vector3;
 
 public class Physics3D {
 
-    public final Vector3 position, velocity;
+    public final Vector3 position, velocity, angularVelocity;
     public final Matrix3x3 orientation;
 
-    public Physics3D(Vector3 position, Vector3 velocity, Matrix3x3 orientation) {
+    public Physics3D(Vector3 position, Vector3 velocity, Matrix3x3 orientation, Vector3 angularVelocity) {
         this.position = position;
         this.velocity = velocity;
         this.orientation = orientation;
+        this.angularVelocity = angularVelocity;
+    }
+
+    public Physics2D flatten() {
+        return new Physics2D(this.position.flatten(), this.velocity.flatten(), this.orientation.flatten(), this.angularVelocity.dot(this.orientation.up()));
     }
 
     public float forwardSpeed() {

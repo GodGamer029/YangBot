@@ -237,10 +237,10 @@ public class Navigator {
 
         Collections.reverse(ctrl_pts);
 
-        Vector3 dx1 = source.add(startTangent.mul(offset)).sub(ctrl_pts.get(0).point);
+        Vector3 dx1 = source.add(startTangent.mul(offset)).sub(ctrl_pts.get(0).pos);
         Vector3 dt1 = startTangent.sub(ctrl_pts.get(0).tangent);
 
-        Vector3 dx2 = destination.sub(unitTangent.mul(offset)).sub(ctrl_pts.get(ctrl_pts.size() - 1).point);
+        Vector3 dx2 = destination.sub(unitTangent.mul(offset)).sub(ctrl_pts.get(ctrl_pts.size() - 1).pos);
         Vector3 dt2 = unitTangent.sub(ctrl_pts.get(ctrl_pts.size() - 1).tangent);
 
         return new Curve(ctrl_pts, dx1, dt1, dx2, dt2, source, destination);

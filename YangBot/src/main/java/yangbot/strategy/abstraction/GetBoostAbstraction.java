@@ -17,8 +17,9 @@ import java.util.stream.Collectors;
 
 public class GetBoostAbstraction extends Abstraction {
 
-    private final boolean allowSmallBoost = false;
-    private final float maxPathTime = 3.5f;
+    public boolean allowSmallBoost = false;
+    public float maxPathTime = 3.5f;
+    public boolean ignoreTeammates = false;
     private boolean hasFoundTarget = false;
     private SegmentedPath pathToBoost;
     private Vector2 chosenBoostLocation;
@@ -26,7 +27,7 @@ public class GetBoostAbstraction extends Abstraction {
     private boolean didTryFindBoost = false;
 
     private static boolean isViableSimple(CarData car) {
-        if (car.boost > 40)
+        if (car.boost > 70)
             return false;
 
         if (car.position.z > 50 || !car.hasWheelContact)
@@ -50,9 +51,6 @@ public class GetBoostAbstraction extends Abstraction {
         final ImmutableBallData ball = gameData.getBallData();
 
         if (!isViableSimple(car))
-            return false;
-
-        if (car.position.flatten().distance(ball.position.flatten()) < 1000)
             return false;
 
         List<BoostPad> allPads = BoostManager.getAllBoosts();
@@ -79,13 +77,15 @@ public class GetBoostAbstraction extends Abstraction {
                 .filter((pad) -> {
                     if (teammates.size() == 0)
                         return true;
+                    if (ignoreTeammates)
+                        return true;
 
                     Vector3 carToPad = pad.getLocation().sub(car.position).withZ(0).normalized();
                     float ourSpeed = Math.abs(car.forwardSpeed()) * MathUtils.remap(car.forward().dot(carToPad), -1, 1, 0.5f, 1);
                     ourSpeed = MathUtils.clip(ourSpeed + 50, 400, 2000);
 
                     float ourTime = (float) pad.getLocation().distance(car.position) / ourSpeed;
-                    if (ourTime < 0.4f && car.forward().dot(carToPad) > 0.75f) // If we're that close, might as well get it
+                    if (ourTime < 0.5f && car.forward().dot(carToPad) > 0.5f) // If we're that close, might as well get it
                         return true;
 
                     // Loop through teammates
@@ -138,7 +138,6 @@ public class GetBoostAbstraction extends Abstraction {
                 .min(Comparator.comparingDouble(Tuple::getValue))
                 .filter(t -> t.getValue() <= this.maxPathTime)
                 .map(Tuple::getKey);
-
 
         if (chosenPadPath.isEmpty())
             return false;

@@ -5,19 +5,19 @@ import rlbot.Bot;
 import rlbot.ControllerState;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.flat.GameTickPacket;
-import rlbot.gamestate.*;
+import rlbot.gamestate.GameInfoState;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
-import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
+import yangbot.util.scenario.ScenarioUtil;
 
 import java.awt.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -30,7 +30,7 @@ public class TestBot implements Bot {
     private final ArrayBlockingQueue<Tuple<CarData, Float>> trail = new ArrayBlockingQueue<>(300);
     private float lastTick = -1;
     private boolean hasSetPriority = false;
-    private float timer = -0.3f;
+    private float timer = -0.15f;
 
     private SegmentedPath path;
     private DodgeManeuver dodgeManeuver;
@@ -61,7 +61,7 @@ public class TestBot implements Bot {
 
         switch (state) {
             case YEET:
-                if (timer > 0.1f)
+                if (timer > 0.2f)
                     this.state = State.RESET;
                 break;
             case RESET: {
@@ -77,48 +77,44 @@ public class TestBot implements Bot {
                 System.out.println(simCar.hitbox.permutatePoint(simCar.position, 1, 0, 0));
 
                 float startSpeed = (float) 0; //
-                RLBotDll.setGameState(new GameState()
+                /*RLBotDll.setGameState(new GameState()
                         .withGameInfoState(new GameInfoState().withGameSpeed(1f))
                         .withCarState(controlCar.playerIndex, new CarState()/*.withPhysics(new PhysicsState()
                                 .withLocation(startPos.toDesiredVector())
                                 .withVelocity(startTangent.mul(startSpeed).toDesiredVector())
                                 .withRotation(Matrix3x3.lookAt(startTangent, new Vector3(0, 0, 1)).toEuler().toDesiredRotation())
                                 .withAngularVelocity(new Vector3().toDesiredVector())
-                        )*/.withBoostAmount(100f))
+                        )*.withBoostAmount(100f))
                         .withBallState(new BallState().withPhysics(new PhysicsState()
                                 .withLocation(new DesiredVector3(0f, 0f, DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT))
                                 .withVelocity(new DesiredVector3(0f, 0f, -5f))
                                 .withAngularVelocity(new DesiredVector3(0f, 0f, 0f))
                         ))
-                        .buildPacket());
+                        .buildPacket());*/
+
+                var gstate = ScenarioUtil.encodedGameStateToGameState("eWFuZ3YxOmMocD0oMzcwMC40NSwtMjI2My4zMSwyMi4yOSksdj0oLTE4NC42NCwxMDgyLjM2LC0zMTcuMzApLGE9KDAuNjUsLTAuMDAsLTAuNzIpLG89KC0wLjAxLDEuNTcsMC4wMCkpLGIocD0oMzg3NC45NiwtMTQzNS4wMyw5OC45Myksdj0oLTM1Mi45NSwxMzk1LjgwLC04NS4wOCksYT0oLTMuMDIsLTAuODQsLTQuNzApKTs")
+                        .withGameInfoState(new GameInfoState().withGameSpeed(0.1f));
+                gstate.getCarState(0).withBoostAmount(0f);
+                RLBotDll.setGameState(gstate.buildPacket());
 
                 dodgeManeuver = new DodgeManeuver();
                 System.out.println("############");
                 break;
             }
             case INIT: {
-                if (timer > 1f || this.path == null || this.path.isDone()) {
-
-                    //var end = new Vector3(Math.random() * 6000 - 3000, Math.random() * 8000 - 4000, 17);
-                    var end = controlCar.position;
-
-                    var plan = new EpicMeshPlanner()
-                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.JAVA_NAVMESH)
-                            .withStart(carBoi)
-                            .withEnd(end, new Vector3(0, 1, 0))
-                            .withArrivalSpeed(2300)
-                            //.withEnd(new Vector3(Math.random() * 2000 - 1000, Math.random() * 2000 - 1000, 17), controlCar.position.normalized().mul(-1))
-                            .plan();
-
-                    if (plan.isEmpty())
-                        return output;
-                    this.path = plan.get();
-
+                if (timer > 0.05f) {
                     this.timer = 0;
-                    //this.state = State.RUN;
+                    this.state = State.RUN;
+                    this.path = new EpicMeshPlanner()
+                            .withStart(controlCar)
+                            .withEnd(new Vector3(3268.63f, 1030, 17f), new Vector3(-0.20f, 0.98f, 0))
+                            .withArrivalTime(controlCar.elapsedSeconds + 2.18f - 0.05f)
+                            .withArrivalSpeed(2300)
+                            .allowOptimize(false)
+                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                            .plan().get();
+                    System.out.println("Est: " + this.path.getTotalTimeEstimate());
                 }
-                this.path.draw(renderer);
-                this.path.step(dt, output);
 
                 break;
             }
@@ -127,8 +123,10 @@ public class TestBot implements Bot {
                 this.path.draw(renderer);
                 if (!this.path.isDone())
                     this.path.step(dt, output);
-                if (this.path.isDone())
+                if (this.path.isDone()) {
                     this.state = State.YEET;
+                    this.timer = -0.5f;
+                }
 
                 if (this.trail.size() >= 298)
                     this.trail.remove();

@@ -18,7 +18,6 @@ import yangbot.util.math.vector.Vector3;
 import java.awt.*;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,11 +69,12 @@ public class Curve {
         this.curvatures = new float[numSubSegments * num_segments + 1];
 
         for (int i = 1; i < num_segments - 1; i++) {
-            Vector3 delta_before = info.get(i).point.sub(info.get(i - 1).point).normalized();
-            Vector3 delta_after = info.get(i + 1).point.sub(info.get(i).point).normalized();
+            ControlPoint point = info.get(i);
+            Vector3 delta_before = point.pos.sub(info.get(i - 1).pos).normalized();
+            Vector3 delta_after = info.get(i + 1).pos.sub(point.pos).normalized();
 
-            float phi_before = (float) Math.asin(info.get(i).tangent.crossProduct(delta_before).dot(info.get(i).normal));
-            float phi_after = (float) Math.asin(info.get(i).tangent.crossProduct(delta_after).dot(info.get(i).normal));
+            float phi_before = (float) Math.asin(point.tangent.crossProduct(delta_before).dot(point.normal));
+            float phi_after = (float) Math.asin(point.tangent.crossProduct(delta_after).dot(point.normal));
 
             if (phi_before * phi_after > 0f) {
                 float phi;
@@ -84,9 +84,8 @@ public class Curve {
                 else
                     phi = phi_after;
 
-                ControlPoint p = info.get(i);
-                p.tangent = Matrix3x3.axisToRotation(p.normal.mul(phi)).dot(p.tangent);
-                info.set(i, p);
+                point.tangent = Matrix3x3.axisToRotation(point.normal.mul(phi)).dot(point.tangent);
+                info.set(i, point);
             }
         }
 
@@ -94,8 +93,8 @@ public class Curve {
             ControlPoint our = info.get(i);
             ControlPoint next = info.get(i + 1);
 
-            Vector3 P0 = our.point;
-            Vector3 P1 = next.point;
+            Vector3 P0 = our.pos;
+            Vector3 P1 = next.pos;
 
             Vector3 V0 = our.tangent;
             Vector3 V1 = next.tangent;
@@ -109,7 +108,7 @@ public class Curve {
 
             for (int j = 0; j < (numSubSegments + is_last); j++) {
                 float t = ((float) j) / ((float) numSubSegments);
-                // place more control points toward the beginning, there is a bug in here that fucks up the first control point, so we getter place the second one close after the first one, because the second one is fine
+                // place more control points toward the beginning, there is a bug in here that fucks up the first control point, so we better place the second one close after the first one, because the second one is fine
                 if (t > 0 && t < 1 && i == 0)
                     t = MathUtils.remapClip((float) (1f / (1f + Math.exp(-fac * (t - 1)))), interpStart, interpEnd, 0, 1);
 
@@ -161,8 +160,8 @@ public class Curve {
             ControlPoint our = info.get(i);
             ControlPoint next = info.get(i + 1);
 
-            Vector3 P0 = our.point;
-            Vector3 P1 = next.point;
+            Vector3 P0 = our.pos;
+            Vector3 P1 = next.pos;
 
             Vector3 V0 = our.tangent;
             Vector3 V1 = next.tangent;
@@ -433,7 +432,7 @@ public class Curve {
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
                 float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
-                assert u >= 0 && u <= 1 : u;
+                assert u >= 0 && u <= 1 : u + " " + s + " " + distances[i] + " " + distances[i + 1];
                 return MathUtils.lerp(maxSpeeds[i + 1], maxSpeeds[i], u);
             }
         }
@@ -477,7 +476,6 @@ public class Curve {
 
     private void calculateDistances() {
         distances = new float[points.size()];
-        Arrays.fill(distances, 0f);
         int last = points.size() - 1;
 
         for (int i = last - 1; i >= 0; i--)
@@ -530,10 +528,12 @@ public class Curve {
         tempCurvatures[curvatures.length + 1] = 0;
 
         for (int i = 0; i < curvatures.length; i++) // average the curvatures
-            tempCurvatures[i] = (tempCurvatures[i] + tempCurvatures[i + 1] + tempCurvatures[i + 2]) / 3;
+            tempCurvatures[i] = (2 * tempCurvatures[i] + tempCurvatures[i + 1] + tempCurvatures[i + 2]) / 4;
 
-        for (int i = 0; i < curvatures.length; i++)
+        for (int i = 0; i < curvatures.length; i++) {
             maxSpeeds[i] = DriveManeuver.maxTurningSpeed(tempCurvatures[i] * 1.03f);
+            assert maxSpeeds[i] > 0 : maxSpeeds[i] + " " + i + " " + tempCurvatures[i] + " " + curvatures[i] + " " + curvatures[Math.min(curvatures.length - 1, i + 1)] + " " + distances[i];
+        }
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
         maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);
@@ -543,24 +543,34 @@ public class Curve {
         for (int i = 1; i < curvatures.length; i++) {
             float ds = distances[i - 1] - distances[i];
             Vector3 t = tangents.get(i).add(tangents.get(i - 1)).normalized();
-            float attainable_speed = maximizeSpeedWithThrottle((float) ((allowBoost ? 1f : 0f) * DriveManeuver.boost_acceleration + gravity.dot(t)), maxSpeeds[i - 1], ds);
+            float attainable_speed = maximizeSpeedWithThrottle((allowBoost ? 1f : 0f) * DriveManeuver.boost_acceleration + gravity.dot(t), maxSpeeds[i - 1], ds);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
         }
 
         float time = 0.0f;
+        boolean nanWarner = false;
 
         for (int i = curvatures.length - 2; i >= 0; i--) {
             float ds = distances[i] - distances[i + 1];
+            if (Math.abs(ds) < 0.001)
+                continue;
             Vector3 t = tangents.get(i).add(tangents.get(i + 1)).normalized();
-            float attainable_speed = maximizeSpeedWithoutThrottle(DriveManeuver.brake_acceleration - (float) gravity.dot(t), maxSpeeds[i + 1], ds);
+            float attainable_speed = maximizeSpeedWithoutThrottle(DriveManeuver.brake_acceleration - gravity.dot(t), maxSpeeds[i + 1], ds);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
             time += ds / (0.5f * (maxSpeeds[i] + maxSpeeds[i + 1]));
+            if (!nanWarner && (Float.isNaN(time) || Float.isInfinite(time))) {
+                //System.out.println("Time became nan or inf! "+ds+" "+maxSpeeds[i]+" "+maxSpeeds[i+1]+" "+i);
+                nanWarner = true;
+            }
         }
-
+        //System.out.println("Calc time: "+time);
+        assert Float.isFinite(time) && !Float.isNaN(time) : time;
         return time;
     }
 
     public float maximizeSpeedWithThrottle(float additionalAcceleration, float v0, float distance) {
+        if (distance == 0)
+            return v0;
         final float dt = RLConstants.simulationTickFrequency;
         float currentDistance = 0.0f;
         float currentVelocity = v0;
@@ -606,20 +616,30 @@ public class Curve {
     }
 
     public static class ControlPoint {
-        public final Vector3 point;
+        public final Vector3 pos;
         public final Vector3 normal;
         public Vector3 tangent;
 
-        public ControlPoint(Vector3 point, Vector3 tangent, Vector3 normal) {
-            this.point = point;
+        public ControlPoint(Vector3 pos, Vector3 tangent, Vector3 normal) {
+            this.pos = pos;
             this.tangent = tangent;
             this.normal = normal;
         }
 
-        public ControlPoint(Vector3 point, Vector3 tangent) {
-            this.point = point;
+        public ControlPoint(Vector3 pos, Vector3 tangent) {
+            this.pos = pos;
             this.tangent = tangent;
             this.normal = new Vector3(0, 0, 1);
+        }
+
+        @Override
+        public String toString() {
+            final StringBuilder sb = new StringBuilder("ControlPoint{");
+            sb.append("pos=").append(pos);
+            sb.append(", normal=").append(normal);
+            sb.append(", tangent=").append(tangent);
+            sb.append('}');
+            return sb.toString();
         }
     }
 

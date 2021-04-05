@@ -28,6 +28,7 @@ public class IdleAbstraction extends Abstraction {
     public float minIdleDistance = 1200;
     public float maxIdleDistance = RLConstants.arenaLength * 0.55f;
     public float forceRetreatTimeout = 0;
+    public float retreatPercentage = 0.5f; // 1 = all the way back, 0 = no change at all
     public float targetSpeed = DriveManeuver.max_throttle_speed;
 
     private SegmentedPath currentPath = null;
@@ -114,17 +115,20 @@ public class IdleAbstraction extends Abstraction {
         {
             float lowestYDist = 9999999;
             float highestYDist = 0;
-            boolean goBackFurther = false;// When on low boost: go back further
+            boolean goBackFurther = false;
+            // When on low boost or we aren't supposed to be attacking: go back further
             var teammatesWithBoostHereToHelp = teammates.stream()
                     .filter((t) -> t.getKey().boost > 30)
                     .anyMatch(t -> Math.abs(t.getKey().position.y - localCar.position.y) < RLConstants.arenaLength * 0.4f);
             if (teammatesWithBoostHereToHelp && localCar.boost < 30) // Only go back when teammates do have boost
                 goBackFurther = true;
+            if (!localCar.getPlayerInfo().isActiveShooter())
+                goBackFurther = true;
             if (this.forceRetreatTimeout > 0)
                 goBackFurther = true;
 
             for (int i = 0; i < yGrid.length; i++) {
-                if (goBackFurther && i < yGrid.length / 2)
+                if (goBackFurther && i < yGrid.length * retreatPercentage && i < yGrid.length - 1)
                     continue;
 
                 if (yGrid[i] < lowestYDist) {

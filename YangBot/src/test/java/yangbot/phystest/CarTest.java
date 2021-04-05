@@ -12,9 +12,15 @@ import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.strategy.manuever.AerialManeuver;
 import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.util.CsvLogger;
+import yangbot.util.Range;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 import yangbot.util.scenario.Scenario;
 import yangbot.util.scenario.ScenarioLoader;
+
+import java.util.Optional;
 
 public class CarTest {
     @Test
@@ -136,5 +142,60 @@ public class CarTest {
 
         ScenarioLoader.loadScenario(s);
         assert ScenarioLoader.get().waitToCompletion(4000);
+    }
+
+    @Test
+    public void turnTimeBySpeed() {
+        var speedIter = Range.of(500, 2300).stepBy(500);
+        var angleIter = Range.of(0, 170).stepBy(15);
+        angleIter.next();
+        var logger = new CsvLogger(new String[]{"angle", "time", "speed"});
+
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.05f)
+                .withDynamicGameState(invoc -> {
+                    if (!speedIter.hasNext()) {
+                        speedIter.reset();
+                        if (!angleIter.hasNext())
+                            return Optional.empty();
+                        angleIter.next();
+                    }
+                    var speedVal = speedIter.next();
+                    System.out.println("angle: " + angleIter.current() + " speed: " + speedVal);
+
+                    return Optional.of(new GameState()
+                            .withCarState(0, new CarState()
+                                    .withBoostAmount(100f)
+                                    .withPhysics(new PhysicsState()
+                                            .withVelocity(new Vector3(0, speedVal, 0).toDesiredVector())
+                                            .withLocation(new Vector3(0, -2000, RLConstants.carElevation + 1).toDesiredVector())
+                                            .withRotation(Matrix3x3.lookAt(new Vector3(0, 1, 0)).toEuler().toDesiredRotation())
+                                            .withAngularVelocity(new Vector3().toDesiredVector())
+                                    )));
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+
+                    var targetTangent = new Vector3(new Vector2(0, 1).rotateBy(-angleIter.current() * (Math.PI / 180)), 0);
+                    var align = car.forward().dot(targetTangent);
+                    if (align > 0.5f)
+                        DriveManeuver.steerController(output, car, car.position.add(targetTangent));
+                    else
+                        output.withSteer(-1);
+                    DriveManeuver.speedController(dt, output, car.forwardSpeed(), 900, 1100, 0.04f, false);
+
+                    return (align > 0.99f || timer > 8) ? Scenario.RunState.RESET : Scenario.RunState.CONTINUE;
+                })
+                .withOnRunComplete((timer, numInvoc) -> {
+                    System.out.println("Run complete at " + timer);
+                    logger.log(new float[]{angleIter.current(), timer, speedIter.current()});
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        ScenarioLoader.get().waitToCompletion(0);
+        logger.save("turntime.txt");
     }
 }

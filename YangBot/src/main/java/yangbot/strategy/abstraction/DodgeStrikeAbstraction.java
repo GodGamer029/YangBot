@@ -24,7 +24,7 @@ public class DodgeStrikeAbstraction extends Abstraction {
     public boolean strikeSolved = false;
     public float maxJumpDelay = 0.6f;
     public float jumpDelayStep = 0.15f;
-    public float strikeCalcDelay = 0.05f; // delay before strike is solved
+    public float strikeCalcDelay = 0.03f; // delay before strike is solved
     public float expectedBallHitTime = -1;
     public Grader customGrader;
     public boolean debugMessages = true;
@@ -293,7 +293,7 @@ public class DodgeStrikeAbstraction extends Abstraction {
         final ImmutableBallData ball = gameData.getBallData();
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
-        if (!this.solvedGoodStrike && this.strikeDodge.timer >= Math.min(0.5f, this.strikeCalcDelay + RLConstants.gameLatencyCompensation))
+        if (!this.solvedGoodStrike && !car.hasWheelContact && this.strikeDodge.timer >= Math.min(0.5f, this.strikeCalcDelay + RLConstants.gameLatencyCompensation))
             this.solveGoodStrike();
 
         this.strikeDodge.step(dt, controlsOutput);

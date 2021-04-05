@@ -1,6 +1,7 @@
 package yangbot.path.builders;
 
 import yangbot.input.ControlsOutput;
+import yangbot.input.Physics3D;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.vector.Vector3;
 
@@ -20,6 +21,10 @@ public abstract class PathSegment {
 
     public PathSegment(PathBuilder builder) {
         this(builder.getCurrentSpeed(), builder.getCurrentBoost());
+    }
+
+    public PathSegment(Physics3D phys, float boost) {
+        this(phys.forwardSpeed(), boost);
     }
 
     public boolean step(float dt, ControlsOutput output) {

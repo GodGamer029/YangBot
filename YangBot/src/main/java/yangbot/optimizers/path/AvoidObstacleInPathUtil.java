@@ -47,7 +47,7 @@ public class AvoidObstacleInPathUtil {
         assert controlPoints.size() == 2 || controlPoints.size() == 3;
 
         // Take the contact point and place a control point in the opposite direction
-        Vector3 contactPoint = pathCheckStatus.ballCollisionContactPoint.withZ(controlPoints.get(0).point.z);
+        Vector3 contactPoint = pathCheckStatus.ballCollisionContactPoint.withZ(controlPoints.get(0).pos.z);
         final float distanceAtCollision = currentPath.findNearest(contactPoint);
         Vector3 pathPointAtCollision = currentPath.pointAt(distanceAtCollision);
         Vector3 tangentAtCollision = currentPath.tangentAt(distanceAtCollision);
@@ -56,12 +56,12 @@ public class AvoidObstacleInPathUtil {
         Vector3 collisionNormalParallel = tangentAtCollision.mul(collisionNormal.dot(tangentAtCollision));
         Vector3 collisionNormalPerpendicular = collisionNormal.sub(collisionNormalParallel).normalized();
 
-        Vector3 newControlPoint = pathPointAtCollision.add(collisionNormalPerpendicular.mul(yangbot.input.BallData.RADIUS * -1.2f * (tries / 2f + 1)).withZ(0)).withZ(controlPoints.get(0).point.z);
+        Vector3 newControlPoint = pathPointAtCollision.add(collisionNormalPerpendicular.mul(yangbot.input.BallData.RADIUS * -1.2f * (tries / 2f + 1)).withZ(0)).withZ(controlPoints.get(0).pos.z);
         if (tries == 0)
-            controlPoints.add(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(controlPoints.get(0).point).normalized()));
+            controlPoints.add(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(controlPoints.get(0).pos).normalized()));
         else
-            controlPoints.set(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(controlPoints.get(0).point).normalized()));
-        controlPoints.get(2).tangent = controlPoints.get(2).point.sub(controlPoints.get(1).point);
+            controlPoints.set(1, new Curve.ControlPoint(newControlPoint, newControlPoint.sub(controlPoints.get(0).pos).normalized()));
+        controlPoints.get(2).tangent = controlPoints.get(2).pos.sub(controlPoints.get(1).pos);
         //this.collision = pathCheckStatus.ballCollisionContactPoint;
 
         return controlPoints;

@@ -9,7 +9,7 @@ public class PowerslideUtil {
     public static PowerslideEntry getPowerslide(float startSpeed, Vector2 startPosition, Vector2 startTangent, Vector2 endTangent) {
 
         final var coolLut = LutManager.get().getDriftLut();
-        assert coolLut != null;
+        assert coolLut != null : "Call loadLut() on the MainClass first!";
 
         final var keyToIndex = coolLut.getKeyToIndexFunction();
         assert keyToIndex != null;

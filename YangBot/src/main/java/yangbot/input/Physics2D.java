@@ -27,4 +27,15 @@ public class Physics2D {
     public Vector2 right() {
         return this.orientation.right();
     }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Physics2D{");
+        sb.append("position=").append(position);
+        sb.append(", velocity=").append(velocity);
+        sb.append(", orientation=").append(orientation);
+        sb.append(", angularVelocity=").append(angularVelocity);
+        sb.append('}');
+        return sb.toString();
+    }
 }

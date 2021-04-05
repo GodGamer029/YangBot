@@ -15,6 +15,32 @@ import yangbot.util.scenario.ScenarioUtil;
 public class GeneralScenarioTest {
 
     @Test
+    public void sampleScenario() {
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.1f)
+                .withGameState(new GameState()
+                        .withGameInfoState(new GameInfoState().withGameSpeed(1f))
+                        .withCarState(0, new CarState()))
+                .withInit(c -> {
+
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+
+                    return timer > 1f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
+                })
+                .withOnComplete((f) -> {
+
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        assert ScenarioLoader.get().waitToCompletion(4000);
+    }
+
+    @Test
     public void testGameStateEncoder() {
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.1f)

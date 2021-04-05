@@ -155,6 +155,7 @@ public class DefendStrategy extends Strategy {
                     .withEnd(endPos, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(CarData.MAX_VELOCITY)
+                    .allowFullSend(car.boost > 20)
                     .allowOptimize(car.boost < 30)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();

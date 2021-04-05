@@ -1,11 +1,13 @@
 package yangbot.path.builders;
 
+import org.jetbrains.annotations.NotNull;
 import yangbot.input.CarData;
 import yangbot.input.Physics2D;
 import yangbot.input.Physics3D;
 import yangbot.path.builders.segments.FlipSegment;
 import yangbot.path.builders.segments.StraightLineSegment;
 import yangbot.util.math.vector.Matrix2x2;
+import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayDeque;
@@ -19,6 +21,14 @@ public class PathBuilder {
     private final Physics3D start;
     private final float startBoost;
     private boolean optimize = false;
+
+    public PathBuilder() {
+        // not recommended
+        this.pathSegments = new ArrayList<>();
+        this.start = null;
+        this.startBoost = 0;
+        assert false;
+    }
 
     public PathBuilder(CarData start) {
         this.start = start.toPhysics3d();
@@ -70,6 +80,10 @@ public class PathBuilder {
         return new Physics2D(this.getCurrentPosition().flatten(), this.getCurrentTangent().flatten().mul(this.getCurrentSpeed()), Matrix2x2.fromRotation((float) this.getCurrentTangent().flatten().angle()), 0);
     }
 
+    public Physics3D getCurrentPhysics3d() {
+        return new Physics3D(this.getCurrentPosition(), this.getCurrentTangent().mul(this.getCurrentSpeed()), Matrix3x3.lookAt(this.getCurrentTangent()), new Vector3());
+    }
+
     public float getSpeedBeforeSegment(int segment) {
         if (segment == 0)
             return (float) this.start.forward().dot(start.velocity);
@@ -82,6 +96,7 @@ public class PathBuilder {
         return this.pathSegments.get(segment).getEndSpeed();
     }
 
+    @NotNull
     public SegmentedPath build() {
         if (this.optimize) {
             final List<PathSegment> optimizedSegments = new ArrayList<>(this.pathSegments.size());

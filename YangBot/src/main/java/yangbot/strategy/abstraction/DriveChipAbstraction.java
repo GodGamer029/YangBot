@@ -139,7 +139,7 @@ public class DriveChipAbstraction extends Abstraction {
 
                     if (Math.abs(zVel) > 50 && zVel < 0) { // Still falling towards the ground
                         float dist = zPos - BallData.RADIUS;
-                        assert dist >= 0;
+                        assert dist >= 0 : zPos + " vel=" + zVel;
                         float t = Math.min(MAX_STEP, Math.abs(dist / zVel));
 
                         var newBallStateOpt = ballPrediction.getFrameAfterRelativeTime(ballState.relativeTime + t);

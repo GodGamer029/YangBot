@@ -25,6 +25,13 @@ public class YangPythonInterface extends SocketServer {
             }
             throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
         }
+        if (botName.startsWith("Vibe")) {
+            switch (MainClass.BOT_TYPE) {
+                case PROD:
+                    return new VibeBot(index);
+            }
+            throw new IllegalArgumentException("Invalid Bot Type: " + MainClass.BOT_TYPE.name());
+        }
         throw new IllegalArgumentException("Unknown Bot Name: " + botName);
     }
 }

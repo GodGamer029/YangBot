@@ -21,6 +21,11 @@ public class Matrix2x2 {
         this.assign(1, 1, right.y);
     }
 
+    public static Matrix2x2 lookAt(Vector2 dir) {
+        dir = dir.normalized();
+        return new Matrix2x2(dir, dir.cross());
+    }
+
     public static Matrix2x2 fromRotation(float theta) {
         Matrix2x2 mat = new Matrix2x2();
 

@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public class SegmentedPath {
 
-    public static final int MAX_SAMPLES = 64;
+    public static final int MAX_SAMPLES = 16;
     private final List<PathSegment> segmentList;
     private int currentSegment = 0;
     private float arrivalTime = 0;
@@ -23,13 +23,14 @@ public class SegmentedPath {
     private Vector3 endTangent = new Vector3(), endPos = new Vector3();
     private float t = 0;
 
-    public SegmentedPath(List<PathSegment> segments) {
+    public SegmentedPath(List<PathSegment> segments, float startTime) {
         this.segmentList = Collections.unmodifiableList(segments);
         this.segmentList.forEach(seg -> {
+            assert seg != null;
             if (seg instanceof BakeablePathSegment)
                 ((BakeablePathSegment) seg).bake(MAX_SAMPLES);
 
-            seg.setStartTime(arrivalTime + GameData.current().getCarData().elapsedSeconds);
+            seg.setStartTime(arrivalTime + startTime);
             arrivalTime += seg.getTimeEstimate();
         });
         if (this.segmentList.size() > 0) {
@@ -37,6 +38,10 @@ public class SegmentedPath {
             this.endTangent = lastSegment.getEndTangent();
             this.endPos = lastSegment.getEndPos();
         }
+    }
+
+    public SegmentedPath(List<PathSegment> segments) {
+        this(segments, GameData.current().getElapsedSeconds());
     }
 
     public static SegmentedPath from(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed) {
@@ -82,6 +87,7 @@ public class SegmentedPath {
     public float getTotalTimeEstimate() {
         float t = 0;
         for (var seg : this.segmentList) {
+            //System.out.println(seg.getClass().getSimpleName()+" "+t+" "+seg.getTimeEstimate());
             t += seg.getTimeEstimate();
         }
         return t;
@@ -96,12 +102,12 @@ public class SegmentedPath {
 
         var curSeg = this.getCurrentPathSegment();
         if (curSeg.isPresent()) {
-            renderer.drawString2d("Seg: " + curSeg.get().getClass().getSimpleName() + " (" + (this.currentSegment + 1) + "/" + this.segmentList.size() + ", canInterrupt=" + curSeg.get().canInterrupt() + ")", Color.WHITE, new Point(400, 400), 2, 2);
-            renderer.drawString2d("Arrival: " + ((this.arrivalTime + this.startTime) - GameData.current().getCarData().elapsedSeconds), Color.WHITE, new Point(400, 450), 2, 2);
-            renderer.drawString2d("Speed: " + GameData.current().getCarData().forwardSpeed(), Color.WHITE, new Point(400, 490), 1, 1);
-            renderer.drawString2d("StartSpeed: " + curSeg.get().getStartSpeed(), Color.WHITE, new Point(400, 510), 1, 1);
-            renderer.drawString2d("EndSpeed: " + curSeg.get().getEndSpeed(), Color.WHITE, new Point(400, 530), 1, 1);
-            renderer.drawString2d("T estimate: " + curSeg.get().getTimeEstimate(), Color.WHITE, new Point(400, 550), 1, 1);
+            renderer.drawString2d("Seg: " + curSeg.get().getClass().getSimpleName() + " (" + (this.currentSegment + 1) + "/" + this.segmentList.size() + ", canInterrupt=" + curSeg.get().canInterrupt() + ")", Color.WHITE, new Point(400, 300), 2, 2);
+            renderer.drawString2d("Arrival: " + ((this.arrivalTime + this.startTime) - GameData.current().getCarData().elapsedSeconds), Color.WHITE, new Point(400, 350), 2, 2);
+            renderer.drawString2d("Speed: " + GameData.current().getCarData().forwardSpeed(), Color.WHITE, new Point(400, 390), 1, 1);
+            renderer.drawString2d("StartSpeed: " + curSeg.get().getStartSpeed(), Color.WHITE, new Point(400, 410), 1, 1);
+            renderer.drawString2d("EndSpeed: " + curSeg.get().getEndSpeed(), Color.WHITE, new Point(400, 430), 1, 1);
+            renderer.drawString2d("curSeg-T estimate: " + curSeg.get().getTimeEstimate(), Color.WHITE, new Point(400, 450), 1, 1);
         }
     }
 

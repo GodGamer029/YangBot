@@ -1,6 +1,7 @@
 package yangbot.util.math.vector;
 
 import java.io.Serializable;
+import java.util.Locale;
 
 /**
  * A vector that only knows about x and y components.
@@ -170,12 +171,7 @@ public class Vector2 implements Serializable {
     }
 
     public double angleBetween(Vector2 o) {
-        double ang = Math.atan2(o.y, o.x) - Math.atan2(y, x);
-        if (ang > Math.PI)
-            ang -= Math.PI * 2;
-        else if (ang <= -Math.PI)
-            ang += 2 * Math.PI;
-        return ang;
+        return Math.atan2(x * o.y - y * o.x, dot(o));
     }
 
     public Vector2 rotateBy(double angle) {
@@ -210,6 +206,6 @@ public class Vector2 implements Serializable {
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + String.format("(x=%.1f;y=%.1f)", x, y);
+        return this.getClass().getSimpleName() + String.format(Locale.US, "(x=%.2f;y=%.2f)", x, y);
     }
 }

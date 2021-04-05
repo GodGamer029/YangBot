@@ -1,7 +1,7 @@
 package yangbot.path.builders.segments;
 
 import yangbot.input.ControlsOutput;
-import yangbot.path.builders.PathBuilder;
+import yangbot.input.Physics3D;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DriftControllerManeuver;
 import yangbot.util.AdvancedRenderer;
@@ -22,12 +22,11 @@ public class DriftSegment extends PathSegment {
     private final float endSpeed;
     private final boolean isEasySlide;
 
-    public DriftSegment(PathBuilder builder, Vector3 endTangent) {
-        super(builder);
-        //System.out.println("Init drift: "+startPosition + " " + startTangent + " " + endTangent + " " + startSpeed);
+    public DriftSegment(Physics3D state, Vector3 endTangent, float startBoost) {
+        super(state, startBoost);
         this.endTangent = endTangent;
-        this.startPos = builder.getCurrentPosition();
-        this.startTangent = builder.getCurrentTangent();
+        this.startPos = state.position;
+        this.startTangent = state.forward();
 
         this.driftControllerManeuver = new DriftControllerManeuver();
         this.driftControllerManeuver.targetDirection = endTangent.normalized();

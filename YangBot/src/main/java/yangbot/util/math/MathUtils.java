@@ -1,7 +1,10 @@
 package yangbot.util.math;
 
+import yangbot.util.Tuple;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
+
+import java.util.function.Function;
 
 public class MathUtils {
 
@@ -31,6 +34,10 @@ public class MathUtils {
     }
 
     public static float clip(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    public static int clip(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
     }
 
@@ -102,5 +109,83 @@ public class MathUtils {
         p2 = p2.sub(pivot).normalized();
 
         return Math.acos(p1.dot(p2));
+    }
+
+    // Returns: x | error
+    public static Tuple<Float, Float> secantMethod(Function<Float, Float> errorFunc, float x1, float x2) {
+        float error = errorFunc.apply(x1);
+        float error2 = errorFunc.apply(x2);
+
+        int i = 0;
+        for (; i < 16; i++) {
+            if (Math.abs(error) < 0.001 || Float.isNaN(error) || Float.isInfinite(error))
+                break;
+
+            float newX = (x2 * error - x1 * error2) / (error - error2);
+            x2 = x1;
+            x1 = newX;
+
+            error2 = error;
+            error = errorFunc.apply(newX);
+        }
+        return new Tuple<>(x1, error);
+    }
+
+    public static Tuple<Float, Float> smartBisectionMethod(Function<Float, Float> errorFunc, float x1, float x2) {
+        float error1 = errorFunc.apply(x1);
+        float error2 = errorFunc.apply(x2);
+
+        assert Math.signum(error1) != Math.signum(error2);
+
+        if (error1 > error2) {
+            float temp = x1, tempE = error1;
+            x1 = x2;
+            error1 = error2;
+            x2 = temp;
+            error2 = tempE;
+        }
+
+        int i = 0;
+
+        //System.out.println("######");
+        float lastCompE = 0;
+        boolean failure = false;
+        for (; i < 24; i++) {
+            if (Math.abs(error1) < 0.001 || Float.isNaN(error1) || Float.isInfinite(error1))
+                break;
+            if (Math.abs(error2) < 0.001 || Float.isNaN(error2) || Float.isInfinite(error2))
+                break;
+
+            //System.out.println("x1="+x1+" x2="+x2+" e1="+error1+" e2="+error2);
+            float newX;
+            if (failure) {
+                // regula falsi failure correction
+                newX = (x1 + x2) / 2;
+                failure = false;
+            } else
+                newX = x1 + (error1 * (x2 - x1)) / (error1 - error2);
+
+            float newE = errorFunc.apply(newX);
+
+            if (Math.signum(newE) == Math.signum(lastCompE))
+                failure = true;
+
+            lastCompE = newE;
+
+            if (newE <= 0) {
+                x1 = newX;
+                error1 = newE;
+            } else {
+                x2 = newX;
+                error2 = newE;
+            }
+        }
+        assert !Float.isNaN(error1) && !Float.isInfinite(error1);
+        assert !Float.isNaN(error2) && !Float.isInfinite(error2);
+
+        if (Math.abs(error1) < Math.abs(error2))
+            return new Tuple<>(x1, error1);
+        else
+            return new Tuple<>(x2, error2);
     }
 }

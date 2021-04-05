@@ -6,6 +6,8 @@ import rlbot.gamestate.DesiredVector3;
 import yangbot.cpp.FlatVec3;
 import yangbot.util.math.MathUtils;
 
+import java.util.Locale;
+
 /**
  * A simple 3d vector class with the most essential operations.
  * <p>
@@ -13,6 +15,8 @@ import yangbot.util.math.MathUtils;
  * as you want, or delete it.
  */
 public class Vector3 extends rlbot.vector.Vector3 {
+
+    public static final Vector3 ZERO = new Vector3(0, 0, 0);
 
     public Vector3(double x, double y, double z) {
         super((float) x, (float) y, (float) z);
@@ -198,12 +202,11 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public Vector3 normalized() {
-
-        if (isZero()) {
-            //System.err.println("Cannot normalize a vector with length zero!");
+        float len = x * x + y * y + z * z;
+        if (len == 0) {
             return new Vector3();
         }
-        return this.mul(1 / magnitude());
+        return this.mul(1 / Math.sqrt(len));
     }
 
     public float dot(Vector3 other) {
@@ -261,11 +264,11 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public String toString(int decimalPlaces) {
-        return this.getClass().getSimpleName() + String.format("(x=%." + decimalPlaces + "f;y=%." + decimalPlaces + "f;z=%." + decimalPlaces + "f)", x, y, z);
+        return this.getClass().getSimpleName() + String.format(Locale.US, "(x=%." + decimalPlaces + "f;y=%." + decimalPlaces + "f;z=%." + decimalPlaces + "f)", x, y, z);
     }
 
     public String toYangEncodedString() {
-        return String.format("(%.2f,%.2f,%.2f)", x, y, z);
+        return String.format(Locale.US, "(%.3f,%.3f,%.3f)", x, y, z);
     }
 
     public float min() {

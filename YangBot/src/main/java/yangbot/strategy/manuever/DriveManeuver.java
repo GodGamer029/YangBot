@@ -50,30 +50,6 @@ public class DriveManeuver extends Maneuver {
         return new Tuple<>(t, v0);
     }
 
-    public static float maxDistance(float currentSpeed, float time) {
-        final float drivingSpeed = 1235.0f;
-
-        if (time <= 0)
-            return 0;
-
-        float newSpeed = currentSpeed;
-        float dist = 0;
-        final float dt = 1f / 60f;
-
-        for (float t = 0; t < time; t += dt) {
-            float force = 0;
-            {
-                if (newSpeed < drivingSpeed)
-                    force = CarData.MAX_VELOCITY - newSpeed;
-                else if (newSpeed < CarData.MAX_VELOCITY)
-                    force = AerialManeuver.boost_airthrottle_acceleration;
-            }
-            newSpeed += force * dt;
-            dist += newSpeed * dt;
-        }
-        return dist;
-    }
-
     public void setSpeed(float speed) {
         this.minimumSpeed = this.maximumSpeed = speed;
     }
@@ -95,7 +71,12 @@ public class DriveManeuver extends Maneuver {
                 {0.00690f, 0.0f}
         };
 
-        final float input = MathUtils.clip(Math.abs(curvature), values[0][0], values[n - 1][0]);
+        final float input = Math.abs(curvature);
+
+        if (input <= values[0][0])
+            return values[0][1];
+        if (input >= values[n - 1][0])
+            return values[n - 1][1];
 
         for (int i = 0; i < (n - 1); i++) {
             if (values[i][0] <= input && input <= values[i + 1][0]) {
@@ -103,6 +84,7 @@ public class DriveManeuver extends Maneuver {
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
         }
+        assert false;
 
         return -1.0f;
     }
@@ -119,7 +101,11 @@ public class DriveManeuver extends Maneuver {
                 {2300.0f, 0.00088f}
         };
 
-        float input = MathUtils.clip(Math.abs(v), 0f, 2300f);
+        float input = Math.abs(v);
+        if (input <= values[0][0])
+            return values[0][1];
+        if (input >= values[n - 1][0])
+            return values[n - 1][1];
 
         for (int i = 0; i < (n - 1); i++) {
             if (values[i][0] <= input && input <= values[i + 1][0]) {
@@ -127,8 +113,8 @@ public class DriveManeuver extends Maneuver {
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
         }
-
-        return -1.0f;
+        assert false;
+        return -1;
     }
 
     public static float throttleAcceleration(float v) {
@@ -159,9 +145,11 @@ public class DriveManeuver extends Maneuver {
         float minimumAcceleration = (minimumSpeed - currentSpeed) / reactionTime;
         float maximumAcceleration = (maximumSpeed - currentSpeed) / reactionTime;
 
-        float brake_coast_transition = -(MathUtils.lerp(brake_acceleration, coasting_acceleration, 0.7f));
-        float coasting_throttle_transition = -0.3f * coasting_acceleration;
-        float throttle_boost_transition = 1.0f * throttleAcceleration(currentSpeed) + 0.45f * boost_acceleration;
+        final float throttleAccel = throttleAcceleration(currentSpeed);
+
+        final float brake_coast_transition = -(MathUtils.lerp(brake_acceleration, coasting_acceleration, 0.7f));
+        final float coasting_throttle_transition = -0.3f * coasting_acceleration;
+        final float throttle_boost_transition = throttleAccel + 0.45f * boost_acceleration;
 
         //if (car.up().z < 0.7f) {
         //    brake_coast_transition = coasting_throttle_transition = -0.5f * brake_acceleration;
@@ -174,16 +162,12 @@ public class DriveManeuver extends Maneuver {
             output.withThrottle(0);
             output.withBoost(false);
         } else if (minimumAcceleration <= throttle_boost_transition) { // acceleration does not need boost accel
-            output.withThrottle(MathUtils.remapClip(minimumAcceleration / throttleAcceleration(currentSpeed), 0, 1, 0.015f, 1));
+            output.withThrottle(MathUtils.remapClip(minimumAcceleration / throttleAccel, 0, 1, 0.015f, 1));
             output.withBoost(false);
         } else {
             output.withThrottle(1.0f);
             output.withBoost(allowBoost);
         }
-        //System.out.println("throttle_boost_transition="+throttle_boost_transition+" minimumAcceleration="+minimumAcceleration+" cur="+currentSpeed+" targ="+minimumSpeed);
-
-        //speeds.add(List.of(currentSpeed, minimumSpeed, throttle_boost_transition, MathUtils.clip(minimumAcceleration, -5000, 5000), minimumSpeed - currentSpeed, brake_coast_transition, coasting_throttle_transition));
-        //times.add(GameData.current().getCarData().elapsedSeconds);
     }
 
     public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos, float multiplier) {

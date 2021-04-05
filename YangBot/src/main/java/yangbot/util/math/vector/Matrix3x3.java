@@ -69,6 +69,7 @@ public class Matrix3x3 {
 
         if (Math.abs(norm_omega) == 0)
             norm_omega = 1.1755e-38f;
+
         {
             Vector3 u = omega.div(norm_omega);
 
@@ -136,6 +137,10 @@ public class Matrix3x3 {
         mat.assign(2, 2, up.z);
 
         return mat;
+    }
+
+    public static Matrix3x3 lookAt(Vector3 direction) {
+        return lookAt(direction, new Vector3(0, 0, 1));
     }
 
     @NotNull

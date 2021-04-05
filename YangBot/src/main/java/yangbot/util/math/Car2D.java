@@ -2,6 +2,7 @@ package yangbot.util.math;
 
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
+import yangbot.input.Physics2D;
 import yangbot.input.RLConstants;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.math.vector.Vector2;
@@ -15,6 +16,15 @@ public class Car2D {
         this.velocity = velocity;
         this.tangent = tangent;
         this.angularVelocity = angularVelocity;
+        this.time = time;
+        this.boost = boost;
+    }
+
+    public Car2D(Physics2D phys, float time, float boost) {
+        this.position = phys.position;
+        this.velocity = phys.velocity;
+        this.tangent = phys.forward();
+        this.angularVelocity = phys.angularVelocity;
         this.time = time;
         this.boost = boost;
     }
@@ -35,7 +45,7 @@ public class Car2D {
             }
         }
 
-        Vector2 force = tangent.mul(driveForceForward(input, v_f, v_l, w_u))/*.add(right.mul(driveForceLeft(in, v_f, v_l, w_u)))*/;
+        Vector2 force = tangent.mul(CarData.driveForceForward(input, v_f, v_l, w_u))/*.add(right.mul(driveForceLeft(in, v_f, v_l, w_u)))*/;
 
         //Vector3 torque = up().mul(driveTorqueUp(in, v_f, w_u));
 
@@ -47,52 +57,6 @@ public class Car2D {
 
         //angularVelocity = angularVelocity.add(torque.mul(dt));
         //orientation = Matrix3x3.axisToRotation(angularVelocity.mul(dt)).matrixMul(orientation);
-    }
-
-    private float driveForceForward(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
-        final float driving_speed = DriveManeuver.max_throttle_speed;
-        final float braking_force = -3500.0f;
-        final float coasting_force = -525.0f;
-        final float throttle_threshold = 0.05f;
-        final float max_speed = 2275.0f;
-        final float min_speed = 3.0f;
-        final float braking_threshold = -0.001f;
-        final float supersonic_turn_drag = -98.25f;
-
-        final float turn_damping = (-0.07186693033945346f * Math.abs(in.getSteer()) + -0.05545323728191764f * Math.abs(angularUp) + 0.00062552963716722f * Math.abs((float) velocityLeft)) * (float) velocityForward;
-
-        if (in.holdBoost()) {
-            if (velocityForward < 0.0f)
-                return -braking_force;
-            else {
-                if (velocityForward < DriveManeuver.max_throttle_speed)
-                    return DriveManeuver.boost_acceleration + DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
-                else {
-                    if (velocityForward < max_speed)
-                        return DriveManeuver.boost_acceleration + turn_damping;
-                    else
-                        return supersonic_turn_drag * Math.abs(angularUp);
-                }
-            }
-        } else { // Not boosting
-            if ((in.getThrottle() * Math.signum(velocityForward) <= braking_threshold) &&
-                    Math.abs(velocityForward) > min_speed) {
-                return braking_force * Math.signum(velocityForward);
-                // not braking
-            } else {
-                // coasting
-                if (Math.abs(in.getThrottle()) < throttle_threshold && Math.abs(velocityForward) > min_speed) {
-                    return coasting_force * Math.signum(velocityForward) + turn_damping;
-                    // accelerating
-                } else {
-                    if (Math.abs(velocityForward) > driving_speed) {
-                        return turn_damping;
-                    } else {
-                        return in.getThrottle() * DriveManeuver.throttleAcceleration(velocityForward) + turn_damping;
-                    }
-                }
-            }
-        }
     }
 
     // Brake until the car gets to a full stop, useful for timing and positional stuff
@@ -139,7 +103,7 @@ public class Car2D {
         }
     }
 
-    public float simulateDriveTimeForward(float time, boolean useBoost) {
+    public float simulateDriveTimeForward(float time, boolean tryUseBoost /*will turn off in step() if no boost available*/) {
         if (time <= 0)
             return 0;
 
@@ -147,7 +111,7 @@ public class Car2D {
 
         float dt = 1f / 30f;
         for (float t = 0; t < time /*max*/; t += dt) {
-            this.step(new ControlsOutput().withThrottle(1).withBoost(useBoost), dt);
+            this.step(new ControlsOutput().withThrottle(1).withBoost(tryUseBoost), dt);
 
             distance += this.velocity.mul(dt).magnitude();
         }

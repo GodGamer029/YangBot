@@ -14,6 +14,7 @@ public abstract class BakeablePathSegment extends PathSegment {
     protected FollowPathManeuver followPathManeuver;
     private float timeEstimate = -1;
     protected float arrivalTime = -1;
+    protected float bakedArrivalTime = -1;
     protected float arrivalSpeed = -1;
     protected boolean allowBoost = false;
 
@@ -34,7 +35,7 @@ public abstract class BakeablePathSegment extends PathSegment {
         super.step(dt, output);
 
         this.followPathManeuver.path = this.getBakedPath();
-        this.followPathManeuver.arrivalTime = this.arrivalTime;
+        this.followPathManeuver.arrivalTime = this.bakedArrivalTime >= 0 ? this.bakedArrivalTime : this.arrivalTime;
 
         //this.followPathManeuver.arrivalSpeed = this.arrivalSpeed; // not needed because arrival speed is capped by curve.calculatemaxspeeds
         //this.followPathManeuver.arrivalTime = (this.getTimeEstimate() - this.timer) + GameData.current().getCarData().elapsedSeconds;
@@ -45,7 +46,6 @@ public abstract class BakeablePathSegment extends PathSegment {
             System.err.println("Exception in Segment: " + this.getClass().getSimpleName());
             throw e;
         }
-
 
         return this.followPathManeuver.isDone();
     }
@@ -67,11 +67,19 @@ public abstract class BakeablePathSegment extends PathSegment {
     }
 
     @Override
+    public void setStartTime(float startTime) {
+        super.setStartTime(startTime);
+        if (this.arrivalTime > 0)
+            this.bakedArrivalTime = Math.max(this.arrivalTime, startTime + this.getTimeEstimate());
+    }
+
+    @Override
     public float getTimeEstimate() {
         if (this.timeEstimate == -1)
             this.bake(SegmentedPath.MAX_SAMPLES);
 
         assert this.timeEstimate != -1;
+        //assert !Float.isNaN(this.timeEstimate) && !Float.isInfinite(this.timeEstimate) : this.timeEstimate;
 
         return this.timeEstimate;
     }
@@ -81,7 +89,10 @@ public abstract class BakeablePathSegment extends PathSegment {
     public final @NotNull Curve bake(int maxSamples) {
         if (this.bakedPath == null) {
             this.bakedPath = this.bakeInternal(maxSamples);
-            this.timeEstimate = this.bakedPath.calculateMaxSpeeds(MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY), this.arrivalSpeed < 0 ? CarData.MAX_VELOCITY : this.arrivalSpeed, this.allowBoost/*automatically turns true if arrival speed needs boost*/);
+            this.timeEstimate = this.bakedPath.calculateMaxSpeeds(
+                    MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY),
+                    this.arrivalSpeed < 0 ? CarData.MAX_VELOCITY : this.arrivalSpeed,
+                    this.allowBoost/*automatically turns true if arrival speed needs boost*/);
         }
 
         return this.bakedPath;

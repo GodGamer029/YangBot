@@ -3,6 +3,8 @@ package yangbot.input;
 import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.BallInfo;
 import rlbot.flat.Physics;
+import rlbot.gamestate.BallState;
+import rlbot.gamestate.PhysicsState;
 import yangbot.cpp.FlatPhysics;
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.util.YangBallPrediction;
@@ -74,11 +76,15 @@ public class BallData {
     }
 
     public BallData(final Physics ballPhysics) {
-        this.position = new Vector3(ballPhysics.location());
-        this.velocity = new Vector3(ballPhysics.velocity());
-        this.angularVelocity = new Vector3(ballPhysics.angularVelocity());
-        this.hasBeenTouched = false;
-        this.latestTouch = null;
+        this(new Vector3(ballPhysics.location()), new Vector3(ballPhysics.velocity()), new Vector3(ballPhysics.angularVelocity()));
+    }
+
+    public BallData(BallState ballState) {
+        this(new Vector3(ballState.getPhysics().getLocation()), new Vector3(ballState.getPhysics().getVelocity()), new Vector3(ballState.getPhysics().getAngularVelocity()));
+    }
+
+    public Physics3D toPhysics3d() {
+        return new Physics3D(this.position, this.velocity, Matrix3x3.identity(), this.angularVelocity);
     }
 
     public ImmutableBallData makeImmutable() {
@@ -357,5 +363,9 @@ public class BallData {
         sb.append(")");
 
         return sb.toString();
+    }
+
+    public BallState toBallState() {
+        return new BallState().withPhysics(new PhysicsState().withLocation(this.position.toDesiredVector()).withVelocity(this.velocity.toDesiredVector()).withAngularVelocity(this.angularVelocity.toDesiredVector()));
     }
 }

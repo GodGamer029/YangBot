@@ -250,6 +250,7 @@ public class VibeBot implements Bot {
         try {
             controlsOutput = processInput(dataPacket);
         } catch (Exception | AssertionError e) {
+            System.out.print("index=" + this.playerIndex + ": ");
             e.printStackTrace();
         }
         //if(dataPacket.car.playerIndex == 0 || dataPacket.car.playerIndex == 3)

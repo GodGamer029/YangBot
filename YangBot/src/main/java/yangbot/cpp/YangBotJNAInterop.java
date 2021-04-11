@@ -6,6 +6,7 @@ import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import rlbot.cppinterop.ByteBufferStruct;
+import yangbot.MainClass;
 import yangbot.input.BallData;
 import yangbot.input.CarData;
 import yangbot.input.ImmutableBallData;
@@ -100,6 +101,11 @@ public class YangBotJNAInterop {
         if (struct.size < 4) {
             if (struct.size > 0)
                 Free(struct.ptr);
+
+            if (MainClass.BOT_TYPE == MainClass.BotType.SCENARIO)
+                assert false : "YangBotCppInterop.init((byte) 0, (byte) 0); has not been called!!!";
+            else
+                System.out.println("YangBotCppInterop.init((byte) 0, (byte) 0); has not been called!!!");
             return YangBallPrediction.empty();
         }
         final byte[] protoBytes = struct.ptr.getByteArray(0, struct.size);
@@ -109,6 +115,7 @@ public class YangBotJNAInterop {
         float tickFreq = 1f / tickrate;
 
         List<YangBallPrediction.YangPredictionFrame> ballDataList = new ArrayList<>();
+        assert flatPrediction.framesLength() > 0;
         for (int i = 0; i < flatPrediction.framesLength(); i++) {
             FlatPhysics frame = flatPrediction.frames(i);
             ImmutableBallData data = new ImmutableBallData(frame);

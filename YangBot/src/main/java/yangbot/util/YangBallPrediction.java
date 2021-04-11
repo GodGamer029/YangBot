@@ -5,6 +5,7 @@ import rlbot.cppinterop.RLBotInterfaceException;
 import rlbot.flat.BallPrediction;
 import rlbot.flat.Physics;
 import rlbot.flat.PredictionSlice;
+import yangbot.MainClass;
 import yangbot.input.BallData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
@@ -135,7 +136,8 @@ public class YangBallPrediction {
                 try {
                     return YangBallPrediction.from(RLBotDll.getBallPrediction());
                 } catch (RLBotInterfaceException e) {
-                    System.err.println("Could not get RLBot ball Prediction!");
+                    if (MainClass.BOT_TYPE != MainClass.BotType.UNKNOWN)
+                        System.err.println("Could not get RLBot ball Prediction!");
                     return YangBallPrediction.empty();
                 }
         }
@@ -208,6 +210,29 @@ public class YangBallPrediction {
     }
 
     public Optional<YangPredictionFrame> getFrameAtRelativeTime(float relativeTime) {
+        if (this.isEmpty() || this.lastFrame().relativeTime < relativeTime)
+            return Optional.empty();
+        if (relativeTime == 0)
+            return Optional.of(this.firstFrame());
+        assert relativeTime > 0;
+
+        /*assert false: "TODO";
+        // TODO: binary search
+        int first = 0;
+        int last = this.frames.size() - 1;
+        int mid = (first + last)/2;
+        while( first <= last ){
+            if ( frames.get(mid).relativeTime < relativeTime ){
+                first = mid + 1;
+            }else if ( arr[mid] == key ){
+                System.out.println("Element is found at index: " + mid);
+                break;
+            }else{
+                last = mid - 1;
+            }
+            mid = (first + last)/2;
+        }*/
+
         return this.frames
                 .stream()
                 .filter((f) -> f.relativeTime >= relativeTime)

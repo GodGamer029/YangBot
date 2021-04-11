@@ -50,8 +50,11 @@ JNIEXPORT ByteBuffer __cdecl simulateBall(void* inputBall, int tickrate)
 	const int simulationSteps = (int)(secondsSimulated / simulationRate);
 
 	ByteBuffer result = ByteBuffer();
-	if (!init)
+	if (!init) { // error code
+		result.ptr = reinterpret_cast<void*>(2);
 		return result;
+	}
+		
 
 	const vec3 position = *reinterpret_cast<const vec3*>(inputBallPhys->position());
 	const vec3 velocity = *reinterpret_cast<const vec3*>(inputBallPhys->velocity());

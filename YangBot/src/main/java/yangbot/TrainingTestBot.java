@@ -58,7 +58,7 @@ public class TrainingTestBot implements Bot {
             case RESET:
                 if (this.timer > 0.5f) {
                     this.state = State.INIT;
-                    RLBotDll.setGameState(ScenarioUtil.encodedGameStateToGameState("eWFuZ3YxOmMocD0oMzcwMC40NSwtMjI2My4zMSwyMi4yOSksdj0oLTE4NC42NCwxMDgyLjM2LC0zMTcuMzApLGE9KDAuNjUsLTAuMDAsLTAuNzIpLG89KC0wLjAxLDEuNTcsMC4wMCkpLGIocD0oMzg3NC45NiwtMTQzNS4wMyw5OC45Myksdj0oLTM1Mi45NSwxMzk1LjgwLC04NS4wOCksYT0oLTMuMDIsLTAuODQsLTQuNzApKTs")
+                    RLBotDll.setGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMocD0oMzcwMC40NSwtMjI2My4zMSwyMi4yOSksdj0oLTE4NC42NCwxMDgyLjM2LC0zMTcuMzApLGE9KDAuNjUsLTAuMDAsLTAuNzIpLG89KC0wLjAxLDEuNTcsMC4wMCkpLGIocD0oMzg3NC45NiwtMTQzNS4wMyw5OC45Myksdj0oLTM1Mi45NSwxMzk1LjgwLC04NS4wOCksYT0oLTMuMDIsLTAuODQsLTQuNzApKTs")
                             .withGameInfoState(new GameInfoState().withGameSpeed(1f))
 
                             .buildPacket());

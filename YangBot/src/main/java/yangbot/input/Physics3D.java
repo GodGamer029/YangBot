@@ -1,5 +1,6 @@
 package yangbot.input;
 
+import rlbot.gamestate.PhysicsState;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
@@ -31,4 +32,7 @@ public class Physics3D {
         return this.orientation.right();
     }
 
+    public PhysicsState toPhysicsState() {
+        return new PhysicsState().withLocation(this.position.toDesiredVector()).withVelocity(this.velocity.toDesiredVector()).withAngularVelocity(this.angularVelocity.toDesiredVector()).withRotation(this.orientation.toEuler().toDesiredRotation());
+    }
 }

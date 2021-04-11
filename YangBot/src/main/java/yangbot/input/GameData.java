@@ -50,7 +50,9 @@ public class GameData {
         this.ballData = ballData;
         this.allCars = allCars;
         this.allCars.forEach((c) -> c.getPlayerInfo().update(c));
+        assert this.allCars.contains(carData);
         this.gravityZ = gameInfo.worldGravityZ();
+        assert gravityZ <= 0;
         this.gameInfoData = new GameInfoData(gameInfo);
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
@@ -66,11 +68,17 @@ public class GameData {
         this.elapsedSeconds = carData.elapsedSeconds;
         this.ballData = ballData;
         this.allCars = allCars;
+        assert this.allCars.contains(carData);
         this.gravityZ = gravity;
+        assert gravity <= 0;
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = YangBallPrediction.get();
         this.botIndex = carData.playerIndex;
+    }
+
+    public void update(CarData car, ImmutableBallData ball) {
+        this.update(car, ball, List.of(car), RLConstants.gravity.z, RLConstants.tickFrequency, null);
     }
 
     public YangBallPrediction getBallPrediction() {

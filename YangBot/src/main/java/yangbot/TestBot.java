@@ -92,7 +92,7 @@ public class TestBot implements Bot {
                         ))
                         .buildPacket());*/
 
-                var gstate = ScenarioUtil.encodedGameStateToGameState("eWFuZ3YxOmMocD0oMzcwMC40NSwtMjI2My4zMSwyMi4yOSksdj0oLTE4NC42NCwxMDgyLjM2LC0zMTcuMzApLGE9KDAuNjUsLTAuMDAsLTAuNzIpLG89KC0wLjAxLDEuNTcsMC4wMCkpLGIocD0oMzg3NC45NiwtMTQzNS4wMyw5OC45Myksdj0oLTM1Mi45NSwxMzk1LjgwLC04NS4wOCksYT0oLTMuMDIsLTAuODQsLTQuNzApKTs")
+                var gstate = ScenarioUtil.decodeToGameState("eWFuZ3YxOmMocD0oMzcwMC40NSwtMjI2My4zMSwyMi4yOSksdj0oLTE4NC42NCwxMDgyLjM2LC0zMTcuMzApLGE9KDAuNjUsLTAuMDAsLTAuNzIpLG89KC0wLjAxLDEuNTcsMC4wMCkpLGIocD0oMzg3NC45NiwtMTQzNS4wMyw5OC45Myksdj0oLTM1Mi45NSwxMzk1LjgwLC04NS4wOCksYT0oLTMuMDIsLTAuODQsLTQuNzApKTs")
                         .withGameInfoState(new GameInfoState().withGameSpeed(0.1f));
                 gstate.getCarState(0).withBoostAmount(0f);
                 RLBotDll.setGameState(gstate.buildPacket());

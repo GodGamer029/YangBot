@@ -5,6 +5,7 @@ import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
+import yangbot.optimizers.graders.ValueNetworkGrader;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.strategy.abstraction.*;
 import yangbot.strategy.manuever.DodgeManeuver;
@@ -184,7 +185,7 @@ public class VibeStrategy extends Strategy {
                         System.out.println("##### end path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate());
                     return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.DODGE, (o) -> {
                         this.state = State.FOLLOW_PATH_STRIKE;
-                        var dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath);
+                        var dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath, new ValueNetworkGrader());
 
                         dodgeStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;
                         dodgeStrikeAbstraction.originalTargetBallPos = targetBallPos;
@@ -197,8 +198,8 @@ public class VibeStrategy extends Strategy {
 
                         System.out.println("Setting jumpBeforeStrikeDelay=" + dodgeStrikeAbstraction.jumpBeforeStrikeDelay + " zDiff=" + zDiff + " ballTargetZ=" + targetBallPos.z + " carZ=" + car.position.z);
 
-                        dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay = Math.max(0.6f, dodgeStrikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
-                        dodgeStrikeAbstraction.strikeAbstraction.jumpDelayStep = Math.max(0.1f, (dodgeStrikeAbstraction.strikeAbstraction.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
+                        dodgeStrikeAbstraction.strikeAbstraction.optimizer.maxJumpDelay = Math.max(0.6f, dodgeStrikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
+                        dodgeStrikeAbstraction.strikeAbstraction.optimizer.jumpDelayStep = Math.max(0.1f, (dodgeStrikeAbstraction.strikeAbstraction.optimizer.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
                         this.strikeAbstraction = dodgeStrikeAbstraction;
                     }));
                 } else if (verboseDebug) {
@@ -499,8 +500,6 @@ public class VibeStrategy extends Strategy {
                     car.getPlayerInfo().setInactiveShooterUntil(car.elapsedSeconds + 3f);
                     return;
                 }
-
-
             }
             break;
             case FOLLOW_PATH_STRIKE: {

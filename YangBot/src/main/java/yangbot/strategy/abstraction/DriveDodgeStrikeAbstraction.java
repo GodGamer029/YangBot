@@ -130,7 +130,7 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
 
                 if (this.arrivalTime - car.elapsedSeconds < this.jumpBeforeStrikeDelay || this.driveAbstraction.isDone()) {
                     this.state = State.STRIKE;
-                    this.strikeAbstraction.expectedBallHitTime = this.arrivalTime;
+                    this.strikeAbstraction.setExpectedBallHitTime(this.arrivalTime);
                     float delay = MathUtils.clip(this.arrivalTime - car.elapsedSeconds, 0.1f, 2f);
 
                     if (this.forceJump)

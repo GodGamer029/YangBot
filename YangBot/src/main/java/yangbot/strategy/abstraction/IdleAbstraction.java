@@ -367,8 +367,7 @@ public class IdleAbstraction extends Abstraction {
 
         assert Math.abs(idleTarget.y) <= RLConstants.goalDistance : idleTarget.toString();
 
-        if (this.currentPath.step(dt, controlsOutput) || this.currentPath.shouldReset(car)) {
-
+        if (this.currentPath.shouldReset(car) || this.currentPath.step(dt, controlsOutput)) {
             this.currentPath = null;
             this.lastPathBuild = car.elapsedSeconds;
             this.canInterruptRightNow = true;

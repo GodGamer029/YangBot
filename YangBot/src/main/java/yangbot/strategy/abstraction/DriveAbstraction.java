@@ -20,10 +20,11 @@ public class DriveAbstraction extends Abstraction {
 
         if (this.doDrawPath)
             this.path.draw(renderer);
-        this.path.step(dt, controlsOutput);
 
         if (this.path.shouldReset(car))
             return RunState.FAILED;
+
+        this.path.step(dt, controlsOutput);
 
         return this.path.isDone() ? RunState.DONE : RunState.CONTINUE;
     }

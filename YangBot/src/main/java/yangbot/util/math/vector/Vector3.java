@@ -55,6 +55,14 @@ public class Vector3 extends rlbot.vector.Vector3 {
         this(copy.x, copy.y, z);
     }
 
+    public Vector3(DesiredVector3 location) {
+        this(location.getX(), location.getY(), location.getZ());
+    }
+
+    public Vector3(DesiredRotation rotation) {
+        this(rotation.pitch, rotation.yaw, rotation.roll);
+    }
+
     public static Vector3 rotationToAxis(Matrix3x3 R) {
         float theta = (float) Math.acos(Math.min(1, Math.max(-1, 0.5f * (R.tr() - 1.0f))));
         float scale;

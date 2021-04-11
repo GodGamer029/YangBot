@@ -10,4 +10,8 @@ public abstract class Grader {
         return "";
     }
 
+    public float requiredBallPredLength() {
+        return 5;
+    }
+
 }

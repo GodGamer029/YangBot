@@ -161,10 +161,11 @@ public class GetBoostAbstraction extends Abstraction {
         final CarData carData = gameData.getCarData();
 
         assert !this.pathToBoost.isDone();
-        this.pathToBoost.step(dt, controlsOutput);
 
         if (this.pathToBoost.shouldReset(carData))
             return RunState.FAILED;
+
+        this.pathToBoost.step(dt, controlsOutput);
 
         if (this.pathToBoost.canInterrupt()) {
             var myBoost = BoostManager.getAllBoosts().stream()

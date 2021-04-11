@@ -97,12 +97,14 @@ public class SimpleKickoffManeuver extends Maneuver {
                     planner.addPoint(padLoc, padLoc.sub(car.position).withZ(0).normalized());
                 }
 
+                if (kickOffLocation == KickoffTester.KickOffLocation.UNKNOWN) {
+                    this.setDone();
+                    return;
+                }
+
                 this.path = planner.plan().get();
 
                 this.kickOffState = KickOffState.DRIVE;
-
-                if (kickOffLocation == KickoffTester.KickOffLocation.UNKNOWN)
-                    this.setDone();
                 break;
             }
             case DRIVESTRIKE: {

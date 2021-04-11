@@ -3,6 +3,7 @@ package yangbot.input;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import rlbot.flat.Rotator;
+import rlbot.gamestate.CarState;
 import yangbot.cpp.FlatCarData;
 import yangbot.cpp.FlatPhysics;
 import yangbot.input.playerinfo.BotInfo;
@@ -140,6 +141,11 @@ public class CarData {
         this.playerIndex = -1;
         this.hitbox = new YangCarHitbox(this.orientation);
         this.isDemolished = false;
+    }
+
+    public CarData(CarState carState) {
+        this(new Vector3(carState.getPhysics().getLocation()), new Vector3(carState.getPhysics().getVelocity()), new Vector3(carState.getPhysics().getAngularVelocity()), Matrix3x3.eulerToRotation(new Vector3(carState.getPhysics().getRotation())));
+        this.boost = carState.getBoostAmount();
     }
 
     // From L0laapk3
@@ -490,7 +496,7 @@ public class CarData {
     }
 
     public void smartPrediction(float time) {
-        assert this.hasWheelContact;
+        assert this.hasWheelContact : "cannot do smart prediction if airborne";
 
         float dt = RLConstants.simulationTickFrequency;
         Vector3 localVel = new Vector3(this.forwardSpeed(), this.right().dot(this.velocity), 0);
@@ -533,12 +539,12 @@ public class CarData {
     public String toString() {
         StringBuilder sb = new StringBuilder(this.getClass().getSimpleName());
 
-        sb.append("(\n");
-        sb.append("\tposition=" + position.toString() + "\n");
-        sb.append("\tvelocity=" + velocity.toString() + "\n");
-        sb.append("\tangular=" + angularVelocity.toString() + "\n");
-        sb.append("\tforward=" + forward().toString() + "\n");
-        sb.append("\tup=" + up().toString() + "\n");
+        sb.append("(");
+        sb.append("\tposition=" + position.toString() + "");
+        sb.append("\tvelocity=" + velocity.toString() + "");
+        sb.append("\tangular=" + angularVelocity.toString() + "");
+        sb.append("\tforward=" + forward().toString() + "");
+        sb.append("\tup=" + up().toString() + "");
         sb.append(")");
 
         return sb.toString();

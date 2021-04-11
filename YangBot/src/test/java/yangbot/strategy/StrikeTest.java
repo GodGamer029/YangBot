@@ -28,7 +28,7 @@ public class StrikeTest {
 
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.15f)
-                .withGameState(ScenarioUtil.encodedGameStateToGameState("eWFuZ3YxOmMoYj04Ni4wLHA9KDIwMzAuODkwLC0yMDAuNzEwLDE3LjA2MCksdj0oMTE0OC44NTEsLTE3NS4wNjEsLTAuMTExKSxhPSgtMC4wMDEsMC4wMDAsLTEuNjA1KSxvPSgtMC4wMTcsLTAuMjI2LDAuMDAwKSksYihwPSgzODg3Ljc4MCwyNTQuNTEwLDg4Ny4wNjApLHY9KC0zOS40NTEsLTUzOS4xMTEsLTY4Ny4xMTEpLGE9KDEuMDQwLDUuMzc3LDIuNDUxKSk7").withGameInfoState(new GameInfoState().withGameSpeed(0.5f)))
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj04Ni4wLHA9KDIwMzAuODkwLC0yMDAuNzEwLDE3LjA2MCksdj0oMTE0OC44NTEsLTE3NS4wNjEsLTAuMTExKSxhPSgtMC4wMDEsMC4wMDAsLTEuNjA1KSxvPSgtMC4wMTcsLTAuMjI2LDAuMDAwKSksYihwPSgzODg3Ljc4MCwyNTQuNTEwLDg4Ny4wNjApLHY9KC0zOS40NTEsLTUzOS4xMTEsLTY4Ny4xMTEpLGE9KDEuMDQwLDUuMzc3LDIuNDUxKSk7").withGameInfoState(new GameInfoState().withGameSpeed(0.5f)))
                 .withInit((controlsOutput -> {
                     System.out.println("########## init");
                     var g = GameData.current();

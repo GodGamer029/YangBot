@@ -4,6 +4,8 @@ import rlbot.gamestate.BallState;
 import rlbot.gamestate.CarState;
 import rlbot.gamestate.GameState;
 import rlbot.gamestate.PhysicsState;
+import yangbot.input.BallData;
+import yangbot.input.CarData;
 import yangbot.input.GameData;
 import yangbot.util.math.vector.Vector3;
 
@@ -52,7 +54,16 @@ public class ScenarioUtil {
         return Base64.getEncoder().withoutPadding().encodeToString(sb.toString().getBytes());
     }
 
-    public static GameState encodedGameStateToGameState(String encoded) {
+    public static void decodeApplyToGameData(GameData gameData, String encoded) {
+        var gState = decodeToGameState(encoded);
+
+        CarData localCar = new CarData(gState.getCarState(0));
+        BallData ball = new BallData(gState.getBallState());
+
+        gameData.update(localCar, ball.makeImmutable());
+    }
+
+    public static GameState decodeToGameState(String encoded) {
         encoded = new String(Base64.getDecoder().decode(encoded));
         assert encoded.startsWith("yangv1:");
 

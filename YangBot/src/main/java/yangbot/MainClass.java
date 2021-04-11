@@ -5,6 +5,7 @@ import rlbot.flat.MatchSettings;
 import rlbot.manager.BotManager;
 import rlbot.pyinterop.SocketServer;
 import yangbot.cpp.YangBotCppInterop;
+import yangbot.optimizers.model.ModelUtils;
 import yangbot.path.navmesh.Graph;
 import yangbot.path.navmesh.Navigator;
 import yangbot.strategy.abstraction.DriveDodgeStrikeAbstraction;
@@ -31,7 +32,7 @@ import java.util.stream.Collectors;
 public class MainClass {
 
     private static final Integer DEFAULT_PORT = 19265;
-    public static BotType BOT_TYPE = BotType.PROD;
+    public static BotType BOT_TYPE = BotType.UNKNOWN;
     private static int portUsed = DEFAULT_PORT;
     private static BotManager botManager = null;
 
@@ -76,9 +77,11 @@ public class MainClass {
         if (async) {
             lazyLoadNavigator();
             lazyLoadRLU();
+            lazyLoadModels();
         } else {
             loadNavigator();
             loadRLU();
+            loadModels();
         }
 
         loadLut();
@@ -349,6 +352,14 @@ public class MainClass {
 
     }
 
+    private static void lazyLoadModels() {
+        new Thread(MainClass::loadModels).start();
+    }
+
+    private static void loadModels() {
+        ModelUtils.preloadAllModels();
+    }
+
     private static void lazyLoadRLU() {
         if (rluLoaded)
             return;
@@ -367,6 +378,7 @@ public class MainClass {
         TEST,
         TRAINING,
         TRAINING_TEST,
-        SCENARIO
+        SCENARIO,
+        UNKNOWN
     }
 }

@@ -27,6 +27,8 @@ public class GeneralScenarioTest {
                 .withRun((output, timer) -> {
                     final var gameData = GameData.current();
                     final var car = gameData.getCarData();
+                    final var ball = gameData.getBallData();
+                    final var renderer = gameData.getAdvancedRenderer();
                     float dt = gameData.getDt();
 
                     return timer > 1f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
@@ -79,7 +81,7 @@ public class GeneralScenarioTest {
     public void testGameStateDecoder() {
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.1f)
-                .withGameState(ScenarioUtil.encodedGameStateToGameState("eWFuZ3YxOmMocD0oNjU1LjU0LC0yLjQ4LDUwMCksdj0oMTQwNy43OCwtNS4wNSwwLjI4KSxhPSgtMC4wMCwwLjAwLDAuMDApLG89KC0wLjAxLC0wLjAwLDAuMDApKSxiKHA9KDAuMDAsMC4wMCwxNTAwKSx2PSgwLjAwLDAuMDAsLTUwKSxhPSgwLjAwLDAuMDAsMC4wMCkpOw=="))
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMocD0oNjU1LjU0LC0yLjQ4LDUwMCksdj0oMTQwNy43OCwtNS4wNSwwLjI4KSxhPSgtMC4wMCwwLjAwLDAuMDApLG89KC0wLjAxLC0wLjAwLDAuMDApKSxiKHA9KDAuMDAsMC4wMCwxNTAwKSx2PSgwLjAwLDAuMDAsLTUwKSxhPSgwLjAwLDAuMDAsMC4wMCkpOw=="))
                 .withRun((output, timer) -> {
 
                     return timer > 1f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;

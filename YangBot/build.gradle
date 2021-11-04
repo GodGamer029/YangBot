@@ -8,7 +8,7 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 mainClassName = 'yangbot.MainClass'
@@ -20,13 +20,13 @@ applicationDefaultJvmArgs = ["-Djna.library.path=" + dllDirectory, "-Xms256m", "
 
 dependencies {
     // Fetch the framework jar file
-    compile('org.jetbrains:annotations:17.0.0')
+    compile('org.jetbrains:annotations:22.0.0')
     compile('org.rlbot.commons:framework:2.1.0')
     // for twitch stuff
     //compile('org.rlbot.twitch:ActionServer:1.+')
     //compile('org.rlbot.twitch:TwitchBrokerClient:1.+')
     //compile('org.knowm.xchart:xchart:3.6.1')
-    testCompile('org.junit.jupiter:junit-jupiter:5.4.2')
+    testCompile('org.junit.jupiter:junit-jupiter:5.8.1')
     // This is makes it easy to find the dll when running in intellij, where JVM args don't get passed from gradle.
     runtime files(dllDirectory)
 }
@@ -82,11 +82,11 @@ test {
 
 run {
     if ( project.hasProperty("trainingbot") ){
-        args "training";
+        args "training"
     }else if ( project.hasProperty("testbot") ){
-        args "test";
-    }else if ( project.hasProperty("trainingtest") ){
-        args "trainingtest";
+        args "test"
+    }else if ( project.hasProperty("trainingtest") ) {
+        args "trainingtest"
     }
     enableAssertions(true)
 }

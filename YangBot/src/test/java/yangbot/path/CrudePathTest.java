@@ -74,7 +74,6 @@ public class CrudePathTest {
                     if (path != null) {
                         path.draw(rend);
                         endTime = Math.min(endTime, timer + 8);
-
                         if (initiatePath) {
                             if (car.position.withZ(0).magnitude() < 30 && car.velocity.magnitude() > 1500)
                                 initiatePath = false;

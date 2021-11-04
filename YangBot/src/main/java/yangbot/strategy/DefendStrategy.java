@@ -7,6 +7,7 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.DefensiveGrader;
 import yangbot.path.EpicMeshPlanner;
+import yangbot.path.builders.SegmentedPath;
 import yangbot.strategy.abstraction.*;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;

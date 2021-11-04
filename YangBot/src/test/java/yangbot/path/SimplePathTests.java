@@ -195,4 +195,52 @@ public class SimplePathTests {
 
     }
 
+    private SegmentedPath path2 = null;
+
+    @Test
+    public void testLut(){
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.1f)
+                .withGameState(new GameState()
+                        .withGameInfoState(new GameInfoState().withGameSpeed(1f))
+                        .withCarState(0, new CarState()))
+                .withInit(c -> {
+
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+
+                    var rend = gameData.getAdvancedRenderer();
+
+                    var startPos = new Vector2(1866.4, 1014.4);
+                    var turnCircleStartPos = new Vector2(2110.6, 1615.2);
+                    var circlePos = new Vector2(1742, 1765.1);
+                    var tangentPoint = new Vector2(2137.3, 1810.7);
+                    float ccw = -1;
+
+                    var startDir = turnCircleStartPos.sub(circlePos).normalized();
+                    var endDir = tangentPoint.sub(circlePos).normalized();
+
+                    float startAngle = (float) startDir.angle();
+                    float corrAng = (float) startDir.angleBetween(endDir);
+                    if (Math.signum(-ccw) != Math.signum(corrAng))
+                        corrAng = (float) (Math.signum(-ccw) * (Math.PI - Math.abs(corrAng) + Math.PI));
+                    float endAngle = startAngle + corrAng;
+
+                    rend.drawCircle(Color.YELLOW, circlePos.withZ(20), (float) circlePos.distance(tangentPoint), startAngle, endAngle);
+                    rend.drawLine3d(Color.YELLOW, startPos.withZ(20), turnCircleStartPos.withZ(20));
+
+                    return timer > 10f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
+                })
+                .withOnComplete((f) -> {
+
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        assert ScenarioLoader.get().waitToCompletion(4000);
+    }
+
 }

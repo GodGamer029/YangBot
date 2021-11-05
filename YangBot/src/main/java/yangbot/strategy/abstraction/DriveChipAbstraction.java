@@ -138,7 +138,7 @@ public class DriveChipAbstraction extends Abstraction {
                     }
 
                     if (Math.abs(zVel) > 50 && zVel < 0) { // Still falling towards the ground
-                        float dist = zPos - BallData.RADIUS;
+                        float dist = zPos - (BallData.RADIUS - 1);
                         assert dist >= 0 : "ball predicted to be in the ground?? zPos=" + zPos + " vel=" + zVel + " arrival=" + arrival + " i=" + i;
                         float t = Math.min(MAX_STEP, Math.abs(dist / zVel));
 
@@ -188,7 +188,6 @@ public class DriveChipAbstraction extends Abstraction {
                     System.out.println("Ball state after: t=" + arrival + " p=" + ballState.ballData.position.z + " v=" + ballState.ballData.velocity.z);
                     System.out.println("#########");
                 }
-
 
                 var predBall = ballState.ballData;
                 // Calculate target drive pos

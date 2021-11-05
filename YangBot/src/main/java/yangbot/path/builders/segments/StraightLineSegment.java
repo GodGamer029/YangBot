@@ -67,14 +67,12 @@ public class StraightLineSegment extends BakeablePathSegment {
 
     @Override
     public float getTimeEstimate() {
+        if(this.timeEstimate >= 0)
+            return this.timeEstimate;
         if (this.hasMontoneSpeed()) {
             var estimate = DriveManeuver.driveArriveAt(this.getStartSpeed(), (float) this.startPos.distance(this.endPos), this.arrivalTime - this.startTime - 0.1f, allowBoost);
-            //System.out.println("Time estimate: t="+estimate.getKey()+" vf="+estimate.getValue()+" prev="+(this.arrivalTime - this.startTime)+ " s="+((float) this.startPos.distance(this.endPos))+" v0="+this.getStartSpeed());
-            //var oldEstimate = super.getTimeEstimate();
-            //System.out.println("old="+oldEstimate+" new="+estimate.getKey());
-            return estimate.getKey();
-        }
-        if (this.timeEstimate < 0) {
+            this.timeEstimate = estimate.getKey();
+        } else {
             var sim = Car1D.simulateDriveDistanceForwardAccel((float) this.endPos.distance(this.startPos), this.startSpeed, this.startBoost);
             this.timeEstimate = sim.time;
             this.endSpeed = sim.speed;

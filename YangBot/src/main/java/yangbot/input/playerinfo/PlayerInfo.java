@@ -25,7 +25,8 @@ public class PlayerInfo {
         this.inactiveShooterUntil = Math.max(this.inactiveShooterUntil, time);
     }
 
-    public void resetInactiveShooter() {
+    public void resetInactive() {
+        this.inactiveShooterUntil = -1;
         this.inactiveRotatorUntil = -1;
     }
 

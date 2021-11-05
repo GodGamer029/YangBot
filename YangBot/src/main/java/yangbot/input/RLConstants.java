@@ -19,8 +19,6 @@ public class RLConstants {
 
     public static Vector3 gravity = new Vector3(0, 0, -650);
 
-    public static float gameLatencyCompensation = 0.f;
-
     public static int tickRate = 120;
     public static float tickFrequency = 1f / tickRate;
 

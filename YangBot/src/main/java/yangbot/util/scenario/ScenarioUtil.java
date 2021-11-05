@@ -1,5 +1,6 @@
 package yangbot.util.scenario;
 
+import rlbot.flat.PlayerInfo;
 import rlbot.gamestate.BallState;
 import rlbot.gamestate.CarState;
 import rlbot.gamestate.GameState;

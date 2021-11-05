@@ -35,7 +35,7 @@ public class DodgeManeuver extends Maneuver {
 
     public boolean enablePreorient = false;
     public Matrix3x3 preorientOrientation = null;
-    private TurnManeuver turnManeuver = null;
+    private TurnManeuver turnManeuver;
     private boolean didLeaveOutFrame = false;
     public boolean reportProblems = true;
 
@@ -54,6 +54,7 @@ public class DodgeManeuver extends Maneuver {
         this.enablePreorient = dodge.enablePreorient;
         this.preorientOrientation = dodge.preorientOrientation;
         this.didLeaveOutFrame = dodge.didLeaveOutFrame;
+        this.reportProblems = dodge.reportProblems;
     }
 
     @Override
@@ -78,10 +79,7 @@ public class DodgeManeuver extends Maneuver {
             dodge_time = /*duration + 2.0f * dt*/9999;
         if (duration > 0 && delay > 0)
             dodge_time = delay;
-
-        if (timer >= dodge_time && !car.doubleJumped) {
-            if (!this.didLeaveOutFrame && reportProblems)
-                System.out.println(car.playerIndex + ": Warning: didn't leave out jump frame timer=" + timer + " dodgetime=" + dodge_time + " duration=" + duration);
+        if (timer >= dodge_time && !car.doubleJumped && this.didLeaveOutFrame) {
             Vector2 direction_local = null;
             if ((target == null && direction == null) || (target != null && direction != null))
                 direction_local = new Vector2();
@@ -95,9 +93,8 @@ public class DodgeManeuver extends Maneuver {
             if (target == null && direction != null)
                 direction_local = direction.normalized().dot(car.getDodgeOrientation());
 
-
             if (direction_local.magnitude() > 0.0f) {
-                float vf = (float) car.velocity.dot(car.forward());
+                float vf = car.velocity.dot(car.forward());
                 float s = Math.abs(vf) / CarData.MAX_VELOCITY;
 
                 boolean backward_dodge;
@@ -121,25 +118,25 @@ public class DodgeManeuver extends Maneuver {
                 controlsOutput.withYaw(controllerInput.x);
             }
             controlsOutput.withJump(true);
-
+            this.setDone();
         } else if (!car.hasWheelContact && !car.doubleJumped) {
             if (this.enablePreorient) {
-                this.turnManeuver.fool(gameData);
+                if(gameData.isFoolGameData())
+                    this.turnManeuver.fool(gameData);
                 this.turnManeuver.target = this.preorientOrientation;
                 this.turnManeuver.step(dt, controlsOutput);
             }
             if (!controlsOutput.holdJump())
-                didLeaveOutFrame = true;
+                this.didLeaveOutFrame = true;
         }
 
         if (car.doubleJumped)
             controlsOutput.withJump(false);
 
-        if (car.doubleJumped && timer - dodge_time > 0.2f)
+        if (car.doubleJumped)
             this.setDone();
         else if (this.timer > timeout)
             this.setDone();
-
     }
 
     @Override

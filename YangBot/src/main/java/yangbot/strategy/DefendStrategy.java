@@ -83,8 +83,7 @@ public class DefendStrategy extends Strategy {
             boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
             if (isPossible) {
                 return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.AERIAL, (o) -> {
-                    this.aerialAbstraction = new AerialAbstraction();
-                    this.aerialAbstraction.targetPos = targetPos;
+                    this.aerialAbstraction = new AerialAbstraction(targetPos);
                     this.aerialAbstraction.targetOrientPos = ballPos;
                     this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
                     this.state = State.AERIAL;
@@ -519,7 +518,7 @@ public class DefendStrategy extends Strategy {
             case BALLCHASE: {
                 if (this.reevaluateStrategy(0.05f) || this.reevaluateStrategy(this.ballTouchInterrupt))
                     return;
-                DefaultStrategy.smartBallChaser(dt, controlsOutput);
+                DefaultStrategy.smartBallChaser(dt, controlsOutput, false);
                 break;
             }
             default:

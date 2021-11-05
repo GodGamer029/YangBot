@@ -41,12 +41,12 @@ JNIEXPORT jfloatArray JNICALL Java_yangbot_cpp_YangBotCppInterop_getSurfaceColli
 	return output;
 }
 
-JNIEXPORT ByteBuffer __cdecl simulateBall(void* inputBall, int tickrate)
+JNIEXPORT ByteBuffer __cdecl simulateBall(void* inputBall, int tickrate, float secondsSimulated)
 {
 	const FlatPhysics* inputBallPhys = flatbuffers::GetRoot<FlatPhysics>(inputBall);
 
 	const float simulationRate = 1.f / tickrate;
-	constexpr float secondsSimulated = 3.f;
+	//constexpr float secondsSimulated = 3.f;
 	const int simulationSteps = (int)(secondsSimulated / simulationRate);
 
 	ByteBuffer result = ByteBuffer();
@@ -54,7 +54,6 @@ JNIEXPORT ByteBuffer __cdecl simulateBall(void* inputBall, int tickrate)
 		result.ptr = reinterpret_cast<void*>(2);
 		return result;
 	}
-		
 
 	const vec3 position = *reinterpret_cast<const vec3*>(inputBallPhys->position());
 	const vec3 velocity = *reinterpret_cast<const vec3*>(inputBallPhys->velocity());

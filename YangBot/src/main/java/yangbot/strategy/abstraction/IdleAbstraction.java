@@ -27,6 +27,8 @@ public class IdleAbstraction extends Abstraction {
     // These may be scaled down, if too close to own goa l
     public float minIdleDistance = 1200;
     public float maxIdleDistance = RLConstants.arenaLength * 0.55f;
+    public float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 350;
+    public float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 140;
     public float forceRetreatTimeout = 0;
     public float retreatPercentage = 0.5f; // 1 = all the way back, 0 = no change at all
     public float targetSpeed = DriveManeuver.max_throttle_speed;
@@ -43,8 +45,7 @@ public class IdleAbstraction extends Abstraction {
         final AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
 
         // Distances will be scaled back if they exceed this value
-        final float maxAbsoluteIdleY = RLConstants.arenaHalfLength - 220;
-        final float maxAbsoluteIdleX = RLConstants.arenaHalfWidth - 140;
+
         final float minAbsoluteChannelBallDist = 1000;
 
         final Vector2 ownGoal = new Vector2(0, teamSign * Math.min(RLConstants.goalDistance, maxAbsoluteIdleY + 10));
@@ -172,7 +173,7 @@ public class IdleAbstraction extends Abstraction {
         final Function<Integer, Float> xIndexToAbs = ind -> {
             float relativeX = MathUtils.remapClip(ind, 0, xGrid.length - 1, -xChannelHalfWidth, xChannelHalfWidth);
             var intersectionOpt = goalToBallFake.getIntersectionPointWithInfOtherLine(new Line2(new Vector2(-1, decidedYPos), new Vector2(1, decidedYPos)));
-            assert intersectionOpt.isPresent() : goalToBallFake.toString() + " " + decidedYPos;
+            assert intersectionOpt.isPresent() : goalToBallFake + " " + decidedYPos;
             float intersectedX = intersectionOpt.get().x;
             if (Math.abs(intersectedX) + xChannelHalfWidth > maxAbsoluteIdleX)
                 intersectedX = (maxAbsoluteIdleX - xChannelHalfWidth) * Math.signum(intersectedX);
@@ -247,7 +248,7 @@ public class IdleAbstraction extends Abstraction {
 
                     float xSize = (xChannelHalfWidth * 2) / (xGrid.length - 1);
 
-                    //renderer.drawCentered3dCube(col, new Vector3(xPos, yPos, 50), new Vector3(xSize, 150, 100));
+                    renderer.drawCentered3dCube(col, new Vector3(xPos, yPos, 50), new Vector3(xSize, 150, 100));
                     //renderer.drawString3d(String.format("%.5f", xGrid[i]), Color.WHITE, new Vector3(xPos, yPos, 200), 1, 1);
                 }
             }
@@ -285,8 +286,8 @@ public class IdleAbstraction extends Abstraction {
         final float maxY = RLConstants.arenaHalfLength;
 
         // Actual Idling distances the bot will follow (Changed when not alone on team)
-        float preferredIdlingY = 1800;
-        float preferredIdlingX = 0;
+        float preferredIdlingY;
+        float preferredIdlingX;
 
         final Vector2 futureBallPos;
 
@@ -350,12 +351,13 @@ public class IdleAbstraction extends Abstraction {
                     .plan();
 
             if (pathOptional.isEmpty()) {
-                System.out.println("We have no path! " + car.position + " to " + idleTarget);
+                System.out.println(car.playerIndex+": We have no path! " + car.position + " to " + idleTarget);
                 var simplePath = new EpicMeshPlanner()
                         .withStart(car)
                         .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
                         .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.ATBA_YANGPATH)
                         .plan();
+                assert simplePath.isPresent();
                 this.currentPath = simplePath.get();
             } else {
                 this.currentPath = pathOptional.get();

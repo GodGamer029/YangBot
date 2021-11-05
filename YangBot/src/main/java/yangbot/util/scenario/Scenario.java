@@ -2,8 +2,10 @@ package yangbot.util.scenario;
 
 import rlbot.cppinterop.RLBotDll;
 import rlbot.gamestate.*;
+import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
@@ -37,7 +39,7 @@ public class Scenario {
 
         final GameData gameData = GameData.current();
         final AdvancedRenderer renderer = AdvancedRenderer.forBotIndex(input.playerIndex);
-        gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+        gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(input.ball, RLConstants.tickRate, 5));
         ControlsOutput controlsOutput = new ControlsOutput();
 
         switch (this.state) {

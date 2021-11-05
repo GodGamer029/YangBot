@@ -86,7 +86,7 @@ public class YangBotJNAInterop {
         return Optional.empty();
     }
 
-    public static YangBallPrediction getBallPrediction(BallData ballData, int tickrate) {
+    public static YangBallPrediction getBallPrediction(BallData ballData, int tickrate, float time) {
         Memory ballMemory;
         {
             FlatBufferBuilder builder = new FlatBufferBuilder(128);
@@ -97,7 +97,7 @@ public class YangBotJNAInterop {
             ballMemory = getMemory(proto);
         }
 
-        final ByteBufferStruct struct = simulateBall(ballMemory, tickrate);
+        final ByteBufferStruct struct = simulateBall(ballMemory, tickrate, time);
         if (struct.size < 4) {
             if (struct.size > 0)
                 Free(struct.ptr);
@@ -206,7 +206,7 @@ public class YangBotJNAInterop {
 
     private static native ByteBufferStruct findPath(Pointer pathRequest);
 
-    private static native ByteBufferStruct simulateBall(Pointer ball, int tickrate);
+    private static native ByteBufferStruct simulateBall(Pointer ball, int tickrate, float secondsSimulated);
 
     private static native void Free(Pointer ptr);
 }

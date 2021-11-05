@@ -7,14 +7,17 @@ import rlbot.flat.GameTickPacket;
 import rlbot.flat.QuickChat;
 import rlbot.flat.QuickChatMessages;
 import rlbot.flat.QuickChatSelection;
+import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
 import yangbot.strategy.*;
+import yangbot.strategy.lac.LACStrategy;
 import yangbot.strategy.manuever.Maneuver;
 import yangbot.strategy.manuever.kickoff.KickoffTester;
 import yangbot.strategy.manuever.kickoff.SimpleKickoffManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -52,20 +55,15 @@ public class VibeBot implements Bot {
         CarData car = input.car;
         BallData ball = input.ball;
         {
-            float det = RLConstants.tickFrequency;
-            for (float time = 0; time < RLConstants.gameLatencyCompensation; time += det) {
-                car.step(new ControlsOutput(), det);
-                ball.step(det);
-            }
 
-            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(ball, RLConstants.tickRate, 5));
         }
 
         drawDebugLines(input, gameData.getCarData());
         ControlsOutput output = new ControlsOutput();
 
         switch (state) {
-            case RESET: {
+            case RESET -> {
                 if (KickoffTester.isKickoff() && KickoffTester.shouldGoForKickoff(car, gameData.getAllCars().stream().filter((c) -> c.team == car.team).collect(Collectors.toList()), ball)) {
                     System.out.println("##################### Kickoff");
                     this.kickoffManeuver = new SimpleKickoffManeuver();
@@ -73,32 +71,30 @@ public class VibeBot implements Bot {
                     output.withThrottle(1);
                     output.withBoost(true);
                 } else {
-                    this.currentPlan = new VibeStrategy();
+                    this.currentPlan = new LACStrategy();
                     this.currentPlan.planStrategy();
                     this.state = State.RUN;
                 }
-                break;
             }
-            case KICKOFF: {
+            case KICKOFF -> {
                 this.kickoffManeuver.step(dt, output);
                 if (this.kickoffManeuver.isDone()) {
                     this.state = State.RUN;
-                    this.currentPlan = new VibeStrategy();
+                    this.currentPlan = new LACStrategy();
                     this.currentPlan.planStrategy();
                 }
-                break;
             }
-            case RUN: {
+            case RUN -> {
                 int i = 0;
                 StringBuilder circularPlanExplainer = new StringBuilder();
                 circularPlanExplainer.append(this.currentPlan.getClass().getSimpleName());
                 while (this.currentPlan.isDone()) {
                     if (this.currentPlan instanceof GenericStrategyPlanner) {
-                        this.currentPlan = new VibeStrategy();
+                        this.currentPlan = new LACStrategy();
                         this.currentPlan.planStrategy();
                         continue;
                     }
-                    this.currentPlan = currentPlan.suggestStrategy().orElse(new VibeStrategy());
+                    this.currentPlan = currentPlan.suggestStrategy().orElse(new LACStrategy());
                     circularPlanExplainer.append(" -> " + this.currentPlan.getClass().getSimpleName());
                     this.currentPlan.planStrategy();
 
@@ -111,7 +107,6 @@ public class VibeBot implements Bot {
                 }
 
                 this.currentPlan.step(dt, output);
-                break;
             }
         }
 
@@ -143,14 +138,7 @@ public class VibeBot implements Bot {
                     text += "\n" + this.currentPlan.getAdditionalInformation();
                 renderer.drawString3d(text, (this.currentPlan != null && this.currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
             }
-            if (true) {
-                renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 440), 1, 1);
-                renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 460), 1, 1);
-                renderer.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, 480), 1, 1);
-                renderer.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, 500), 1, 1);
-                renderer.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), output.getThrottle() < 0 ? Color.RED : Color.WHITE, new Point(10, 520), 1, 1);
-            }
-
+            renderer.drawControlsOutput(output, 440);
         }
 
         return output;
@@ -160,16 +148,10 @@ public class VibeBot implements Bot {
         AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
 
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
-        if (true) {
-            renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
-        }
+        renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 210), 1, 1);
         renderer.drawString2d(String.format("Time: %.2f", myCar.elapsedSeconds), Color.WHITE, new Point(10, 230), 1, 1);
-        if (false) {
-            renderer.drawString2d("Ang: " + myCar.angularVelocity, Color.WHITE, new Point(10, 230), 1, 1);
-            renderer.drawString2d("Nose: " + myCar.forward(), Color.WHITE, new Point(10, 250), 1, 1);
-        }
     }
 
     @Override
@@ -181,6 +163,7 @@ public class VibeBot implements Bot {
     public ControllerState processInput(GameTickPacket packet) {
         if (!hasSetPriority) {
             hasSetPriority = true;
+            Thread.currentThread().setName("VibeBot Thread i="+playerIndex);
             Thread.currentThread().setPriority(10);
         }
 
@@ -227,6 +210,7 @@ public class VibeBot implements Bot {
 
             for (var needBoost : needBoostChatters) {
                 needBoost.getPlayerInfo().setInactiveRotatorUntil(needBoost.elapsedSeconds + 0.7f);
+                needBoost.getPlayerInfo().setInactiveShooterUntil(needBoost.elapsedSeconds + 0.7f);
             }
 
             var inactiveShooterChatters = quickchats.stream()
@@ -240,7 +224,7 @@ public class VibeBot implements Bot {
                     .collect(Collectors.toList());
 
             for (var inactiveShoot : inactiveShooterChatters) {
-                inactiveShoot.getPlayerInfo().setInactiveShooterUntil(inactiveShoot.elapsedSeconds + 0.7f);
+                inactiveShoot.getPlayerInfo().setInactiveShooterUntil(inactiveShoot.elapsedSeconds + 1.25f);
             }
         }
 

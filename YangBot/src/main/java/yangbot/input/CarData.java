@@ -146,6 +146,7 @@ public class CarData {
     public CarData(CarState carState) {
         this(new Vector3(carState.getPhysics().getLocation()), new Vector3(carState.getPhysics().getVelocity()), new Vector3(carState.getPhysics().getAngularVelocity()), Matrix3x3.eulerToRotation(new Vector3(carState.getPhysics().getRotation())));
         this.boost = carState.getBoostAmount();
+        this.hasWheelContact = this.position.z < 7 + RLConstants.carElevation;
     }
 
     // From L0laapk3
@@ -172,10 +173,8 @@ public class CarData {
     }
 
     public static float driveTorqueUp(ControlsOutput in, float velocityForward, float angularUp) {
-        final float v_f = velocityForward;
-        final float w_u = angularUp;
 
-        return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(v_f)) * v_f - w_u);
+        return 15.0f * (in.getSteer() * DriveManeuver.maxTurningCurvature(Math.abs(velocityForward)) * velocityForward - angularUp);
     }
 
     public float forwardSpeed() {
@@ -295,17 +294,14 @@ public class CarData {
     }
 
     public Car2D toCar2D() {
-        return new Car2D(this.position.flatten(), this.velocity.flatten(), this.forward().flatten(), (float) this.up().dot(angularVelocity), this.elapsedSeconds, (float) this.boost);
+        return new Car2D(this.position.flatten(), this.velocity.flatten(), this.forward().flatten(), this.up().dot(angularVelocity), this.elapsedSeconds, this.boost);
     }
 
     public static float driveForceLeft(ControlsOutput in, float velocityForward, float velocityLeft, float angularUp) {
-        final float v_f = (float) velocityForward;
-        final float v_l = (float) velocityLeft;
-        final float w_u = (float) angularUp;
 
         return (float) ((1380.4531378f * in.getSteer() + 7.8281188f * in.getThrottle() -
-                15.0064029f * v_l + 668.1208332f * w_u) *
-                (1.0f - Math.exp(-0.001161f * Math.abs(v_f))));
+                15.0064029f * velocityLeft + 668.1208332f * angularUp) *
+                (1.0f - Math.exp(-0.001161f * Math.abs(velocityForward))));
     }
 
     public BotInfo getBotFamilyInfo() {
@@ -321,9 +317,9 @@ public class CarData {
     }
 
     private void driving(ControlsOutput in, float dt) {
-        final float v_f = (float) velocity.dot(forward());
-        final float v_l = (float) velocity.dot(right());
-        final float w_u = (float) angularVelocity.dot(up());
+        final float v_f = velocity.dot(forward());
+        final float v_l = velocity.dot(right());
+        final float w_u = angularVelocity.dot(up());
 
         Vector3 force = forward().mul(driveForceForward(in, v_f, v_l, w_u)).add(right().mul(driveForceLeft(in, v_f, v_l, w_u)));
 

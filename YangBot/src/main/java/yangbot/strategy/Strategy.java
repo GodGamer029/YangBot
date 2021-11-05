@@ -58,7 +58,7 @@ public abstract class Strategy {
     }
 
     protected final boolean reevaluateStrategy(Interrupt interrupt, float timeout) {
-        if (interrupt.hasInterrupted()) {
+        if (this.couldReevaluateStrategy(timeout) && interrupt.hasInterrupted()) {
             return reevaluateStrategy(timeout);
         }
 
@@ -74,14 +74,18 @@ public abstract class Strategy {
         return this.isDone();
     }
 
-    protected final boolean reevaluateStrategy(float timeout) {
+    protected final boolean couldReevaluateStrategy(float timeout){
         float currentSeconds = GameData.current().getCarData().elapsedSeconds;
         if (currentSeconds < this.lastStrategyPlan)
             this.lastStrategyPlan = -10; // Something wierd is going on, replan strat
 
         assert currentSeconds - this.lastStrategyPlan >= 0 : "Strategy was possibly planned twice in the same frame";
 
-        if (currentSeconds - this.lastStrategyPlan > timeout || timeout == 0) {
+        return currentSeconds - this.lastStrategyPlan > timeout || timeout == 0;
+    }
+
+    protected final boolean reevaluateStrategy(float timeout) {
+        if (couldReevaluateStrategy(timeout)) {
             planStrategy(true);
             return true;
         }

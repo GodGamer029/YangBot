@@ -118,23 +118,27 @@ public class DriveManeuver extends Maneuver {
     }
 
     public static float throttleAcceleration(float v) {
-        final int n = 3;
+        /*final int n = 3;
         float[][] values = {
                 {0f, 1600f},
                 {1400f, 160f},
                 {1410f, 0f}
-        };
+        };*/
 
-        float input = Math.max(0, Math.min(1410, Math.abs(v)));
+        float input = Math.max(0, Math.abs(v));
+        if(input >= 1410f)
+            return 0;
+        if(input >= 1400)
+            return MathUtils.remap(input, 1400, 1410, 160, 0);
+        return MathUtils.remap(input, 0, 1400, 1600, 160);
 
-        for (int i = 0; i < (n - 1); i++) {
+        /*for (int i = 0; i < (n - 1); i++) {
             if (values[i][0] <= input && input <= values[i + 1][0]) {
                 float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
-        }
+        }*/
 
-        return values[values.length - 1][1];
     }
 
     public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime, boolean allowBoost) {
@@ -176,7 +180,7 @@ public class DriveManeuver extends Maneuver {
         float angle = (float) Math.atan2(target_local.y, target_local.x);
         float d = 0.05f;
         float p = 3.1f;
-        output.withSteer(MathUtils.clip(d * -car.angularVelocity.dot(car.up()) + multiplier * p * angle * (float) Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
+        output.withSteer(MathUtils.clip(d * -car.angularVelocity.dot(car.up()) + multiplier * p * angle * Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
     }
 
     public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {

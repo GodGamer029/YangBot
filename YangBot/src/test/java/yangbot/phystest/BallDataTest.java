@@ -141,15 +141,13 @@ public class BallDataTest {
                                 .withVelocity(ballData.velocity.toDesiredVector())
                                 .withAngularVelocity(ballData.angularVelocity.toDesiredVector())
                         )))
-                .withInit((c) -> {
-                    startTime = GameData.current().getCarData().elapsedSeconds;
-                })
+                .withInit((c) -> startTime = GameData.current().getCarData().elapsedSeconds)
                 .withRun((output, timer) -> {
                     final var gameData = GameData.current();
                     final var car = gameData.getCarData();
                     float dt = gameData.getDt();
                     myTimer += dt;
-                    var ballPred = YangBotJNAInterop.getBallPrediction(gameData.getBallData().makeMutable(), 120);
+                    var ballPred = YangBotJNAInterop.getBallPrediction(gameData.getBallData().makeMutable(), 120, 5);
                     //var gucciPred = gameData.getBallPrediction();
                     //var ballPred = gameData.getBallData().makeMutable().makeBallPrediction(RLConstants.tickFrequency, 4f);
 

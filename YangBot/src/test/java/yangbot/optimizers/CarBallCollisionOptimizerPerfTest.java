@@ -58,7 +58,7 @@ public class CarBallCollisionOptimizerPerfTest {
         optimizer.jumpDelayStep = 0.1f;
 
         optimizer.customGrader = new OffensiveGrader();
-        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(simGameData.getBallData().makeMutable(), RLConstants.tickRate);
+        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(simGameData.getBallData().makeMutable(), RLConstants.tickRate, 5);
         optimizer.solveGoodStrike(simGameData, strikeDodge);
 
 

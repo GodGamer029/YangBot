@@ -10,7 +10,7 @@ public class FoolGameData extends GameData {
     }
 
     @Override
-    public boolean isFoolGameDate() {
+    public boolean isFoolGameData() {
         return true;
     }
 

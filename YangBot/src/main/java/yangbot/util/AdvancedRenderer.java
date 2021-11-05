@@ -5,6 +5,7 @@ import rlbot.Bot;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.render.RenderPacket;
 import rlbot.render.Renderer;
+import yangbot.input.ControlsOutput;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 
@@ -104,5 +105,13 @@ public class AdvancedRenderer extends Renderer {
 
             this.drawLine3d(c, thisPos.mul(radius).withZ(0).add(center), nextPos.mul(radius).withZ(0).add(center));
         }
+    }
+
+    public void drawControlsOutput(ControlsOutput output, int y){
+        this.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, y += 20), 1, 1);
+        this.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, y += 20), 1, 1);
+        this.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, y += 20), 1, 1);
+        this.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, y += 20), 1, 1);
+        this.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), output.getThrottle() < 0 ? Color.RED : Color.WHITE, new Point(10, y += 20), 1, 1);
     }
 }

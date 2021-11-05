@@ -52,7 +52,7 @@ public class InterruptManager {
     }
 
     public BallTouchInterrupt getBallTouchInterrupt() {
-        return getBallTouchInterrupt(-1);
+        return getBallTouchInterrupt(-999);
     }
 
     public BallTouchInterrupt getBallTouchInterrupt(int carIgnoreIndex) {

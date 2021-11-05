@@ -82,8 +82,7 @@ public class OffensiveStrategy extends Strategy {
             boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
             if (isPossible) {
                 return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.AERIAL, (o) -> {
-                    this.aerialAbstraction = new AerialAbstraction();
-                    this.aerialAbstraction.targetPos = targetPos;
+                    this.aerialAbstraction = new AerialAbstraction(targetPos);
                     this.aerialAbstraction.targetOrientPos = ballPos;
                     this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
                     this.state = State.AERIAL;

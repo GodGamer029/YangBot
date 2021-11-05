@@ -28,18 +28,6 @@ public class YangBallPrediction {
     private YangBallPrediction(List<YangPredictionFrame> frames, float tickFrequency) {
         if (frames == null)
             frames = new ArrayList<>();
-        float latencyCompensation = RLConstants.gameLatencyCompensation;
-        if (latencyCompensation > 0) {
-            List<YangPredictionFrame> newFrames = new ArrayList<>(frames.size());
-            for (YangPredictionFrame frame : frames) {
-                if (frame.relativeTime < latencyCompensation)
-                    continue;
-
-                frame.adjustForLatencyCompensation(latencyCompensation);
-                newFrames.add(frame);
-            }
-            frames = newFrames;
-        }
         frames = Collections.unmodifiableList(frames);
 
         this.frames = frames;
@@ -160,7 +148,7 @@ public class YangBallPrediction {
         Vector3 lastPos = this.frames.get(0).ballData.position;
         while (time < length) {
             Optional<YangPredictionFrame> frame = this.getFrameAfterRelativeTime(time);
-            if (!frame.isPresent())
+            if (frame.isEmpty())
                 break;
 
             if (Math.floor(lastAbsTime) < Math.floor(frame.get().absoluteTime)) {
@@ -209,6 +197,31 @@ public class YangBallPrediction {
         return new YangBallPrediction(this.getFramesBetweenRelative(relativeStartTime, relativeEndTime), this.tickFrequency);
     }
 
+    // Returns first index at or after relativeTime
+    private int binarySearchRelativeTime(float relative){
+        if(this.frames.size() == 0)
+            return 0;
+        assert relative < this.relativeTimeOfLastFrame();
+        int left = 0, right = this.frames.size();
+        int mid;
+        int timeout = 0;
+        int candidate = -1;
+        while(left < right){
+            assert timeout < 200;
+            timeout++;
+            mid = (left + right) / 2;
+            var sample = this.frames.get(mid);
+            if(sample.relativeTime >= relative){
+                right = mid;
+                candidate = mid;
+            }
+            else
+                left = mid + 1;
+        }
+        assert candidate != -1;
+        return candidate;
+    }
+
     public Optional<YangPredictionFrame> getFrameAtRelativeTime(float relativeTime) {
         if (this.isEmpty() || this.lastFrame().relativeTime < relativeTime)
             return Optional.empty();
@@ -240,10 +253,11 @@ public class YangBallPrediction {
     }
 
     public Optional<YangPredictionFrame> getFrameAfterRelativeTime(float relativeTime) {
-        return this.frames
-                .stream()
-                .filter((f) -> f.relativeTime > relativeTime)
-                .findFirst();
+        for(int i = this.binarySearchRelativeTime(relativeTime); i < this.frames.size(); i++){
+            if(this.frames.get(i).relativeTime > relativeTime)
+                return Optional.of(this.frames.get(i));
+        }
+        return Optional.empty();
     }
 
     public Optional<YangPredictionFrame> getFrameAtAbsoluteTime(float absolute) {

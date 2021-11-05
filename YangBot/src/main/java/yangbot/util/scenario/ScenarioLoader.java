@@ -86,6 +86,7 @@ public class ScenarioLoader extends SocketServer {
                 this.isRunningScenario.set(false);
                 this.scenario = null;
                 this.isRunningScenario.notifyAll();
+                System.out.println("Scenario has completed");
             }
             return new ControlsOutput();
         }

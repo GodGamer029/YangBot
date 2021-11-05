@@ -12,7 +12,7 @@ public class ValueNetworkGrader extends Grader {
     @Override
     public boolean isImproved(GameData gameData) {
         float targetSign = gameData.getCarData().team;
-        var simBall = gameData.getBallPrediction().getFrameAtRelativeTime(0.1f);
+        var simBall = gameData.getBallPrediction().getFrameAtRelativeTime(0.15f);
         var ball = simBall.orElseThrow().ballData;
         var pred = ModelUtils.ballToPrediction(ball.makeMutable());
         float error = Math.abs(pred.getKey() - targetSign);
@@ -31,6 +31,6 @@ public class ValueNetworkGrader extends Grader {
 
     @Override
     public float requiredBallPredLength() {
-        return 0.5f;
+        return 0.3f;
     }
 }

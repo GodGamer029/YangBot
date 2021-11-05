@@ -34,17 +34,17 @@ public class GameData {
         return botLoopMap.get(Thread.currentThread().getId());
     }
 
-    public boolean isFoolGameDate() {
+    public boolean isFoolGameData() {
         return false;
     }
 
     public FoolGameData fool() {
         FoolGameData foo = new FoolGameData(0L);
-        foo.update(carData, ballData, allCars, gravityZ, dt, advancedRenderer);
+        foo.update(carData, ballData, allCars, gravityZ, dt, advancedRenderer, ballPrediction);
         return foo;
     }
 
-    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt, AdvancedRenderer advancedRenderer) {
+    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, GameInfo gameInfo, float dt, AdvancedRenderer advancedRenderer, YangBallPrediction ballPrediction) {
         this.carData = carData;
         this.elapsedSeconds = carData.elapsedSeconds;
         this.ballData = ballData;
@@ -56,14 +56,14 @@ public class GameData {
         this.gameInfoData = new GameInfoData(gameInfo);
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
-        this.ballPrediction = YangBallPrediction.get();
+        this.ballPrediction = ballPrediction;
         this.botIndex = carData.playerIndex;
 
-        if (this.ballData.hasBeenTouched())
+        if (this.ballData.hasBeenTouched() && !this.isFoolGameData())
             InterruptManager.ballTouchInterrupt(this.ballData.getLatestTouch());
     }
 
-    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
+    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer, YangBallPrediction ballPrediction) {
         this.carData = carData;
         this.elapsedSeconds = carData.elapsedSeconds;
         this.ballData = ballData;
@@ -73,8 +73,12 @@ public class GameData {
         assert gravity <= 0;
         this.dt = dt;
         this.advancedRenderer = advancedRenderer;
-        this.ballPrediction = YangBallPrediction.get();
+        this.ballPrediction = ballPrediction;
         this.botIndex = carData.playerIndex;
+    }
+
+    public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
+        this.update(carData, ballData, allCars, gravity, dt, advancedRenderer, YangBallPrediction.get());
     }
 
     public void update(CarData car, ImmutableBallData ball) {

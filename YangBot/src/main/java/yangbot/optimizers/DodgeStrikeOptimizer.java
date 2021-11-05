@@ -71,10 +71,9 @@ public class DodgeStrikeOptimizer {
             }
         }
 
-
         YangBallPrediction simBallPred;
         if (this.customGrader.requiredBallPredLength() > 0)
-            simBallPred = YangBotJNAInterop.getBallPrediction(simBall, 60);
+            simBallPred = YangBotJNAInterop.getBallPrediction(simBall, this.customGrader.requiredBallPredLength() > 1 ? 60 : 120, this.customGrader.requiredBallPredLength());
         else
             simBallPred = YangBallPrediction.empty();
 
@@ -153,7 +152,7 @@ public class DodgeStrikeOptimizer {
             }
 
             simBall = frameOptional.get().ballData.makeMutable();
-            assert simBall.velocity.magnitude() < BallData.MAX_VELOCITY * 1.2f : "Got faulty ball: " + simBall.toString();
+            assert simBall.velocity.magnitude() < BallData.MAX_VELOCITY * 1.2f : "Got faulty ball: " + simBall;
 
             simBall.hasBeenTouched = false;
         }
@@ -191,7 +190,7 @@ public class DodgeStrikeOptimizer {
         assert this.customGrader != null;
         final CarData car = gameData.getCarData();
         final ImmutableBallData ball = gameData.getBallData();
-        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(ball.makeMutable(), RLConstants.tickRate);
+        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(ball.makeMutable(), RLConstants.tickRate, 3);
 
         System.out.println("Solving good strike " + ScenarioUtil.getEncodedGameState(gameData));
 
@@ -282,7 +281,7 @@ public class DodgeStrikeOptimizer {
             this.strikeDodge.setDone();
             System.out.println(car.playerIndex + ": >>> Could not satisfy grader, aborting... (Grader: " + this.customGrader.getClass().getSimpleName() + ", didHitBall=" + statistics.didHitBall + ", didHitBallAfterDodge=" + statistics.didHitBallAfterDodge + ", numHits=" + statistics.numHits + ", numGraderCalls=" + statistics.numGraderCalls + ", numWheelHits=" + statistics.numWheelHits + ", T=" + T + ")");
             System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
-            System.out.println(car.playerIndex + ": > State info: " + car.toString().replaceAll("\n\t", ",").replaceAll("\n", "") + " ball=" + ball.toString());
+            System.out.println(car.playerIndex + ": > State info: " + car.toString().replaceAll("\n\t", ",").replaceAll("\n", "") + " ball=" + ball);
         }
         if (this.debugMessages) {
             System.out.println(car.playerIndex + ": > With parameters: maxJumpDelay=" + this.maxJumpDelay + " expectedAt=" + (this.expectedBallHitTime - car.elapsedSeconds) + " jumpDelayStep=" + this.jumpDelayStep + " timer=" + this.strikeDodge.timer + " graderinfo=" + this.customGrader.getAdditionalInfo());

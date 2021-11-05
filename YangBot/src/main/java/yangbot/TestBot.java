@@ -53,7 +53,7 @@ public class TestBot implements Bot {
         CarData controlCar = input.allCars.stream().filter((c) -> c.team != carBoi.team).findFirst().orElse(carBoi);
 
         final AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
-        GameData.current().update(carBoi, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+        GameData.current().update(carBoi, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBallPrediction.get());
 
         final YangBallPrediction ballPrediction = GameData.current().getBallPrediction();
         drawDebugLines(input, controlCar);

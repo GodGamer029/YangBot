@@ -48,7 +48,7 @@ public class TrainingBot implements Bot {
         }
         lastBallPos = ball.position;
         final Vector2 ownGoal = new Vector2(0, car.getTeamSign() * RLConstants.goalDistance);
-        GameData.current().update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
+        GameData.current().update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBallPrediction.get());
 
         final YangBallPrediction ballPrediction = GameData.current().getBallPrediction();
         drawDebugLines(input, car);
@@ -78,7 +78,7 @@ public class TrainingBot implements Bot {
 
                     i++;
                     if (i == 5) {
-                        System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer.toString() + ")");
+                        System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer + ")");
                         System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         this.currentPlan = new DefaultStrategy();
                     }

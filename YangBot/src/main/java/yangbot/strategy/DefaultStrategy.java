@@ -13,12 +13,22 @@ public class DefaultStrategy extends Strategy {
     private Strategy newDecidedStrategy = null;
     private int jumpFromWallTick = 0;
 
-    public static void smartBallChaser(float dt, ControlsOutput controlsOutput) {
+    public static void driveToPos(ControlsOutput controlsOutput, Vector3 pos, boolean allowBoost){
+        final GameData gameData = GameData.current();
+        final CarData car = gameData.getCarData();
+        DriveManeuver.steerController(controlsOutput, car, pos);
+        controlsOutput.withThrottle(Math.max(0.05f, (float) (pos.flatten().distance(car.position.flatten()) - 100f) / 100f));
+        if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 2f)
+            controlsOutput.withSlide(true);
+        if(allowBoost && Math.abs(controlsOutput.getSteer()) < 0.1 && controlsOutput.getThrottle() > 0.8f)
+            controlsOutput.withBoost();
+    }
+
+    public static void smartBallChaser(float dt, ControlsOutput controlsOutput, boolean allowBoost) {
         final GameData gameData = GameData.current();
         final ImmutableBallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
         final CarData car = gameData.getCarData();
-        final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
         Vector3 futureBallPos = ballPrediction.getFrameAtRelativeTime((float) Math.min(0.5f, car.position.flatten().distance(ball.position.flatten()) / (car.velocity.flatten().magnitude() + 50))).get().ballData.position;
 
@@ -29,15 +39,7 @@ public class DefaultStrategy extends Strategy {
             futureBallPos = new Vector3(0, 0, 0);
         }
 
-
-        DriveManeuver.steerController(controlsOutput, car, futureBallPos);
-        //controlsOutput.withSteer((float) car.forward().flatten().correctionAngle(futureBallPos.flatten().sub(car.position.flatten())) * 0.9f);
-        controlsOutput.withThrottle(Math.max(0.05f, (float) (futureBallPos.flatten().distance(car.position.flatten()) - 100f) / 100f));
-        //if (Math.abs(controlsOutput.getSteer()) <= 0.1f && car.position.flatten().distance(futureBallPos.flatten()) > 1000 && car.boost > 60 && car.velocity.dot(car.forward()) < 2000)
-        //    controlsOutput.withBoost(true);
-
-        if (Math.abs(controlsOutput.getSteer()) >= 0.95f && car.angularVelocity.magnitude() < 2f)
-            controlsOutput.withSlide(true);
+        DefaultStrategy.driveToPos(controlsOutput, futureBallPos.withZ(0), allowBoost);
     }
 
     @Override
@@ -83,7 +85,7 @@ public class DefaultStrategy extends Strategy {
             }
         }
 
-        DefaultStrategy.smartBallChaser(dt, controlsOutput);
+        DefaultStrategy.smartBallChaser(dt, controlsOutput, false);
 
         this.setDone();
     }

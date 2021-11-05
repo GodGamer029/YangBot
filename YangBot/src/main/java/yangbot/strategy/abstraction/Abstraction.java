@@ -2,6 +2,7 @@ package yangbot.strategy.abstraction;
 
 import yangbot.input.ControlsOutput;
 import yangbot.input.GameData;
+import yangbot.util.AdvancedRenderer;
 
 // High Level Maneuvers that are (usually) too complex to be simulated, but contain little strategic code
 public abstract class Abstraction {
@@ -35,6 +36,10 @@ public abstract class Abstraction {
 
     public boolean canInterrupt() {
         return true;
+    }
+
+    public void draw(AdvancedRenderer renderer){
+
     }
 
     public enum RunState {

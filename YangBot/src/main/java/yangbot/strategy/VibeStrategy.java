@@ -79,8 +79,7 @@ public class VibeStrategy extends Strategy {
             boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
             if (isPossible) {
                 return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.AERIAL, (o) -> {
-                    this.aerialAbstraction = new AerialAbstraction();
-                    this.aerialAbstraction.targetPos = targetPos;
+                    this.aerialAbstraction = new AerialAbstraction(targetPos);
                     this.aerialAbstraction.targetOrientPos = ballPos;
                     this.aerialAbstraction.arrivalTime = interceptFrame.absoluteTime;
                     this.state = State.AERIAL;
@@ -203,10 +202,10 @@ public class VibeStrategy extends Strategy {
                         this.strikeAbstraction = dodgeStrikeAbstraction;
                     }));
                 } else if (verboseDebug) {
-                    String s = "continue path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate() + " ";
+                    StringBuilder s = new StringBuilder("continue path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate() + " ");
                     for (var seg : currentPath.getSegmentList()) {
                         var est = seg.getTimeEstimate();
-                        s += seg.getClass().getSimpleName() + " est=" + est + " ";
+                        s.append(seg.getClass().getSimpleName()).append(" est=").append(est).append(" ");
                     }
 
                     System.out.println(s);
@@ -481,7 +480,7 @@ public class VibeStrategy extends Strategy {
                     return;
 
                 if (this.boostAbstraction.step(dt, controlsOutput).isDone()) {
-                    car.getPlayerInfo().resetInactiveShooter();
+                    car.getPlayerInfo().resetInactive();
                     this.reevaluateStrategy(0);
                     return;
                 }

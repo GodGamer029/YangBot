@@ -15,6 +15,7 @@ import yangbot.strategy.manuever.Maneuver;
 import yangbot.strategy.manuever.kickoff.KickoffTester;
 import yangbot.strategy.manuever.kickoff.SimpleKickoffManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.YangBallPrediction;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public class YangBot implements Bot {
 
     public YangBot(int playerIndex) {
         this.playerIndex = playerIndex;
+
     }
 
     private ControlsOutput processInput(DataPacket input) {
@@ -51,21 +53,13 @@ public class YangBot implements Bot {
 
         CarData car = input.car;
         BallData ball = input.ball;
-        {
-            float det = RLConstants.tickFrequency;
-            for (float time = 0; time < RLConstants.gameLatencyCompensation; time += det) {
-                car.step(new ControlsOutput(), det);
-                ball.step(det);
-            }
-
-            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer);
-        }
+        gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBallPrediction.get());
 
         drawDebugLines(input, gameData.getCarData());
         ControlsOutput output = new ControlsOutput();
 
         switch (state) {
-            case RESET: {
+            case RESET -> {
                 if (KickoffTester.isKickoff() && KickoffTester.shouldGoForKickoff(car, gameData.getAllCars().stream().filter((c) -> c.team == car.team).collect(Collectors.toList()), ball)) {
                     System.out.println("##################### Kickoff");
                     this.kickoffManeuver = new SimpleKickoffManeuver();
@@ -77,18 +71,16 @@ public class YangBot implements Bot {
                     this.currentPlan.planStrategy();
                     this.state = State.RUN;
                 }
-                break;
             }
-            case KICKOFF: {
+            case KICKOFF -> {
                 this.kickoffManeuver.step(dt, output);
                 if (this.kickoffManeuver.isDone()) {
                     this.state = State.RUN;
                     this.currentPlan = new AfterKickoffStrategy();
                     this.currentPlan.planStrategy();
                 }
-                break;
             }
-            case RUN: {
+            case RUN -> {
                 int i = 0;
                 StringBuilder circularPlanExplainer = new StringBuilder();
                 circularPlanExplainer.append(this.currentPlan.getClass().getSimpleName());
@@ -99,14 +91,13 @@ public class YangBot implements Bot {
 
                     i++;
                     if (i == 5) {
-                        System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer.toString() + ")");
+                        System.err.println("Circular Strategy: Defaulting to DefaultStrategy (" + circularPlanExplainer + ")");
                         System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         this.currentPlan = new DefaultStrategy();
                     }
                 }
 
                 this.currentPlan.step(dt, output);
-                break;
             }
         }
 
@@ -138,14 +129,7 @@ public class YangBot implements Bot {
                     text += "\n" + this.currentPlan.getAdditionalInformation();
                 renderer.drawString3d(text, (this.currentPlan != null && this.currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
             }
-            if (true) {
-                renderer.drawString2d(String.format("Yaw: %.1f", output.getYaw()), Color.WHITE, new Point(10, 440), 1, 1);
-                renderer.drawString2d(String.format("Pitch: %.1f", output.getPitch()), Color.WHITE, new Point(10, 460), 1, 1);
-                renderer.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, 480), 1, 1);
-                renderer.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, 500), 1, 1);
-                renderer.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), output.getThrottle() < 0 ? Color.RED : Color.WHITE, new Point(10, 520), 1, 1);
-            }
-
+            renderer.drawControlsOutput(output, 440);
         }
 
         return output;
@@ -155,9 +139,7 @@ public class YangBot implements Bot {
         AdvancedRenderer renderer = GameData.current().getAdvancedRenderer();
 
         renderer.drawString2d("BallP: " + input.ball.position, Color.WHITE, new Point(10, 150), 1, 1);
-        if (true) {
-            renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
-        }
+        renderer.drawString2d("BallV: " + input.ball.velocity, Color.WHITE, new Point(10, 170), 1, 1);
         renderer.drawString2d("Car: " + myCar.position, Color.WHITE, new Point(10, 190), 1, 1);
         renderer.drawString2d(String.format("CarSpeedXY: %.1f", myCar.velocity.flatten().magnitude()), Color.WHITE, new Point(10, 210), 1, 1);
         renderer.drawString2d(String.format("Time: %.2f", myCar.elapsedSeconds), Color.WHITE, new Point(10, 230), 1, 1);
@@ -176,6 +158,7 @@ public class YangBot implements Bot {
     public ControllerState processInput(GameTickPacket packet) {
         if (!hasSetPriority) {
             hasSetPriority = true;
+            Thread.currentThread().setName("YangBot Thread i="+playerIndex);
             Thread.currentThread().setPriority(10);
         }
 
@@ -195,7 +178,7 @@ public class YangBot implements Bot {
             GameData.timeOfMatchStart = packet.gameInfo().secondsElapsed();
 
         AdvancedRenderer r;
-        if (playerIndex == 0 || playerIndex == 3 || true)
+        if (playerIndex == 0 || playerIndex == 3)
             r = AdvancedRenderer.forBotLoop(this);
         else {
             r = new DummyRenderer(this.playerIndex);

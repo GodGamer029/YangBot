@@ -84,7 +84,7 @@ public class EpicMeshPlanner {
 
     public EpicMeshPlanner withStart(CarData car, float offset) {
         this.startSpeed = MathUtils.clip(car.forwardSpeed(), 0, CarData.MAX_VELOCITY);
-        this.boostAvailable = (float) car.boost;
+        this.boostAvailable = car.boost;
         return this.withStart(car.position, car.getPathStartTangent(), offset);
     }
 
@@ -148,7 +148,7 @@ public class EpicMeshPlanner {
 
         Optional<SegmentedPath> currentPath;
         switch (this.pathCreationStrategy) {
-            case SIMPLE: {
+            case SIMPLE -> {
                 assert !this.allowFullSend;
                 List<Curve.ControlPoint> controlPoints = new ArrayList<>();
                 // Construct Path
@@ -160,9 +160,8 @@ public class EpicMeshPlanner {
 
                     currentPath = Optional.of(SegmentedPath.from(new Curve(controlPoints, 32), this.startSpeed, this.arrivalTime, this.arrivalSpeed));
                 }
-                break;
             }
-            case NAVMESH: {
+            case NAVMESH -> {
                 assert this.additionalPoints.size() == 0;
                 assert !this.allowFullSend;
                 var curveOptional = YangBotJNAInterop.findPath(this.startPos, this.startTangent, this.endPos, this.endTangent, 20);
@@ -170,9 +169,8 @@ public class EpicMeshPlanner {
                     currentPath = Optional.empty();
                 else
                     currentPath = Optional.of(SegmentedPath.from(curveOptional.get(), this.startSpeed, this.arrivalTime, this.arrivalSpeed));
-                break;
             }
-            case JAVA_NAVMESH: {
+            case JAVA_NAVMESH -> {
                 assert this.additionalPoints.size() == 0;
                 assert !this.allowFullSend;
                 var nav = new Navigator(Navigator.PathAlgorithm.BELLMANN_FORD);
@@ -184,9 +182,8 @@ public class EpicMeshPlanner {
                     currentPath = Optional.empty();
                 else
                     currentPath = Optional.of(SegmentedPath.from(curve, this.startSpeed, this.arrivalTime, this.arrivalSpeed));
-                break;
             }
-            case YANGPATH: {
+            case YANGPATH -> {
                 assert this.additionalPoints.size() == 0;
                 assert !this.avoidBall;
 
@@ -194,7 +191,7 @@ public class EpicMeshPlanner {
                 if (this.allowOptimize)
                     builder.optimize();
 
-                if (Math.abs(this.startPos.y) > RLConstants.goalDistance - 50 && Math.abs(this.startPos.x) < RLConstants.goalCenterToPost) {
+                if (Math.abs(this.startPos.y) > RLConstants.goalDistance - 50 && Math.abs(this.startPos.x) < RLConstants.goalCenterToPost && this.startPos.z < RLConstants.goalHeight) {
                     var getOutOfGoal = new GetOutOfGoalSegment(builder, this.endPos);
                     builder.add(getOutOfGoal);
                 }
@@ -236,10 +233,8 @@ public class EpicMeshPlanner {
 
                 builder.add(new StraightLineSegment(builder, this.endPos, this.arrivalSpeed, this.arrivalTime, this.allowFullSend));
                 currentPath = Optional.of(builder.build());
-
-                break;
             }
-            case ATBA_YANGPATH: {
+            case ATBA_YANGPATH -> {
                 assert this.additionalPoints.size() == 0;
                 assert !this.avoidBall;
 
@@ -250,10 +245,8 @@ public class EpicMeshPlanner {
                 builder.add(new AtbaSegment(builder, this.endPos));
 
                 currentPath = Optional.of(builder.build());
-                break;
             }
-            default:
-                throw new IllegalStateException("Unknown path creation strategy: " + this.pathCreationStrategy);
+            default -> throw new IllegalStateException("Unknown path creation strategy: " + this.pathCreationStrategy);
         }
 
         /*if (this.avoidBall) {

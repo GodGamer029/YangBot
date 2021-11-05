@@ -11,14 +11,14 @@ public class TurnManeuver extends Maneuver {
             new Vector3(0, 1, 0),
             new Vector3(0, 0, 1)
     };
-    public ControlsOutput controls = new ControlsOutput();
+    //public ControlsOutput controls = new ControlsOutput();
     public Matrix3x3 target = null;
     public float maxErrorOrientation = 0.10f;
     public float maxErrorAngularVelocity = 0.15f;
-    private Vector3 omega = new Vector3();
+    private Vector3 angularError = new Vector3();
     private Vector3 omega_local = new Vector3();
     private Vector3 dphi_dt = new Vector3();
-    private Vector3 phi = new Vector3();
+    private Vector3 orientationError = new Vector3();
     private Matrix3x3 Z0 = new Matrix3x3();
     private Matrix3x3 theta = new Matrix3x3();
     private float horizon_time = 0.05f;
@@ -42,9 +42,9 @@ public class TurnManeuver extends Maneuver {
 
     private Vector3 f(Vector3 alpha_local, float dt) {
         Vector3 alpha_world = theta.dot(alpha_local);
-        Vector3 omega_prediction = omega.add(alpha_world.mul(dt));
-        Vector3 phi_prediction = phi
-                .add(Z0.dot(omega.add(alpha_world.mul(0.5f * dt))).mul(dt));
+        Vector3 omega_prediction = angularError.add(alpha_world.mul(dt));
+        Vector3 phi_prediction = orientationError
+                .add(Z0.dot(angularError.add(alpha_world.mul(0.5f * dt))).mul(dt));
         Vector3 dphi_dt_prediction = Z0.dot(omega_prediction);
         return phi_prediction.mul(-1).sub(G(phi_prediction, dphi_dt_prediction));
     }
@@ -137,33 +137,27 @@ public class TurnManeuver extends Maneuver {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
 
-        omega = target.transpose().dot(car.angularVelocity);
+        angularError = target.transpose().dot(car.angularVelocity);
         theta = target.transpose().matrixMul(car.orientation);
-        omega_local = omega.dot(theta);
-        phi = Vector3.rotationToAxis(theta);
+        omega_local = angularError.dot(theta);
+        orientationError = Vector3.rotationToAxis(theta);
 
-        this.setIsDone((phi.magnitude() < maxErrorOrientation) && (omega.magnitude() < maxErrorAngularVelocity));
+        this.setIsDone((orientationError.magnitude() < maxErrorOrientation) && (angularError.magnitude() < maxErrorAngularVelocity));
 
         if (this.isDone()) {
-            controls.withRoll(0);
-            controls.withYaw(0);
-            controls.withPitch(0);
-
-            if (controlsOutput != null) {
-                controlsOutput.withPitch(0);
-                controlsOutput.withYaw(0);
-                controlsOutput.withRoll(0);
-            }
+            controlsOutput.withPitch(0);
+            controlsOutput.withYaw(0);
+            controlsOutput.withRoll(0);
         } else {
-            this.Z0 = Z(phi);
-            dphi_dt = this.Z0.dot(omega);
+            this.alpha = new Vector3();
+            this.Z0 = Z(orientationError);
+            dphi_dt = this.Z0.dot(angularError);
             this.horizon_time = Math.max(0.03f, 4.0f * dt);
 
             final int n_iterations = 5;
             float eps = 0.001f;
             for (int i = 0; i < n_iterations; i++) {
                 Vector3 f0 = f(alpha, horizon_time);
-
                 Matrix3x3 J = new Matrix3x3();
                 for (int j = 0; j < 3; j++) {
                     Vector3 df_j = (f0.sub(
@@ -182,16 +176,9 @@ public class TurnManeuver extends Maneuver {
                     break;
             }
             Vector3 rpy = findControlsFor(alpha);
-
-            controls.withRoll(rpy.x);
-            controls.withPitch(rpy.y);
-            controls.withYaw(rpy.z);
-
-            if (controlsOutput != null) {
-                controlsOutput.withRoll(rpy.x);
-                controlsOutput.withPitch(rpy.y);
-                controlsOutput.withYaw(rpy.z);
-            }
+            controlsOutput.withRoll(rpy.x);
+            controlsOutput.withPitch(rpy.y);
+            controlsOutput.withYaw(rpy.z);
         }
     }
 

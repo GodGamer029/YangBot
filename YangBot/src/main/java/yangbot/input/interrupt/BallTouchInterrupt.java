@@ -4,7 +4,7 @@ import yangbot.input.BallTouch;
 
 public class BallTouchInterrupt extends Interrupt {
 
-    private int carHideIndex = -1;
+    private int carHideIndex;
 
     public BallTouchInterrupt(int carHideIndex) {
         this.carHideIndex = carHideIndex;

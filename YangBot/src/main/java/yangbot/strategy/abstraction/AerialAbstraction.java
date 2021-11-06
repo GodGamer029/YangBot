@@ -205,6 +205,7 @@ public class AerialAbstraction extends Abstraction {
         var car = GameData.current().getCarData();
         var deltaX = AerialManeuver.getDeltaX(car, this.targetPos, arrivalTime);
         renderer.drawString2d("State: " + this.state.name(), Color.WHITE, new Point(400, 300), 2, 2);
+        renderer.drawString2d(String.format("Deltamag: %.2f\nreorient time: %.2f", deltaX.magnitude(), this.aerialManeuver.timeNeededForLastMinuteReorient), Color.WHITE, new Point(400, 340), 1, 1);
         var bean = AerialManeuver.getDeltaX(car, new Vector3(), arrivalTime, 0.2f - this.aerialManeuver.doubleJump.timer).mul(-1);
         renderer.drawCentered3dCube(Color.RED, bean, 50);
         renderer.drawCentered3dCube(Color.RED, bean, 120);

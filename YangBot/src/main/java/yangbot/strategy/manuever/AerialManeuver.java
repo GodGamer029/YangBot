@@ -20,7 +20,8 @@ public class AerialManeuver extends Maneuver {
     public final DodgeManeuver doubleJump;
     private final TurnManeuver turnManuver;
     private float boostTime = 0;
-    private float timeNeededForLastMinuteReorient = -1;
+    public float timeNeededForLastMinuteReorient = -1;
+    private float timeoutComputeLastMinuteReorient = 0f;
 
     private static final float j_speed = DodgeManeuver.speed;
     private static final float j_acceleration = DodgeManeuver.acceleration;
@@ -108,14 +109,21 @@ public class AerialManeuver extends Maneuver {
 
         Vector3 delta_x = target.sub(xf);
         Vector3 direction = delta_x.normalized();
-
-        if(this.arrivalTime - car.elapsedSeconds < 1 && this.timeNeededForLastMinuteReorient < 0 && this.target_orientation != null){
-            var simTurn = new TurnManeuver();
-            simTurn.target = this.target_orientation;
-            simTurn.maxErrorOrientation = 0.3f;
-            simTurn.maxErrorAngularVelocity = 1f;
-            this.timeNeededForLastMinuteReorient = MathUtils.clip(simTurn.simulate(car).elapsedSeconds + 0.05f, 0.05f, 1.5f);
+        if(this.arrivalTime - car.elapsedSeconds < 1.5f){
+            this.timeoutComputeLastMinuteReorient -= dt;
+            if((this.timeoutComputeLastMinuteReorient < 0 || this.timeNeededForLastMinuteReorient < 0) && this.target_orientation != null){
+                var simTurn = new TurnManeuver();
+                simTurn.target = this.target_orientation;
+                simTurn.maxErrorOrientation = 0.1f;
+                simTurn.maxErrorAngularVelocity = 0.15f;
+                this.timeNeededForLastMinuteReorient = MathUtils.clip(simTurn.simulate(car).elapsedSeconds + 0.05f, 0.2f, 1.5f);
+                if(this.arrivalTime - car.elapsedSeconds - this.timeNeededForLastMinuteReorient < 0.3f)
+                    this.timeoutComputeLastMinuteReorient = 0.05f;
+                else
+                    this.timeoutComputeLastMinuteReorient = 0.1f;
+            }
         }
+
         float reorientUntil = 0.6f;
         if(this.timeNeededForLastMinuteReorient >= 0)
             reorientUntil = this.timeNeededForLastMinuteReorient;

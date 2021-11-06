@@ -10,7 +10,7 @@ public class SimpleYangNet {
     public static SimpleYangNet BALL_STATE_PREDICTOR;
 
     static {
-        BALL_STATE_PREDICTOR = SimpleYangNet.readFrom("network.ptyang", new int[]{9, 64, 32, 32, 9},
+        BALL_STATE_PREDICTOR = SimpleYangNet.readFrom("simple_net.ptyang", new int[]{9, 64, 32, 32, 9},
                 new LinearLayer.Activation[]{
                         LinearLayer.Activation.MISH,
                         LinearLayer.Activation.MISH,
@@ -18,9 +18,25 @@ public class SimpleYangNet {
                         LinearLayer.Activation.SIGMOID});
     }
 
-    private List<LinearLayer> layers;
+    protected List<LinearLayer> layers;
+
+    protected SimpleYangNet() {
+    }
 
     public SimpleYangNet(byte[] model, int[] sizes, LinearLayer.Activation[] activations) {
+        this.initialize(model, sizes, activations);
+    }
+
+    public void initialize(byte[] model, int[] sizes, LinearLayer.Activation[] activations){
+        int[][] betterSizes = new int[sizes.length - 1][2];
+        for(int i = 0; i < betterSizes.length; i++){
+            betterSizes[i][0] = sizes[i];
+            betterSizes[i][1] = sizes[i + 1];
+        }
+        this.initialize(model, betterSizes, activations);
+    }
+
+    public void initialize(byte[] model, int[][] sizes, LinearLayer.Activation[] activations){
         assert sizes.length > 0;
         assert model.length > 0;
 
@@ -28,8 +44,8 @@ public class SimpleYangNet {
         int modelIndex = 0;
         int layerIndex = 0;
         while (modelIndex + 1 < model.length) {
-            float[][] weigths = new float[sizes[layerIndex + 1]][sizes[layerIndex]];
-            float[] biases = new float[sizes[layerIndex + 1]];
+            float[][] weigths = new float[sizes[layerIndex][1]][sizes[layerIndex][0]];
+            float[] biases = new float[sizes[layerIndex][1]];
 
             assert model.length >= modelIndex + 4 * weigths.length * weigths[0].length + 4 * biases.length : model.length + " " + modelIndex + " " + weigths.length + " " + weigths[0].length + " " + biases.length;
 

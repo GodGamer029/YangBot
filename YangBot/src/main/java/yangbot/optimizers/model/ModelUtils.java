@@ -1,16 +1,34 @@
 package yangbot.optimizers.model;
 
-import yangbot.input.BallData;
-import yangbot.input.Physics3D;
+import yangbot.input.*;
 import yangbot.util.Tuple;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ModelUtils {
 
-    public static float[] physicsToNormalizedState(Physics3D ph) {
-        var pos = ph.position;
-        var vel = ph.velocity;
-        var ang = ph.angularVelocity;
+    public static float[] encodeBall(ImmutableBallData b) {
+        var pos = b.position;
+        var vel = b.velocity;
+        var ang = b.angularVelocity;
         return new float[]{pos.x / 4100f, pos.y / 6000f, pos.z / 2000f, vel.x / 4000f, vel.y / 4000, vel.z / 4000, ang.x / 6f, ang.y / 6f, ang.z / 6f};
+    }
+
+    public static float[] encodeCar(CarData c) {
+        var pos = c.position;
+        var vel = c.velocity;
+        var ang = c.angularVelocity;
+        var forward = c.forward();
+        var right = c.right();
+        return new float[]{
+                pos.x / 4100f, pos.y / 6000f, pos.z / 2000f,
+                vel.x / 2300f, vel.y / 2300, vel.z / 2300,
+                ang.x / 5.5f, ang.y / 5.5f, ang.z / 5.5f,
+                forward.x, forward.y, forward.z,
+                right.x, right.y, right.z,
+                c.boost / 100.f
+        };
     }
 
     // < side | time >
@@ -27,12 +45,52 @@ public class ModelUtils {
         return new Tuple<>(output[output.length - 1], t);
     }
 
-    public static Tuple<Float, Float> ballToPrediction(BallData ballData) {
-        return ModelUtils.interpretYangOutput(SimpleYangNet.BALL_STATE_PREDICTOR.forward(ModelUtils.physicsToNormalizedState(ballData.toPhysics3d())));
+    public static Tuple<Float, Float> ballToPrediction(ImmutableBallData ballData) {
+        return ModelUtils.interpretYangOutput(SimpleYangNet.BALL_STATE_PREDICTOR.forward(ModelUtils.encodeBall(ballData)));
+    }
+
+    private static float[] combine(float[] one, float[] two){
+        float[] alloc = new float[one.length + two.length];
+        System.arraycopy(one, 0, alloc, 0, one.length);
+        System.arraycopy(two, 0, alloc, one.length, two.length);
+        return alloc;
+    }
+
+    public static float getImportanceOfCar(CarData c, ImmutableBallData b){
+        var ballEnc = ModelUtils.encodeBall(b);
+        var carEnc = ModelUtils.encodeCar(c);
+        return DeciderYangNet.GAME_STATE_PREDICTOR.deciderForward(ModelUtils.combine(carEnc, ballEnc))[0];
+    }
+
+    public static float gameStateToPrediction(GameData g){
+        var ballEnc = ModelUtils.encodeBall(g.getBallData());
+        Map<Integer, float[]> carData = new HashMap<>();
+        g.getAllCars().forEach(c -> carData.put(c.playerIndex, ModelUtils.encodeCar(c)));
+        var carImportances = g.getAllCars().stream()
+                .map(c -> {
+                    var data = ModelUtils.combine(carData.get(c.playerIndex), ballEnc);
+                    float importance = DeciderYangNet.GAME_STATE_PREDICTOR.deciderForward(data)[0];
+                    return new Tuple<>(c, importance);
+                })
+                .collect(Collectors.toList());
+        var t0 = carImportances.stream()
+                .filter(c -> c.getKey().team == 0)
+                .max(Comparator.comparingDouble(Tuple::getValue))
+                .map(Tuple::getKey);
+        var t1 = carImportances.stream()
+                .filter(c -> c.getKey().team == 1)
+                .max(Comparator.comparingDouble(Tuple::getValue))
+                .map(Tuple::getKey);
+
+        assert t0.isPresent() && t1.isPresent();
+        var data = ModelUtils.combine(ballEnc, carData.get(t0.get().playerIndex));
+        data = ModelUtils.combine(data, carData.get(t1.get().playerIndex));
+        return DeciderYangNet.GAME_STATE_PREDICTOR.forward(data)[0];
     }
 
     public static void preloadAllModels() {
         SimpleYangNet.BALL_STATE_PREDICTOR.toString();
+        DeciderYangNet.GAME_STATE_PREDICTOR.toString();
     }
 
 }

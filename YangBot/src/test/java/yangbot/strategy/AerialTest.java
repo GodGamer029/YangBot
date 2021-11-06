@@ -51,7 +51,7 @@ public class AerialTest {
     public void executionTest(){
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.2f)
-                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xMDAuMCxwPSgyMDY5Ljg1MCwtNDI2OC4xMDAsMTcuMDQwKSx2PSg0MDAuNDYxLDExMjkuNzYxLDAuNTIxKSxhPSgtMC4wMDAsLTAuMDAxLDIuNDU3KSxvPSgtMC4wMTcsMS4yOTksLTAuMDAwKSksYihwPSgxOTE2LjUwMCwtMzg5OC4zMDAsNTE1LjE2MCksdj0oLTg2Ny42MDEsOTM4LjMyMSwxMDY4LjcxMSksYT0oLTAuNTY3LDUuOTIwLC0wLjc5MykpOw==")
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj04NC4wLHA9KDEwNS4yOTAsLTM1NDIuMzAwLDE3LjA2MCksdj0oLTg1LjU3MSwtMTQwNC4yOTEsMC4xODEpLGE9KC0wLjAwMCwwLjAwMSwwLjAwMSksbz0oLTAuMDE3LC0xLjYzMiwwLjAwMCkpLGIocD0oNDAwMS43NTAsLTM1MTIuMDQwLDMyOS44MDApLHY9KC03LjE5MSwyMDQuNjUxLDEzNzkuNDcxKSxhPSgtMC4yNTksNS45MzgsLTAuODIzKSk7")
                         .withGameInfoState(new GameInfoState().withGameSpeed(0.1f)))
                 .withInit((controlsOutput -> {
                     System.out.println("########## init");

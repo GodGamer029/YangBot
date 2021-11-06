@@ -8,6 +8,7 @@ import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.optimizers.graders.OffensiveGrader;
+import yangbot.optimizers.graders.ValueNetworkGrader;
 import yangbot.optimizers.model.ModelUtils;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.YangBallPrediction;
@@ -36,7 +37,7 @@ public class CarBallCollisionOptimizerPerfTest {
 
         var ball = simGameData.getBallData();
 
-        var predicted = ModelUtils.ballToPrediction(ball.makeMutable());
+        var predicted = ModelUtils.ballToPrediction(ball);
         System.out.println("Predicted s=" + predicted.getKey() + " t=" + predicted.getValue());
     }
 
@@ -54,13 +55,18 @@ public class CarBallCollisionOptimizerPerfTest {
         strikeDodge.duration = 0.2f;
         strikeDodge.delay = 0.6f;
 
+        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(simGameData.getBallData().makeMutable(), RLConstants.tickRate, 5);
         optimizer.maxJumpDelay = 0.6f;
         optimizer.jumpDelayStep = 0.1f;
-
-        optimizer.customGrader = new OffensiveGrader();
-        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(simGameData.getBallData().makeMutable(), RLConstants.tickRate, 5);
+        optimizer.customGrader = new ValueNetworkGrader();
         optimizer.solveGoodStrike(simGameData, strikeDodge);
-
+        optimizer.solvedGoodStrike = false;
+        optimizer.customGrader = new ValueNetworkGrader();
+        ((ValueNetworkGrader)optimizer.customGrader).careAboutCars = false;
+        optimizer.solveGoodStrike(simGameData, strikeDodge);
+        optimizer.customGrader = new OffensiveGrader();
+        optimizer.solvedGoodStrike = false;
+        optimizer.solveGoodStrike(simGameData, strikeDodge);
 
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(RLConstants.tickFrequency * 4)

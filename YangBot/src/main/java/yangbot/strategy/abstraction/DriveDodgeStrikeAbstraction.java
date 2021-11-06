@@ -6,6 +6,7 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.Grader;
 import yangbot.optimizers.graders.OffensiveGrader;
+import yangbot.optimizers.graders.ValueNetworkGrader;
 import yangbot.path.builders.SegmentedPath;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
@@ -40,7 +41,7 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
     public boolean debugMessages = true;
 
     public DriveDodgeStrikeAbstraction(@NotNull SegmentedPath path) {
-        this(path, new OffensiveGrader());
+        this(path, new ValueNetworkGrader());
     }
 
     public DriveDodgeStrikeAbstraction(@NotNull SegmentedPath path, @NotNull Grader grader) {

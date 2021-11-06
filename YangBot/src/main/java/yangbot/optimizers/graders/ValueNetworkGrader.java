@@ -7,15 +7,25 @@ import yangbot.util.Tuple;
 public class ValueNetworkGrader extends Grader {
 
     private float lastError = 1;
-    private Tuple<Float, Float> bestPrediction;
+    private float bestPrediction = -1;
+    public boolean careAboutCars = true;
+    private boolean didWRN = false;
 
     @Override
     public boolean isImproved(GameData gameData) {
-        float targetSign = gameData.getCarData().team;
-        var simBall = gameData.getBallPrediction().getFrameAtRelativeTime(0.15f);
+        float myTeam = gameData.getCarData().team;
+        var simBall = gameData.getBallPrediction().getFrameAtRelativeTime(0.05f);
         var ball = simBall.orElseThrow().ballData;
-        var pred = ModelUtils.ballToPrediction(ball.makeMutable());
-        float error = Math.abs(pred.getKey() - targetSign);
+        float pred;
+        if(careAboutCars && gameData.getAllCars().size() > 1 && gameData.getAllCars().stream().anyMatch(c -> c.team != myTeam && !c.isDemolished)){
+            if(!didWRN){
+                didWRN = true;
+                System.out.println("USED NEW GAMSE TSATETET");
+            }
+            pred = ModelUtils.gameStateToPrediction(gameData);
+        }else
+            pred = ModelUtils.ballToPrediction(ball).getKey();
+        float error = Math.abs(pred - myTeam);
         if (error < lastError) {
             lastError = error;
             bestPrediction = pred;
@@ -26,11 +36,11 @@ public class ValueNetworkGrader extends Grader {
 
     @Override
     public String getAdditionalInfo() {
-        return "lastError=" + lastError + " t=" + (bestPrediction != null ? bestPrediction.getValue() : -1);
+        return "lastError=" + lastError + " t=" + (bestPrediction != -1 ? bestPrediction : -1);
     }
 
     @Override
     public float requiredBallPredLength() {
-        return 0.3f;
+        return 0.2f;
     }
 }

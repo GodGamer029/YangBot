@@ -40,7 +40,6 @@ public class StrikeTest {
 
                     strikeableFrames.clear();
 
-
                     ballPredBeginn = g.getBallPrediction();
 
                     strikeableFrames.addAll(g.getBallPrediction().getFramesBetweenRelative(0.25f, 3.5f)
@@ -75,7 +74,7 @@ public class StrikeTest {
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = new ArrayList<>();
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.05f)
-                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj03MC4wLHA9KC0yODMuODIwLC01MjI4LjM1MCwxNi4xNjApLHY9KC0wLjEyMSwtMC4xMDEsMTUuMTUxKSxhPSgwLjAwNiwtMC4wMDgsMC4wMDApLG89KC0wLjAxNywwLjY4OCwwLjAwMCkpLGIocD0oLTIzMTguMzgwLC0zMjU0Ljg4MCwyOTcuMDIwKSx2PSgxMTgxLjEwMSwtODQ5Ljg4MSwtMzQ3LjU1MSksYT0oLTQuMjM4LC0zLjcxNywyLjA1NCkpOw")
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj04NC4wLHA9KDEwNS4yOTAsLTM1NDIuMzAwLDE3LjA2MCksdj0oLTg1LjU3MSwtMTQwNC4yOTEsMC4xODEpLGE9KC0wLjAwMCwwLjAwMSwwLjAwMSksbz0oLTAuMDE3LC0xLjYzMiwwLjAwMCkpLGIocD0oNDAwMS43NTAsLTM1MTIuMDQwLDMyOS44MDApLHY9KC03LjE5MSwyMDQuNjUxLDEzNzkuNDcxKSxhPSgtMC4yNTksNS45MzgsLTAuODIzKSk7")
                         .withGameInfoState(new GameInfoState().withGameSpeed(0.2f)))
                 .withInit((controlsOutput -> {
                     System.out.println("########## init");

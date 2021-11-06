@@ -25,7 +25,7 @@ print('\n'.join(allJars))
 print()
 
 print('Searching modules...')
-result = subprocess.run(['jdeps', '--print-module-deps', '-cp', "'"+(';'.join(allJars))+"'"] + allJars, stdout=subprocess.PIPE)
+result = subprocess.run(['jdeps', '--print-module-deps', '--multi-release', '16', '-cp', "'"+(';'.join(allJars))+"'"] + allJars, stdout=subprocess.PIPE)
 modules = result.stdout.decode('utf-8').split(os.linesep)[0]
 print()
 print('Modules needed:', modules)

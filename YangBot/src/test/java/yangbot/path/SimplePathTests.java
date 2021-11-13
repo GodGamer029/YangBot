@@ -5,16 +5,15 @@ import rlbot.gamestate.CarState;
 import rlbot.gamestate.GameInfoState;
 import rlbot.gamestate.GameState;
 import rlbot.gamestate.PhysicsState;
-import yangbot.input.GameData;
-import yangbot.input.Physics2D;
-import yangbot.input.Physics3D;
-import yangbot.input.RLConstants;
+import yangbot.input.*;
 import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.PathSegment;
 import yangbot.path.builders.SegmentedPath;
+import yangbot.path.builders.segments.ArcLineArc;
 import yangbot.path.builders.segments.StraightLineSegment;
 import yangbot.path.builders.segments.TurnCircleSegment;
 import yangbot.strategy.manuever.DriveManeuver;
+import yangbot.util.CsvLogger;
 import yangbot.util.Range;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix2x2;
@@ -236,6 +235,67 @@ public class SimplePathTests {
                 })
                 .withOnComplete((f) -> {
 
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        assert ScenarioLoader.get().waitToCompletion(4000);
+    }
+
+    private float lastVel = 0;
+    private CsvLogger logger;
+
+    @Test
+    public void testArcLineArc() {
+        var startPos = new Vector2(1298.81, 2000.78);
+        var startTangent = new Vector2(0.49, 0.87f).normalized();
+        var startSpeed = 1800.51f;
+        var endPos = new Vector2(0, -2000);
+        var endTangent = new Vector2(1, 0).normalized();
+        var seg = new ArcLineArc(new Physics2D(startPos, startTangent.mul(startSpeed), Matrix2x2.lookAt(startTangent), 0),
+               100, endPos, endTangent, 10 + startSpeed * 0.25f, 1 / DriveManeuver.maxTurningCurvature(2300), 50, 1 / DriveManeuver.maxTurningCurvature(2300));
+        seg.setArrivalSpeed(CarData.MAX_VELOCITY);
+
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.08f)
+                .withGameState(new GameState()
+                        .withGameInfoState(new GameInfoState().withGameSpeed(0.2f))
+                        .withCarState(0, new CarState().withBoostAmount(100f).withPhysics(new PhysicsState()
+                                .withLocation(startPos.sub(startTangent.mul(startSpeed * 0.1f)).withZ(RLConstants.carElevation).toDesiredVector())
+                                .withVelocity(startTangent.mul(startSpeed * 1.05f).withZ(0).toDesiredVector())
+                                .withRotation(Matrix3x3.lookAt(startTangent.withZ(0)).toEuler().toDesiredRotation())
+                                .withAngularVelocity(new Vector3().toDesiredVector())
+                        )))
+                .withInit(c -> {
+                    path = new SegmentedPath(List.of(seg));
+                    seg.getTimeEstimate();
+                    logger = new CsvLogger(new String[]{"t", "accel", "pred"});
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+
+                    var rend = gameData.getAdvancedRenderer();
+                    if (!path.isDone() && car.hasWheelContact)
+                        path.step(dt, output);
+                    else
+                        return Scenario.RunState.COMPLETE;
+
+                    if(path.isDone())
+                        System.out.println("Dist to target: "+car.position.flatten().distance(endPos));
+
+                    var cp = car.position.add(0, 0, 50);
+                    rend.drawLine3d(Color.WHITE, cp, cp.add(car.forward().mul(100)));
+                    rend.drawLine3d(Color.GREEN, cp, cp.add(car.velocity.normalized().mul(100)));
+
+                    path.draw(rend);
+
+                    rend.drawControlsOutput(output, 440);
+                    return timer > 8 || path.isDone() ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
+                })
+                .withOnComplete((f) -> {
+                    logger.save("..\\data\\turntime.csv");
                 })
                 .build();
 

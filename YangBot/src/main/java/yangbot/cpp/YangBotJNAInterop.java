@@ -209,4 +209,8 @@ public class YangBotJNAInterop {
     private static native ByteBufferStruct simulateBall(Pointer ball, int tickrate, float secondsSimulated);
 
     private static native void Free(Pointer ptr);
+
+    public static void doNothing(){
+
+    }
 }

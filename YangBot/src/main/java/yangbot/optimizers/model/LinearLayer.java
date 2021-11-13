@@ -1,5 +1,7 @@
 package yangbot.optimizers.model;
 
+import net.jafama.FastMath;
+
 public class LinearLayer {
 
     private float[][] weights;
@@ -13,11 +15,11 @@ public class LinearLayer {
     }
 
     private float sigmoid(float x) {
-        return 1 / (1 + (float) Math.exp(-1 * x));
+        return 1 / (1 + (float) FastMath.exp(-1 * x));
     }
 
     private float mish(float x) {
-        return x * (float) (Math.tanh(Math.log(1 + Math.exp(x))));
+        return x * (float) (FastMath.tanh(FastMath.log(1 + FastMath.exp(x))));
     }
 
     private float activation(float x) {

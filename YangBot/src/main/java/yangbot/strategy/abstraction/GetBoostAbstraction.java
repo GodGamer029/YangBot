@@ -69,7 +69,7 @@ public class GetBoostAbstraction extends Abstraction {
         List<BoostPad> closestPadList = allPads.stream()
                 .filter(pad -> allowSmallBoost || pad.isFullBoost())
                 // Pad is active
-                .filter((pad) -> pad.isActive() || pad.boostAvailableIn() < 1)
+                .filter((pad) -> pad.isActive() /*|| pad.boostAvailableIn() < 1*/)
                 // Pad is closer to our goal than ball
                 .filter((pad) -> Math.signum(MathUtils.minAbs(ball.position.y, RLConstants.goalDistance * 0.8f /*always allow own corner boosts*/) - pad.getLocation().y) == -teamSign)
 

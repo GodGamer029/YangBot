@@ -3,10 +3,14 @@ package yangbot.path.builders;
 import org.jetbrains.annotations.NotNull;
 import yangbot.input.CarData;
 import yangbot.input.ControlsOutput;
+import yangbot.input.GameData;
 import yangbot.path.Curve;
 import yangbot.strategy.manuever.FollowPathManeuver;
+import yangbot.util.AdvancedRenderer;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
+
+import java.awt.*;
 
 public abstract class BakeablePathSegment extends PathSegment {
 
@@ -37,9 +41,7 @@ public abstract class BakeablePathSegment extends PathSegment {
         this.followPathManeuver.path = this.getBakedPath();
         this.followPathManeuver.arrivalTime = this.bakedArrivalTime >= 0 ? this.bakedArrivalTime : this.arrivalTime;
 
-        //this.followPathManeuver.arrivalSpeed = this.arrivalSpeed; // not needed because arrival speed is capped by curve.calculatemaxspeeds
-        //this.followPathManeuver.arrivalTime = (this.getTimeEstimate() - this.timer) + GameData.current().getCarData().elapsedSeconds;
-        //this.followPathManeuver.draw(GameData.current().getAdvancedRenderer(), GameData.current().getCarData());
+        this.followPathManeuver.draw(GameData.current().getAdvancedRenderer(), GameData.current().getCarData());
         try {
             this.followPathManeuver.step(dt, output);
         } catch (Exception e) {
@@ -89,18 +91,36 @@ public abstract class BakeablePathSegment extends PathSegment {
     public final @NotNull Curve bake(int maxSamples) {
         if (this.bakedPath == null) {
             this.bakedPath = this.bakeInternal(maxSamples);
+            assert this.bakedPath != null : this.getClass().getSimpleName();
             this.timeEstimate = this.bakedPath.calculateMaxSpeeds(
                     MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY),
-                    this.arrivalSpeed < 0 ? CarData.MAX_VELOCITY : this.arrivalSpeed,
+                    this.arrivalSpeed < 0 ? -1 : this.arrivalSpeed,
                     this.allowBoost/*automatically turns true if arrival speed needs boost*/);
         }
 
         return this.bakedPath;
     }
 
-
     public @NotNull Curve getBakedPath() {
         assert this.bakedPath != null;
         return this.bakedPath;
+    }
+
+    @Override
+    public void draw(AdvancedRenderer renderer, Color color) {
+        if(this.bakedPath == null)
+            return;
+
+        this.bakedPath.draw(renderer, color);
+    }
+
+    public void setArrivalSpeed(float newSpeed){
+        this.arrivalSpeed = newSpeed;
+        this.bakedPath = null;
+    }
+
+    public void setArrivalTime(float t){
+        this.arrivalTime = t;
+        this.bakedPath = null;
     }
 }

@@ -213,7 +213,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
         return this.tangentPoint.sub(this.circlePos).normalized().cross().mul(-ccw).withZ(0);
     }
 
-    @Override
+    /*@Override
     public void draw(AdvancedRenderer renderer, Color color) {
         assert tangentPoint != null;
         //renderer.drawCircle(Color.PINK, circlePos.withZ(40), this.circleRadius);
@@ -229,7 +229,7 @@ public class TurnCircleSegment extends BakeablePathSegment {
         renderer.drawCircle(color, circlePos.withZ(20), this.circleRadius, startAngle, endAngle);
         renderer.drawLine3d(color, this.startPos.withZ(20), this.turnCircleStartPos.withZ(20));
         //renderer.drawLine3d(color.darker(), endPos.withZ(20), this.tangentPoint.withZ(20));
-    }
+    }*/
 
     @Override
     protected @NotNull Curve bakeInternal(int maxSamples) {

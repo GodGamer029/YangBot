@@ -55,6 +55,7 @@ public class SimpleKickoffManeuver extends Maneuver {
                 var planner = new EpicMeshPlanner()
                         .withArrivalSpeed(2300)
                         .withStart(car)
+                        .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.SIMPLE)
                         .withEnd(ball.position.withZ(17), ball.position.sub(car.position).normalized().add(new Vector3(0, -1 * car.getTeamSign(), 0).mul(0.5f)).normalized());
 
                 this.targetPos = ball.position;

@@ -109,7 +109,7 @@ public class RecoverStrategy extends Strategy {
         //    renderer.drawString2d(String.format("Arriving in: %.1f", simulationTime), Color.WHITE, new Point(400, 400), 2, 2);
         //renderer.drawString2d(String.format("Total: %.1f", this.recoverEndTime - this.recoverStartTime), speedflipPossible ? Color.GREEN : Color.RED, new Point(400, 450), 2, 2);
 
-        if (speedflipPossible && simulationTime <= 0.15f) {
+        if (speedflipPossible && simulationTime <= 0.15f && Math.abs(car.velocity.dot(car.right())) < 100 && Math.abs(car.angularVelocity.dot(new Vector3(0, 0, 1))) < 1) {
             double backWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, -1, 0, -1)).sub(impactPosition));
             double frontWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, 1, 0, -1)).sub(impactPosition));
             if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight > backWheelsHeight + 15 && frontWheelsHeight < backWheelsHeight + 50) {

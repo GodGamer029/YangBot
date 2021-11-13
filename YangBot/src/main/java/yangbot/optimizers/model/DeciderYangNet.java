@@ -12,12 +12,12 @@ public class DeciderYangNet extends SimpleYangNet {
 
     static {
         GAME_STATE_PREDICTOR = DeciderYangNet.readFrom("dec_net.ptyang", new int[][]{
-                        {41, 64},
+                        {20 * 2 + 9, 64},
                         {64, 32},
                         {32, 16},
                         {16, 1},
 
-                        {25, 20},
+                        {20 + 9, 20},
                         {20, 1}
                 },
                 new LinearLayer.Activation[]{ // value

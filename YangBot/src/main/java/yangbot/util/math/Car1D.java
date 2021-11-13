@@ -73,10 +73,10 @@ public class Car1D {
         for (float t = 0; t < maxTime /*max*/; t += dt) {
             if (Math.abs(startSpeed - targetSpeed) > 10) {
                 var out = new ControlsOutput();
+                out.withSteer(steerInput);
                 DriveManeuver.speedController(dt, out, startSpeed, targetSpeed, targetSpeed, 0.03f, true);
                 if (boost <= 0)
                     out.withBoost(false);
-                out.withSteer(steerInput);
                 float force = CarData.driveForceForward(out, startSpeed, 0, 0);
                 if (out.holdBoost())
                     boost -= CarData.BOOST_CONSUMPTION * dt;

@@ -2,6 +2,8 @@ package yangbot.optimizers.model;
 
 import yangbot.input.*;
 import yangbot.util.Tuple;
+import yangbot.util.math.vector.Matrix3x3;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,19 +17,22 @@ public class ModelUtils {
         return new float[]{pos.x / 4100f, pos.y / 6000f, pos.z / 2000f, vel.x / 4000f, vel.y / 4000, vel.z / 4000, ang.x / 6f, ang.y / 6f, ang.z / 6f};
     }
 
-    public static float[] encodeCar(CarData c) {
+    public static float[] encodeCar(CarData c, ImmutableBallData b) {
         var pos = c.position;
         var vel = c.velocity;
         var ang = c.angularVelocity;
         var forward = c.forward();
         var right = c.right();
+        var cToB = b.position.sub(c.position);
+        var cToBNorm = cToB.normalized();
         return new float[]{
                 pos.x / 4100f, pos.y / 6000f, pos.z / 2000f,
                 vel.x / 2300f, vel.y / 2300, vel.z / 2300,
                 ang.x / 5.5f, ang.y / 5.5f, ang.z / 5.5f,
                 forward.x, forward.y, forward.z,
                 right.x, right.y, right.z,
-                c.boost / 100.f
+                c.boost / 100.f,
+                cToBNorm.x, cToBNorm.y, cToBNorm.z, (float)(Math.sqrt(cToB.magnitudeF()) / Math.sqrt(6000))
         };
     }
 
@@ -58,14 +63,14 @@ public class ModelUtils {
 
     public static float getImportanceOfCar(CarData c, ImmutableBallData b){
         var ballEnc = ModelUtils.encodeBall(b);
-        var carEnc = ModelUtils.encodeCar(c);
+        var carEnc = ModelUtils.encodeCar(c, b);
         return DeciderYangNet.GAME_STATE_PREDICTOR.deciderForward(ModelUtils.combine(carEnc, ballEnc))[0];
     }
 
     public static float gameStateToPrediction(GameData g){
         var ballEnc = ModelUtils.encodeBall(g.getBallData());
         Map<Integer, float[]> carData = new HashMap<>();
-        g.getAllCars().forEach(c -> carData.put(c.playerIndex, ModelUtils.encodeCar(c)));
+        g.getAllCars().forEach(c -> carData.put(c.playerIndex, ModelUtils.encodeCar(c, g.getBallData())));
         var carImportances = g.getAllCars().stream()
                 .map(c -> {
                     var data = ModelUtils.combine(carData.get(c.playerIndex), ballEnc);
@@ -82,7 +87,17 @@ public class ModelUtils {
                 .max(Comparator.comparingDouble(Tuple::getValue))
                 .map(Tuple::getKey);
 
-        assert t0.isPresent() && t1.isPresent();
+        if(t0.isEmpty() || t1.isEmpty()){
+            assert t0.isPresent() || t1.isPresent();
+            int team = t0.isEmpty() ? -1 : 1;
+            var sample = new CarData(new Vector3(0, team * -(RLConstants.goalDistance + 200), RLConstants.carElevation), new Vector3(), new Vector3(), Matrix3x3.lookAt(new Vector3(1, 0, 0)));
+            sample.playerIndex = -999;
+            carData.put(-999, ModelUtils.encodeCar(sample, g.getBallData()));
+            if(t0.isEmpty())
+                t0 = Optional.of(sample);
+            else
+                t1 = Optional.of(sample);
+        }
         var data = ModelUtils.combine(ballEnc, carData.get(t0.get().playerIndex));
         data = ModelUtils.combine(data, carData.get(t1.get().playerIndex));
         return DeciderYangNet.GAME_STATE_PREDICTOR.forward(data)[0];

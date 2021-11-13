@@ -23,6 +23,11 @@ public class MathUtils {
         return a.mul(1.0f - t).add(b.mul(t));
     }
 
+    public static Vector2 lerp(Vector2 a, Vector2 b, double t) {
+        assert t >= 0 && t <= 1 : "t=" + t;
+        return a.mul(1.0f - t).add(b.mul(t));
+    }
+
     public static float minAbs(float val, float min) {
         assert min >= 0;
 
@@ -69,8 +74,20 @@ public class MathUtils {
         return angle;
     }
 
+    public static float closestMultiple(float value, float base){
+        float factor = value / base;
+        return base * Math.round(factor);
+    }
 
     public static float remapClip(float value, float rangeStart, float rangeEnd, float newRangeStart, float newRangeEnd) {
+        if(rangeStart == rangeEnd){
+            if(value < rangeStart)
+                return newRangeStart;
+            else if(value > rangeEnd)
+                return newRangeEnd;
+            else
+                return 0.5f * (newRangeStart + newRangeEnd);
+        }
         return remap(MathUtils.clip(value, rangeStart, rangeEnd), rangeStart, rangeEnd, newRangeStart, newRangeEnd);
     }
 

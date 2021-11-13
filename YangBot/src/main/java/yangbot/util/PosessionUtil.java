@@ -18,6 +18,7 @@ public class PosessionUtil {
         gameData.getAllCars().stream()
                 .filter(c -> c.team == gameData.getCarData().team)
                 .filter(c -> c.getPlayerInfo().isActiveShooter())
+                .filter(c -> c.hasWheelContact)
                 .forEach(c -> {
                     float time = timeToBall(c, ballPrediction);
                     if (time < ourTimeToBall.getKey()) {

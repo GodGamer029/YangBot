@@ -70,7 +70,7 @@ public class CarData {
     public final boolean isBot;
     public final String name;
     public final String strippedName;
-    public final int playerIndex;
+    public int playerIndex;
     public ControlsOutput lastControllerInputs = new ControlsOutput();
 
     // Variables used exclusively in step functions
@@ -160,8 +160,23 @@ public class CarData {
         }
     }
 
-    public float slowdownForceFromSteering(float steerIn) {
-        return (-0.07186693033945346f * Math.abs(steerIn) + -0.05545323728191764f * Math.abs(this.angularVelocity.dot(this.up())) + 0.00062552963716722f * Math.abs(this.velocity.dot(this.right()))) * this.forwardSpeed();
+    public static float slowdownForceFromSteering(float steer, float vf){
+        steer = Math.abs(steer);
+        if(steer < 0.01f)
+            return 0;
+        float x1 = vf * DriveManeuver.maxTurningCurvature(vf);
+        float x2 = vf * x1;
+        float predAccel = -36.34783f * x1 -0.09389f * x2 + 41.91971f;
+        // Scale according to steer
+        float s1 = steer * predAccel;
+        float s2 = s1 * steer;
+        float s3 = s2 * steer;
+        return 0.0146f * s1 + 0.83f * s2 + 0.15f * s3;
+    }
+
+    public float slowdownForceFromSteering(float steer) {
+        float vF = this.forwardSpeed();
+        return CarData.slowdownForceFromSteering(steer, vF);
     }
 
     // airTime ranges between ~1 to ~1.73

@@ -8,6 +8,7 @@ import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.optimizers.graders.ValueNetworkGrader;
 import yangbot.path.EpicMeshPlanner;
+import yangbot.path.builders.SegmentedPath;
 import yangbot.strategy.abstraction.*;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.PosessionUtil;
@@ -117,7 +118,7 @@ public class LACHelper {
             boolean isPossible = AerialAbstraction.isViable(car, targetPos, interceptFrame.absoluteTime);
             if (isPossible) {
                 return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.AERIAL, (o) -> {
-                    System.out.println(car.playerIndex+": Executing Aerial << at t="+interceptFrame.relativeTime+" "+ ScenarioUtil.getEncodedGameState(gameData));
+                    System.out.println(car.playerIndex+": Executing Aerial << at t="+interceptFrame.relativeTime+" z="+ballPos.z+" >> "+ ScenarioUtil.getEncodedGameState(gameData));
 
                     var aerialAbstraction = new AerialAbstraction(targetPos);
                     aerialAbstraction.targetOrientPos = ballPos;
@@ -138,7 +139,7 @@ public class LACHelper {
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
         int teamSign = car.getTeamSign();
-        final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 1000));
+        final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 200));
         float maxT = strikePrediction.relativeTimeOfLastFrame() - RLConstants.simulationTickFrequency * 2;
         float t = strikePrediction.firstFrame().relativeTime;
 
@@ -165,7 +166,6 @@ public class LACHelper {
                 t += RLConstants.simulationTickFrequency * 4; // 15hz
             else // default
                 t += RLConstants.simulationTickFrequency * 2; // 30hz
-
             if (interceptFrame.ballData.isInAnyGoal())
                 break;
 
@@ -174,85 +174,106 @@ public class LACHelper {
 
             final Vector3 targetBallPos = interceptFrame.ballData.position;
 
+            //if(car.position.distance(targetBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getForwardExtent() - 50 > CarData.MAX_VELOCITY * interceptFrame.relativeTime * 1.1f)
+            //    continue; // impossible to get there in time
+
+            float jumpDelay;
             {
-                float zDiff = targetBallPos.z - 0.7f * BallData.COLLISION_RADIUS - car.position.z;
-                float jumpDelay;
+                float zDiff = targetBallPos.z - BallData.COLLISION_RADIUS * 0.2f - car.position.z;
+
                 if (zDiff < 5)
-                    jumpDelay = 0.25f;
+                    jumpDelay = 0.2f;
                 else
-                    jumpDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.05f, 0.25f, 1f);
+                    jumpDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.1f, 0.2f, 1.1f);
 
                 if (interceptFrame.relativeTime < jumpDelay)
                     continue;
             }
 
-            final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
-            final Vector3 carToBall = targetBallPos.sub(car.position).withZ(0).normalized();
+            final Vector2 closestScoringPosition = enemyGoalLine.center();
+            final Vector3 carToBall = targetBallPos.sub(car.position).normalized().withZ(0);
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 
-            Vector3 ballHitTarget = targetBallPos.sub((carToBall.add(ballTargetToGoalTarget.mul(2))).normalized().mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent()));
-
-            //Vector3 ballHitTarget = targetBallPos.sub(carToBall.mul(BallData.COLLISION_RADIUS + car.hitbox.getDiagonalExtent()));
-            ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
+            final Vector3 ballHitTarget = targetBallPos.sub(
+                    carToBall.add(ballTargetToGoalTarget.mul(2))
+                                    .normalized()
+                                    .mul(BallData.COLLISION_RADIUS + car.hitbox.getForwardExtent())
+            ).withZ(RLConstants.carElevation);
 
             final Vector3 carToDriveTarget = ballHitTarget.sub(car.position).normalized();
-            final Vector3 endTangent = carToDriveTarget.mul(4).add(ballTargetToGoalTarget).withZ(0).normalized();
+            final Vector3 endTangent = carToDriveTarget.mul(1).add(ballTargetToGoalTarget.mul(1)).withZ(0).normalized();
 
-            var currentPathOptional = new EpicMeshPlanner()
-                    .withStart(car)
-                    .withEnd(ballHitTarget, endTangent)
-                    .withArrivalTime(interceptFrame.absoluteTime)
-                    .withArrivalSpeed(2300)
-                    .allowFullSend(car.boost > 20)
-                    .allowOptimize(false)
-                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
-                    .plan();
+            Function<Optional<SegmentedPath>, Optional<StrikeInfo>> testPath = (Optional<SegmentedPath> p) -> {
+                if (p.isEmpty())
+                    return Optional.empty();
 
-            if (currentPathOptional.isEmpty())
-                continue;
+                var currentPath = p.get();
 
-            var currentPath = currentPathOptional.get();
+                if(currentPath.getEndSpeed() < 400)
+                    return Optional.empty();
 
-            //if (ballTargetToGoalTarget.dot(currentPath.getEndTangent()) < 0)
-            //    continue;
-
-            // Check if path is valid
-            {
                 float tEstimate = currentPath.getTotalTimeEstimate();
-                //System.out.println("Time estimate: "+tEstimate+" "+interceptFrame.relativeTime);
-                if (tEstimate <= interceptFrame.relativeTime) {
-                    if (verboseDebug)
-                        System.out.println("##### end path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate());
-                    return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.DODGE, (o) -> {
-                        System.out.println(car.playerIndex+": Executing DodgeStrike << "+ ScenarioUtil.getEncodedGameState(gameData));
 
-                        var dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath, new ValueNetworkGrader());
+                if (tEstimate > interceptFrame.relativeTime || Math.abs(tEstimate - interceptFrame.relativeTime) > 1.5f){
+                    if (verboseDebug) {
+                        StringBuilder s = new StringBuilder("continue path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate() + " ");
+                        for (var seg : currentPath.getSegmentList()) {
+                            var est = seg.getTimeEstimate();
+                            s.append(seg.getClass().getSimpleName()).append(" est=").append(est).append(" ");
+                        }
 
-                        dodgeStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;
-                        dodgeStrikeAbstraction.originalTargetBallPos = targetBallPos;
+                        System.out.println(s);
+                    }
+                    return Optional.empty();
+                }
 
-                        float zDiff = targetBallPos.z - 0.3f * BallData.COLLISION_RADIUS - car.position.z;
-                        if (zDiff < 5)
-                            dodgeStrikeAbstraction.jumpBeforeStrikeDelay = 0.25f;
-                        else
-                            dodgeStrikeAbstraction.jumpBeforeStrikeDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z), 0.25f, 1f);
-
-                        //System.out.println("Setting jumpBeforeStrikeDelay=" + dodgeStrikeAbstraction.jumpBeforeStrikeDelay + " zDiff=" + zDiff + " ballTargetZ=" + targetBallPos.z + " carZ=" + car.position.z);
-
-                        dodgeStrikeAbstraction.strikeAbstraction.optimizer.maxJumpDelay = Math.max(0.6f, dodgeStrikeAbstraction.jumpBeforeStrikeDelay + 0.1f);
-                        dodgeStrikeAbstraction.strikeAbstraction.optimizer.jumpDelayStep = Math.max(0.1f, (dodgeStrikeAbstraction.strikeAbstraction.optimizer.maxJumpDelay - /*duration*/ 0.2f) / 5 - 0.02f);
-                        return dodgeStrikeAbstraction;
-                    }));
-                } else if (verboseDebug) {
-                    StringBuilder s = new StringBuilder("continue path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate() + " ");
+                if (verboseDebug){
+                    System.out.print("##### end path finder at t=" + interceptFrame.relativeTime + " with path total=" + currentPath.getTotalTimeEstimate() + " ");
                     for (var seg : currentPath.getSegmentList()) {
                         var est = seg.getTimeEstimate();
-                        s.append(seg.getClass().getSimpleName()).append(" est=").append(est).append(" ");
+                        System.out.print(seg.getClass().getSimpleName() + " est="+est+" ");
                     }
-
-                    System.out.println(s);
+                    System.out.println();
                 }
-            }
+                return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.DODGE, (o) -> {
+
+                    var dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath, new ValueNetworkGrader());
+
+                    dodgeStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;
+                    dodgeStrikeAbstraction.originalTargetBallPos = targetBallPos;
+
+                    dodgeStrikeAbstraction.jumpBeforeStrikeDelay = jumpDelay;
+
+                    System.out.println(car.playerIndex+": Executing DodgeStrike with jumpBeforeStrikeDelay=" + dodgeStrikeAbstraction.jumpBeforeStrikeDelay + "<< "+ ScenarioUtil.getEncodedGameState(gameData));
+
+                    dodgeStrikeAbstraction.strikeAbstraction.optimizer.maxJumpDelay = MathUtils.clip(dodgeStrikeAbstraction.jumpBeforeStrikeDelay + 0.3f, 0.6f, DodgeManeuver.startTimeout);
+                    dodgeStrikeAbstraction.strikeAbstraction.optimizer.jumpDelayStep = 0.1f;
+                    return dodgeStrikeAbstraction;
+                }));
+            };
+
+            var potentialStrike = testPath.apply(
+                    new EpicMeshPlanner()
+                        .withStart(car, 0.05f)
+                        .withEnd(ballHitTarget, endTangent)
+                        .withArrivalTime(interceptFrame.absoluteTime)
+                        .withArrivalSpeed(2300)
+                        .allowOptimize(false)
+                        .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANG_ARC)
+                    .plan()
+            ).or(() -> testPath.apply(
+                    new EpicMeshPlanner()
+                        .withStart(car, 0.05f)
+                        .withEnd(ballHitTarget, endTangent)
+                        .withArrivalTime(interceptFrame.absoluteTime)
+                        .withArrivalSpeed(2300)
+                        .allowOptimize(false)
+                        .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                        .plan()
+            ));
+
+            if(potentialStrike.isPresent())
+                return potentialStrike;
         }
         if (verboseDebug)
             System.out.println("##### end path finder");
@@ -308,16 +329,15 @@ public class LACHelper {
             ballHitTarget = ballHitTarget.withZ(RLConstants.carElevation);
 
             final Vector3 carToDriveTarget = ballHitTarget.sub(car.position).normalized();
-            final Vector3 endTangent = carToDriveTarget.mul(4).add(ballTargetToGoalTarget).withZ(0).normalized();
+            final Vector3 endTangent = carToDriveTarget.mul(3).add(ballTargetToGoalTarget).withZ(0).normalized();
 
             var currentPathOptional = new EpicMeshPlanner()
-                    .withStart(car)
+                    .withStart(car, 0.05f)
                     .withEnd(ballHitTarget, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(2300)
-                    .allowFullSend(car.boost > 20)
                     .allowOptimize(car.boost < 30)
-                    .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
+                    .withCreationStrategy(car.position.distance(ballHitTarget) > 2000 ? EpicMeshPlanner.PathCreationStrategy.YANG_ARC : EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
             if (currentPathOptional.isEmpty())
@@ -331,6 +351,9 @@ public class LACHelper {
             final Vector2 hitTangent = targetBallPos.flatten().sub(ballHitTarget.flatten()).normalized();
             if (hitTangent.dot(currentPath.getEndTangent().flatten().normalized()) < 0.6f)
                 continue; // We should be driving at the ball, otherwise the code fails horribly
+
+            if(currentPath.getEndSpeed() < 800)
+                continue;
 
             var relativeVel = currentPath.getEndTangent().mul(currentPath.getEndSpeed()).sub(interceptFrame.ballData.velocity).flatten();
             if (relativeVel.magnitude() < 1400)

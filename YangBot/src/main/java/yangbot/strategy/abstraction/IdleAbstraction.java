@@ -3,6 +3,7 @@ package yangbot.strategy.abstraction;
 import yangbot.input.*;
 import yangbot.path.EpicMeshPlanner;
 import yangbot.path.builders.SegmentedPath;
+import yangbot.strategy.advisor.RotationAdvisor;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
@@ -59,7 +60,7 @@ public class IdleAbstraction extends Abstraction {
             futureBallPosFake = futureBallPosFake.withY(Math.signum(ownGoal.y) * (Math.abs(ownGoal.y) - minAbsoluteChannelBallDist));
 
         // This line is used to keep the bots between the own goal and the ball, keeping them close to a possible save
-        final Line2 goalToBallFake = new Line2(ownGoal, futureBallPosFake);
+        final Line2 goalToBallFake = new Line2(ownGoal.add(0, teamSign * 500), futureBallPosFake);
 
         float minIdleDistance = this.minIdleDistance;
         float maxIdleDistance = this.maxIdleDistance;
@@ -189,32 +190,35 @@ public class IdleAbstraction extends Abstraction {
                 float posX = xIndexToAbs.apply(i);
                 float distance = MathUtils.distance(posX, xIndexToAbs.apply(0));
 
-                xGrid[i] += (1 / Math.max(distance, 10)) * 0.5f;
+                xGrid[i] += (1 / Math.max(distance, 10)) * 0.2f;
             }
             // Positive x
             {
                 float posX = xIndexToAbs.apply(i);
                 float distance = MathUtils.distance(posX, xIndexToAbs.apply(xGrid.length - 1));
 
-                xGrid[i] += (1 / Math.max(distance, 10)) * 0.5f;
+                xGrid[i] += (1 / Math.max(distance, 10)) * 0.2f;
             }
         }
 
+        teammates.add(new Tuple<>(localCar, 0.8f));
         for (var mate : teammates) {
             var carMate = mate.getKey();
 
             // X-Distances
             for (int i = 0; i < xGrid.length; i++) {
                 float posX = xIndexToAbs.apply(i);
-                float futureMateXPos = carMate.position.x + carMate.velocity.x * this.teammatePredictionDelay;
+                if(carMate.playerIndex != localCar.playerIndex){
+                    float futureMateXPos = carMate.position.x + carMate.velocity.x * this.teammatePredictionDelay;
 
-                float distance = MathUtils.distance(posX, futureMateXPos);
-                xGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue();
+                    float distance = MathUtils.distance(posX, futureMateXPos);
+                    xGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue();
+                }
 
                 if (this.doBothPredictionAndCurrent) {
                     float currentMateXPos = carMate.position.x;
 
-                    distance = MathUtils.distance(posX, currentMateXPos);
+                    var distance = MathUtils.distance(posX, currentMateXPos);
                     xGrid[i] += (1 / Math.max(distance, 10)) * mate.getValue() * 0.5f;
                 }
             }
@@ -236,7 +240,7 @@ public class IdleAbstraction extends Abstraction {
             }
 
             // Draw
-            if (false) {
+            if (true) {
                 float yPos = yIndexToAbs.apply(lowestYSpot);
                 for (int i = 0; i < xGrid.length; i++) {
                     float xPos = xIndexToAbs.apply(i);
@@ -277,9 +281,9 @@ public class IdleAbstraction extends Abstraction {
             this.forceRetreatTimeout -= dt;
 
         // Use position of the ball in x seconds
-        float futureBallPosDelay = 0.6f;
+        float futureBallPosDelay = 0.4f;
         // If the ball is up high retreat, because this bot is too bad to hit them anyways
-        futureBallPosDelay += MathUtils.remapClip(ball.position.z, 400, 2000, 0.05f, 0.4f);
+        futureBallPosDelay += MathUtils.remapClip(ball.position.z + ball.velocity.z * 0.2f, 400, 2000, 0f, 0.6f);
 
         // Clips idlingTarget
         final float maxX = RLConstants.arenaHalfWidth * 0.9f;
@@ -312,9 +316,10 @@ public class IdleAbstraction extends Abstraction {
         // find out where my teammates are idling
         var teammates = gameData.getAllCars().stream()
                 .filter(c -> c.team == car.team && c.playerIndex != car.playerIndex)
-                .filter(c -> !c.isDemolished)
-                //.filter(c -> RotationAdvisor.isInfrontOfBall(c, ball))
-                .map(c -> new Tuple<>(c, c.getPlayerInfo().isActiveRotator() ? 1 : 0.3f))
+                .filter(c -> !c.isDemolished && c.hasWheelContact)
+                // either moving toward enemy or in defense
+                .filter(c -> (Math.abs(c.velocity.y) < 300 || Math.signum(c.velocity.y) == -teamSign || Math.signum(c.position.y) == teamSign))
+                .map(c -> new Tuple<>(c, c.getPlayerInfo().isActiveRotator() ? 1 : 0.2f))
                 .collect(Collectors.toList());
 
         {
@@ -331,19 +336,19 @@ public class IdleAbstraction extends Abstraction {
                 MathUtils.clip(preferredIdlingY, -maxY, maxY),
                 RLConstants.carElevation);
 
-        if (this.currentPath == null || (this.currentPath.canInterrupt() && (idleTarget.distance(this.pathTarget) > 500 || car.elapsedSeconds - this.lastPathBuild > 0.5f))) {
+        if (this.currentPath == null || (this.currentPath.canInterrupt() && car.elapsedSeconds - this.lastPathBuild > (idleTarget.distance(this.pathTarget) > 500 ? 0.1f : 0.6f))) {
 
             this.lastPathBuild = car.elapsedSeconds;
             this.pathTarget = idleTarget;
 
             float targetArrivalSpeed = this.targetSpeed;
             if (Math.abs(idleTarget.y) > RLConstants.goalDistance * 0.8f)
-                targetArrivalSpeed = Math.min(targetArrivalSpeed, 900); // We don't want to faceplant the goal wall
+                targetArrivalSpeed = Math.min(targetArrivalSpeed, 1100); // We don't want to faceplant the goal wall
 
             targetArrivalSpeed = MathUtils.clip(targetArrivalSpeed, 200, CarData.MAX_VELOCITY);
 
             var pathOptional = new EpicMeshPlanner()
-                    .withStart(car)
+                    .withStart(car, RLConstants.tickFrequency * 4)
                     .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
                     .withArrivalSpeed(targetArrivalSpeed)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)

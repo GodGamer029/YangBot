@@ -59,6 +59,10 @@ public class Line2 {
         return Optional.empty();
     }
 
+    public Vector2 center(){
+        return a.add(b).mul(0.5f);
+    }
+
     @Override
     public String toString() {
         return "Line2(" + "a=" + a + ", b=" + b + ')';

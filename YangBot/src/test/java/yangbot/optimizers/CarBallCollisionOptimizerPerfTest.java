@@ -22,6 +22,7 @@ public class CarBallCollisionOptimizerPerfTest {
     @BeforeAll
     public static void setup() {
         YangBotCppInterop.init((byte) 0, (byte) 0);
+        YangBotJNAInterop.doNothing();
     }
 
     @Test
@@ -43,54 +44,37 @@ public class CarBallCollisionOptimizerPerfTest {
 
     @Test
     public void testSample() {
-        String encoded = "eWFuZ3YxOmMoYj05OC4wLHA9KDE2MjQuOTQwLDQzOTEuMDQwLDI3LjEyMCksdj0oLTEyNDEuNTcxLDYwMS43OTEsMzA4LjAyMSksYT0oLTAuMDA3LC0wLjAwMywtMC4zMjEpLG89KC0wLjAxNywyLjY3NSwwLjAwMCkpLGIocD0oMTIzMi42MTAsNDg2NS4xNzAsOTIuNDcwKSx2PSgzMTEuNjIxLC05MTIuNzExLDAuMDAwKSxhPSg1LjA2MiwyLjM2NSwtMi4xODcpKTs";
+        String encoded = "eWFuZ3YxOmMoYj05MS4wLHA9KC0yMDExLjk0MCwyNzI1LjIzMCwyNy4xMjApLHY9KC0yODcuNzkxLDEyNDEuMzkxLDMwNy43NjEpLGE9KC0wLjAwMiwwLjAwMCwtMC4wMDApLG89KC0wLjAxNywxLjc5OSwwLjAwMCkpLGIocD0oLTIwODcuMzQwLDMyNDMuODMwLDkzLjEzMCksdj0oMTY4LjQzMSwtMTA5LjIyMSwwLjAwMCksYT0oMS4xOTcsMS44NDYsLTAuMjA2KSk7";
         var simGameData = GameData.current();
         ScenarioUtil.decodeApplyToGameData(simGameData, encoded);
 
         DodgeStrikeOptimizer optimizer = new DodgeStrikeOptimizer();
-        optimizer.expectedBallHitTime = simGameData.getElapsedSeconds() + 0.2f;
+        optimizer.expectedBallHitTime = simGameData.getElapsedSeconds() + 0.5f;
 
         DodgeManeuver strikeDodge = new DodgeManeuver();
         strikeDodge.timer = 0.03f;
         strikeDodge.duration = 0.2f;
         strikeDodge.delay = 0.6f;
 
-        YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(simGameData.getBallData().makeMutable(), RLConstants.tickRate, 5);
-        optimizer.maxJumpDelay = 0.6f;
+        optimizer.maxJumpDelay = 1f;
         optimizer.jumpDelayStep = 0.1f;
-        optimizer.customGrader = new ValueNetworkGrader();
-        optimizer.solveGoodStrike(simGameData, strikeDodge);
-        optimizer.solvedGoodStrike = false;
-        optimizer.customGrader = new ValueNetworkGrader();
-        ((ValueNetworkGrader)optimizer.customGrader).careAboutCars = false;
-        optimizer.solveGoodStrike(simGameData, strikeDodge);
-        optimizer.customGrader = new OffensiveGrader();
-        optimizer.solvedGoodStrike = false;
-        optimizer.solveGoodStrike(simGameData, strikeDodge);
 
-        Scenario s = new Scenario.Builder()
-                .withTransitionDelay(RLConstants.tickFrequency * 4)
-                .withGameState(ScenarioUtil.decodeToGameState(encoded).withGameInfoState(new GameInfoState().withGameSpeed(0.2f)))
-                .withInit(c -> {
+        for(int i = 0; i < 10; i++){
+            optimizer.customGrader = new ValueNetworkGrader();
+            optimizer.solvedGoodStrike = false;
+            optimizer.debugMessages = true;
+            optimizer.solveGoodStrike(simGameData, strikeDodge);
+        }/*
 
-                })
-                .withRun((output, timer) -> {
-                    final var gameData = GameData.current();
-                    final var car = gameData.getCarData();
-                    final var ball = gameData.getBallData();
-                    final var renderer = gameData.getAdvancedRenderer();
-                    float dt = gameData.getDt();
-                    car.hitbox.draw(renderer, car.position, 1, Color.YELLOW);
-                    ballPrediction.draw(renderer, Color.YELLOW, 5);
-
-                    return timer > 1f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
-                })
-                .withOnComplete((f) -> {
-
-                })
-                .build();
-        //ScenarioLoader.loadScenario(s);
-        //assert ScenarioLoader.get().waitToCompletion(4000);
+        var start = System.currentTimeMillis();
+        for(int i = 0; i < 2000; i++){
+            optimizer.customGrader = new ValueNetworkGrader();
+            optimizer.solvedGoodStrike = false;
+            optimizer.debugMessages = false;
+            optimizer.solveGoodStrike(simGameData, strikeDodge);
+        }
+        var end = System.currentTimeMillis();
+        System.out.println("Took "+(end-start)+"ms, per="+((end-start) / 2000f));*/
     }
 
 }

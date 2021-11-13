@@ -405,6 +405,7 @@ public class Curve {
                 return MathUtils.lerp(tangents.get(i + 1), tangents.get(i), u).normalized();
             }
         }
+        assert false : "s="+s+" ds="+distances.length+" d0="+distances[0]+" dE="+distances[distances.length - 1];
         return new Vector3();
     }
 
@@ -415,7 +416,7 @@ public class Curve {
             if (distances[i] >= s && s >= distances[i + 1]) {
                 float deltaTheta = (float) tangents.get(i + 1).angle(tangents.get(i));
                 float deltaS = distances[i] - distances[i + 1];
-
+                assert Float.isFinite(deltaTheta) : deltaTheta + " " + tangents.get(i + 1) + " " + tangents.get(i);
                 return deltaTheta / deltaS;
             }
         }
@@ -484,7 +485,7 @@ public class Curve {
         length = distances[0];
     }
 
-    private void calculateTangents() {
+    public void calculateTangents() {
         tangents = new ArrayList<>(points.size());
         while (tangents.size() < points.size())
             tangents.add(new Vector3());
@@ -507,6 +508,8 @@ public class Curve {
                         .add(points.get(last - 2))
                         .normalized()
         );
+
+        assert !tangents.get(tangents.size() - 1).isZero();
     }
 
 
@@ -518,7 +521,8 @@ public class Curve {
         final Vector3 gravity = new Vector3(0, 0, -650);
 
         v0 = MathUtils.clip(v0, 0, CarData.MAX_VELOCITY);
-        vf = MathUtils.clip(vf, 0, CarData.MAX_VELOCITY);
+        if(vf != -1)
+            vf = MathUtils.clip(vf, 0, CarData.MAX_VELOCITY);
 
         maxSpeeds = new float[curvatures.length];
 
@@ -531,19 +535,21 @@ public class Curve {
             tempCurvatures[i] = (2 * tempCurvatures[i] + tempCurvatures[i + 1] + tempCurvatures[i + 2]) / 4;
 
         for (int i = 0; i < curvatures.length; i++) {
-            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(tempCurvatures[i] * 1.03f);
+            maxSpeeds[i] = DriveManeuver.maxTurningSpeed(tempCurvatures[i] * 1.01f);
             assert maxSpeeds[i] > 0 : maxSpeeds[i] + " " + i + " " + tempCurvatures[i] + " " + curvatures[i] + " " + curvatures[Math.min(curvatures.length - 1, i + 1)] + " " + distances[i];
         }
 
         maxSpeeds[0] = Math.min(v0, maxSpeeds[0]);
-        maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);
+        if(vf != -1)
+            maxSpeeds[maxSpeeds.length - 1] = Math.min(vf, maxSpeeds[maxSpeeds.length - 1]);
 
         assert curvatures.length == distances.length : curvatures.length + " " + distances.length;
 
         for (int i = 1; i < curvatures.length; i++) {
             float ds = distances[i - 1] - distances[i];
             Vector3 t = tangents.get(i).add(tangents.get(i - 1)).normalized();
-            float attainable_speed = maximizeSpeedWithThrottle((allowBoost ? 1f : 0f) * DriveManeuver.boost_acceleration + gravity.dot(t), maxSpeeds[i - 1], ds);
+
+            float attainable_speed = maximizeSpeedWithThrottleSteer((allowBoost ? 1f : 0f) * DriveManeuver.boost_acceleration + gravity.dot(t), maxSpeeds[i - 1], ds, tempCurvatures[i]);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
         }
 
@@ -555,7 +561,7 @@ public class Curve {
             if (Math.abs(ds) < 0.001)
                 continue;
             Vector3 t = tangents.get(i).add(tangents.get(i + 1)).normalized();
-            float attainable_speed = maximizeSpeedWithoutThrottle(DriveManeuver.brake_acceleration - gravity.dot(t), maxSpeeds[i + 1], ds);
+            float attainable_speed = maximizeSpeedWithoutThrottle(-DriveManeuver.brake_acceleration - gravity.dot(t), maxSpeeds[i + 1], ds);
             maxSpeeds[i] = Math.min(maxSpeeds[i], attainable_speed);
             time += ds / (0.5f * (maxSpeeds[i] + maxSpeeds[i + 1]));
             if (!nanWarner && (Float.isNaN(time) || Float.isInfinite(time))) {
@@ -568,7 +574,7 @@ public class Curve {
         return time;
     }
 
-    public float maximizeSpeedWithThrottle(float additionalAcceleration, float v0, float distance) {
+    public float maximizeSpeedWithThrottleSteer(float additionalAcceleration, float v0, float distance, float curvature) {
         if (distance == 0)
             return v0;
         final float dt = RLConstants.simulationTickFrequency;
@@ -576,7 +582,11 @@ public class Curve {
         float currentVelocity = v0;
 
         for (int i = 0; i < 50; i++) {
-            float accel = (DriveManeuver.throttleAcceleration(currentVelocity) + additionalAcceleration) * dt;
+            float maxCurv = DriveManeuver.maxTurningCurvature(currentVelocity);
+            float ratio = MathUtils.clip(Math.abs(curvature) / maxCurv, 0, 1);
+            float steerSlowdown = CarData.slowdownForceFromSteering(ratio * ratio, currentVelocity);
+
+            float accel = (DriveManeuver.throttleAcceleration(currentVelocity) + additionalAcceleration + steerSlowdown) * dt;
             float ds = (currentVelocity + 0.5f * accel) * dt;
             currentVelocity += accel;
             currentDistance += ds;

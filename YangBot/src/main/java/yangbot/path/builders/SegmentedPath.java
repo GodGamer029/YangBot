@@ -104,7 +104,7 @@ public class SegmentedPath {
         if (curSeg.isPresent()) {
             renderer.drawString2d("Seg: " + curSeg.get().getClass().getSimpleName() + " (" + (this.currentSegment + 1) + "/" + this.segmentList.size() + ", canInterrupt=" + curSeg.get().canInterrupt() + ")", Color.WHITE, new Point(400, 300), 2, 2);
             renderer.drawString2d("Arrival: " + ((this.arrivalTime + this.startTime) - GameData.current().getCarData().elapsedSeconds), Color.WHITE, new Point(400, 350), 2, 2);
-            renderer.drawString2d("Speed: " + GameData.current().getCarData().forwardSpeed(), Color.WHITE, new Point(400, 390), 1, 1);
+            renderer.drawString2d("MySpeed: " + GameData.current().getCarData().velocity.magnitudeF(), Color.WHITE, new Point(400, 390), 1, 1);
             renderer.drawString2d("StartSpeed: " + curSeg.get().getStartSpeed(), Color.WHITE, new Point(400, 410), 1, 1);
             renderer.drawString2d("EndSpeed: " + curSeg.get().getEndSpeed(), Color.WHITE, new Point(400, 430), 1, 1);
             renderer.drawString2d("curSeg-T estimate: " + curSeg.get().getTimeEstimate(), Color.WHITE, new Point(400, 450), 1, 1);

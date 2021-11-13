@@ -28,7 +28,7 @@ public class DodgeStrikeOptimizer {
     public float expectedBallHitTime = -1;
 
     public float maxJumpDelay = 0.6f;
-    public float jumpDelayStep = 0.15f;
+    public float jumpDelayStep = 0.1f;
 
     public float dodgeCollisionTime = 0;
     public boolean solvedGoodStrike = false;
@@ -78,8 +78,7 @@ public class DodgeStrikeOptimizer {
             simBallPred = YangBallPrediction.empty();
 
         final GameData tempGameData = new GameData(0L);
-        tempGameData.update(simCar, new ImmutableBallData(simBall), List.of(simCar), gameData.getGravity().z, RLConstants.tickFrequency, null);
-        tempGameData.setBallPrediction(simBallPred);
+        tempGameData.update(simCar, new ImmutableBallData(simBall), List.of(simCar), gameData.getGravity().z, RLConstants.tickFrequency, null, simBallPred);
 
         statistics.numGraderCalls++;
 
@@ -118,7 +117,7 @@ public class DodgeStrikeOptimizer {
         FoolGameData foolGameData = GameData.current().fool();
         Vector3 simContact = null;
 
-        float timeEnd = T + 0.2f;
+        float timeEnd = T + 0.3f;
         // Simulate ball - car collision
         for (float time = 0; time < timeEnd; time += SIMULATION_DT) {
             ControlsOutput simControls = new ControlsOutput();
@@ -157,8 +156,12 @@ public class DodgeStrikeOptimizer {
             simBall.hasBeenTouched = false;
         }
 
-        if (!simBall.hasBeenTouched)
+        if (!simBall.hasBeenTouched){
+            //System.out.println("miss with delay="+simDodge.delay+" dur="+simDodge.duration);
             return false;
+        }
+
+        //System.out.println("hit  with delay="+simDodge.delay+" dur="+simDodge.duration);
 
         // Evaluate post-collision ball state
         if (onCollide.test(simCar, simBall)) {
@@ -194,7 +197,8 @@ public class DodgeStrikeOptimizer {
         final ImmutableBallData ball = gameData.getBallData();
         YangBallPrediction ballPrediction = YangBotJNAInterop.getBallPrediction(ball.makeMutable(), RLConstants.tickRate, 3);
 
-        System.out.println("Solving good strike " + ScenarioUtil.getEncodedGameState(gameData));
+        if(debugMessages)
+            System.out.println(car.playerIndex+": > Solving good strike " + ScenarioUtil.getEncodedGameState(gameData));
 
         if (this.expectedBallHitTime < car.elapsedSeconds) {
             System.out.println("expectedBallHitTime=" + this.expectedBallHitTime + " car.elapsed=" + car.elapsedSeconds);
@@ -239,9 +243,9 @@ public class DodgeStrikeOptimizer {
         long ms = System.currentTimeMillis();
         final var statistics = new StrikeStatistics();
 
-        Matrix3x3 preorientMatrix;
-        {
-            Vector3 orientDir = ballAtArrival.sub(carAtArrival).normalized().mul(1, 1, 0.8f).add(0, 0, 0.5f).normalized();
+        Matrix3x3 preorientMatrix = strikeDodge.preorientOrientation;
+        if(preorientMatrix == null) {
+            Vector3 orientDir = ballAtArrival.sub(carAtArrival).normalized();
             //Vector2 velDir = car.velocity.flatten().normalized();
             Vector3 comb = orientDir.flatten().normalized().withZ(orientDir.z).normalized();
             preorientMatrix = Matrix3x3.lookAt(comb, new Vector3(0, 0, 1));
@@ -251,7 +255,7 @@ public class DodgeStrikeOptimizer {
         for (float duration = MathUtils.clip(this.strikeDodge.timer, 0.1f, 0.2f); duration <= 0.2f; duration = duration < 0.2f ? 0.2f : 999f) {
             float jumpDelayStep = this.jumpDelayStep;
             float angleDiffStep = (float) (Math.PI * 0.15f);
-            if (duration < 0.2f) { // We really only need a duration < 0.2 if we want to single jump
+            if (duration < 0.2f && T > 0.4f) { // We really only need a duration < 0.2 if we want to single jump
                 jumpDelayStep *= 2;
                 angleDiffStep *= 3;
             }
@@ -276,10 +280,12 @@ public class DodgeStrikeOptimizer {
 
         if (this.strikeSolved) { // Found shot
 
-            if (debugMessages)
+            if (debugMessages){
                 System.out.printf("%d: >> Optimized dodgeManeuver: delay=%.2f duration=%.2f grader=%s doesHitNotInvolveDodge=%s angleDiff=%.3f "+System.lineSeparator(),
                         car.playerIndex, this.strikeDodge.delay, this.strikeDodge.duration, this.customGrader.getClass().getSimpleName(), doesHitNotInvolveDodge, chosenAngleDiff);
 
+                System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
+            }
 
         } else { // Couldn't satisfy grader
             this.strikeDodge.direction = null;
@@ -290,12 +296,13 @@ public class DodgeStrikeOptimizer {
             System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
             System.out.println(car.playerIndex + ": > State info: " + car.toString().replaceAll("\n\t", ",").replaceAll("\n", "") + " ball=" + ball);
         }
+
         if (this.debugMessages) {
             System.out.println(car.playerIndex + ": > With parameters: maxJumpDelay=" + this.maxJumpDelay + " expectedAt=" + (this.expectedBallHitTime - car.elapsedSeconds) + " jumpDelayStep=" + this.jumpDelayStep + " timer=" + this.strikeDodge.timer + " graderinfo=" + this.customGrader.getAdditionalInfo());
-            System.out.println(car.playerIndex + ": > expectedBallHitTime=" + this.expectedBallHitTime + " T=" + T + " numHits=" + statistics.numHits);
+            System.out.println(car.playerIndex + ": > expectedBallHitTime=" + this.expectedBallHitTime + " T=" + T + " numHits=" + statistics.numHits+" wheelHits="+ statistics.numWheelHits);
         }
-
-        System.out.println(car.playerIndex + ": > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + statistics.simulationCount + " simulations at: " + car.elapsedSeconds);
+        if(debugMessages)
+            System.out.println(car.playerIndex + ": > Strike planning took: " + (System.currentTimeMillis() - ms) + "ms with " + statistics.simulationCount + " simulations at: " + car.elapsedSeconds);
     }
 
     public void drawSolvedStrike(AdvancedRenderer renderer) {

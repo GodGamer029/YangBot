@@ -184,15 +184,23 @@ public class AerialAbstraction extends Abstraction {
                 this.aerialManeuver.step(dt, controlsOutput);
                 if (this.aerialManeuver.isDone() || car.elapsedSeconds > this.arrivalTime + 0.1f)
                     return RunState.DONE;
+                if(!car.hasWheelContact){
+                    if(!car.doubleJumped){
+                        var d1 = AerialManeuver.getDeltaX(car, this.aerialManeuver.target, this.arrivalTime, 0.2f - this.aerialManeuver.doubleJump.timer, true);
+                        var d2 = AerialManeuver.getDeltaX(car, this.aerialManeuver.target, this.arrivalTime, 0.2f - this.aerialManeuver.doubleJump.timer, false);
 
-                if(!car.hasWheelContact && car.doubleJumped && car.elapsedSeconds >= this.nextOptimizeAt && this.nextOptimizeAt > 0){
-                    var newState = this.updateOptimizeAerial();
-                    if(newState.isDone())
-                        return newState;
-                    if(this.arrivalTime - car.elapsedSeconds >= 0.5f)
-                        this.nextOptimizeAt = car.elapsedSeconds + 0.1f;
-                    else
-                        this.nextOptimizeAt = -1;
+                        if(d2.magnitudeSquared() < d1.magnitudeSquared())
+                            this.aerialManeuver.doDoubleJump = false;
+                    }
+                    if(car.doubleJumped && car.elapsedSeconds >= this.nextOptimizeAt && this.nextOptimizeAt > 0){
+                        var newState = this.updateOptimizeAerial();
+                        if(newState.isDone())
+                            return newState;
+                        if(this.arrivalTime - car.elapsedSeconds >= 0.5f)
+                            this.nextOptimizeAt = car.elapsedSeconds + 0.1f;
+                        else
+                            this.nextOptimizeAt = -1;
+                    }
                 }
 
                 return RunState.CONTINUE;
@@ -206,7 +214,7 @@ public class AerialAbstraction extends Abstraction {
         var deltaX = AerialManeuver.getDeltaX(car, this.targetPos, arrivalTime);
         renderer.drawString2d("State: " + this.state.name(), Color.WHITE, new Point(400, 300), 2, 2);
         renderer.drawString2d(String.format("Deltamag: %.2f\nreorient time: %.2f", deltaX.magnitude(), this.aerialManeuver.timeNeededForLastMinuteReorient), Color.WHITE, new Point(400, 340), 1, 1);
-        var bean = AerialManeuver.getDeltaX(car, new Vector3(), arrivalTime, 0.2f - this.aerialManeuver.doubleJump.timer).mul(-1);
+        var bean = AerialManeuver.getDeltaX(car, new Vector3(), arrivalTime, 0.2f - this.aerialManeuver.doubleJump.timer, true).mul(-1);
         renderer.drawCentered3dCube(Color.RED, bean, 50);
         renderer.drawCentered3dCube(Color.RED, bean, 120);
 
@@ -224,6 +232,8 @@ public class AerialAbstraction extends Abstraction {
             lookPos = this.targetOrientPos;
         renderer.drawLine3d(Color.BLUE, car.position, car.position.add(lookPos.sub(this.targetPos.sub(deltaX)).normalized().mul(100)));
 
+        if(this.state == State.DRIVE)
+            this.groundPrepManeuver.draw(renderer);
     }
 
     enum State {

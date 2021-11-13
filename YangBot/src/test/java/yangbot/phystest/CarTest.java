@@ -20,6 +20,7 @@ import yangbot.util.math.vector.Vector3;
 import yangbot.util.scenario.Scenario;
 import yangbot.util.scenario.ScenarioLoader;
 
+import java.awt.*;
 import java.util.Optional;
 
 public class CarTest {
@@ -149,7 +150,7 @@ public class CarTest {
         var speedIter = Range.of(500, 2300).stepBy(500);
         var angleIter = Range.of(0, 170).stepBy(15);
         angleIter.next();
-        var logger = new CsvLogger(new String[]{"angle", "time", "speed"});
+        var logger = new CsvLogger(new String[]{"t", "accel", "pred"});
 
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.05f)
@@ -198,4 +199,159 @@ public class CarTest {
         ScenarioLoader.get().waitToCompletion(0);
         logger.save("turntime.txt");
     }
+
+    private float lastVel = 0;
+
+    @Test
+    public void turnTests() {
+        var speedIter = Range.of(300, 400).stepWith(2);
+        var steerIter = Range.of(0.7f, 1).stepWith(5);
+        steerIter.next();
+        var logger = new CsvLogger(new String[]{"ang", "speed", "accel","time"});
+
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.05f)
+                .withDynamicGameState(invoc -> {
+                    if (!speedIter.hasNext()) {
+                        speedIter.reset();
+                        if (!steerIter.hasNext())
+                            return Optional.empty();
+                        steerIter.next();
+                    }
+                    var speedVal = speedIter.next();
+                    System.out.println("steerIter: " + steerIter.current() + " speed: " + speedVal);
+                    lastVel = 0;
+                    return Optional.of(new GameState()
+                                    .withGameInfoState(new GameInfoState().withGameSpeed(0.1f))
+                            .withCarState(0, new CarState()
+                                    .withBoostAmount(100f)
+                                    .withPhysics(new PhysicsState()
+                                            .withVelocity(new Vector3(0, speedVal, 0).toDesiredVector())
+                                            .withLocation(new Vector3(2000, -3000, RLConstants.carElevation + 1).toDesiredVector())
+                                            .withRotation(Matrix3x3.lookAt(new Vector3(0, 1, 0)).toEuler().toDesiredRotation())
+                                            .withAngularVelocity(new Vector3().toDesiredVector())
+                                    )));
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+                    var r = gameData.getAdvancedRenderer();
+
+                    output.withThrottle(0.015f);
+
+                    if(timer > 0.1f && lastVel != 0){
+                        if(timer > 0.3f && timer < 1)
+                            output.withSteer(1);
+                        float throttleAccel = DriveManeuver.throttleAcceleration(car.forwardSpeed()) * output.getThrottle();
+                        float accel = ((float)car.velocity.magnitude() - lastVel) / dt;
+                        accel -= throttleAccel;
+
+                        logger.log(new float[]{car.angularVelocity.dot(car.up()), (float)car.velocity.magnitude(), accel, timer });
+                        r.drawString2d(String.format("V: %03.1f\nAccel: %02.2f\nSteer: %.1f", car.velocity.magnitude(), accel, output.getSteer()), Color.WHITE, new Point(220, 300), 2, 2);
+                    }
+
+                    lastVel = (float)car.velocity.magnitude();
+
+                    return (timer > 1.4) ? Scenario.RunState.RESET : Scenario.RunState.CONTINUE;
+                })
+                .withOnRunComplete((timer, numInvoc) -> {
+                    System.out.println("Run complete at " + timer);
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        ScenarioLoader.get().waitToCompletion(0);
+        System.out.println("Data saved");
+        logger.save("..\\data\\turntime.csv");
+    }
+
+    private float nextThrottleAccel = -1;
+
+    @Test
+    public void straightSteerTransitionTest() {
+        var logger = new CsvLogger(new String[]{"ang", "speed", "accel","time","riserate", "maxcurve", "steer"});
+        //var speedIter = Range.of(500, 2000).stepWith(2);
+        //var throttleIter = Range.of(0, 1).stepWith(2);
+        var steerIter = Range.of(0.8f, 1).stepBy(0.2f);
+
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.05f)
+                .withDynamicGameState(invoc -> {
+                    if (!steerIter.hasNext()) {
+                        steerIter.reset();
+                        //if (!throttleIter.hasNext())
+                            return Optional.empty();
+                        //throttleIter.next();
+                    }
+                    steerIter.next();
+                    //var speedVal = speedIter.next();
+                    var speedVal = 1000;
+                    this.lastVel = 0;
+                    this.nextThrottleAccel = -1;
+                    return Optional.of(new GameState()
+                            .withGameInfoState(new GameInfoState().withGameSpeed(0.2f))
+                            .withCarState(0, new CarState()
+                                    .withBoostAmount(100f)
+                                    .withPhysics(new PhysicsState()
+                                            .withVelocity(new Vector3(0, speedVal, 0).toDesiredVector())
+                                            .withLocation(new Vector3(3200, -2500, RLConstants.carElevation + 1).toDesiredVector())
+                                            .withRotation(Matrix3x3.lookAt(new Vector3(0, 1, 0)).toEuler().toDesiredRotation())
+                                            .withAngularVelocity(new Vector3().toDesiredVector())
+                                    )));
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+                    var r = gameData.getAdvancedRenderer();
+
+                    //if(car.forwardSpeed() > 600)
+                    /*var tr = throttleIter.current();
+                    if(tr == 1)
+                        output.withThrottle(0.015f);
+                    else if(tr == 2)
+                        output.withThrottle(1);
+
+                     */
+                    output.withSteer(steerIter.current());
+                    if(timer > 1.5f && lastVel != 0){
+                        float vF = car.forwardSpeed();
+                        float vT = car.velocity.magnitudeF();
+                        float throttleAccel = DriveManeuver.throttleAcceleration(vF) * output.getThrottle();
+                        if(output.getThrottle() == 0)
+                            throttleAccel = DriveManeuver.coasting_acceleration;
+                        else if(Math.signum(output.getThrottle()) != Math.signum(car.forwardSpeed()))
+                            throttleAccel = DriveManeuver.brake_acceleration;
+                        float accel = (vF - lastVel) / dt;
+                        accel -= nextThrottleAccel;
+                        accel -= car.slowdownForceFromSteering(output.getSteer());
+                        if(timer > 0f && vF > 150 && accel < 200 && nextThrottleAccel != -1 /*&& (vT < 1400 || vT > 1410)*/)
+                            logger.log(new float[]{car.angularVelocity.dot(car.up()), vF, accel, timer, throttleAccel, DriveManeuver.maxTurningCurvature(vF), output.getSteer()});
+
+                        nextThrottleAccel = throttleAccel;
+
+                        r.drawString2d(String.format("V: %03.1f\nAccel: %02.2f\nSteer: %.1f", vF, accel, output.getSteer()), Color.WHITE, new Point(220, 300), 2, 2);
+                    }else if(timer < 1.3f)
+                        output.withBoost();
+
+                    lastVel = car.forwardSpeed();
+                    if(RLConstants.isPosNearWall(car.position.flatten(), 200))
+                        return Scenario.RunState.RESET;
+                    return (timer > 5 || lastVel < 150) ? Scenario.RunState.RESET : Scenario.RunState.CONTINUE;
+                })
+                .withOnRunComplete((timer, numInvoc) -> {
+                    System.out.println("Run complete at " + timer);
+                    System.out.println("End speed: "+GameData.current().getCarData().velocity.magnitude());
+                    System.out.println("End Angle: "+Math.abs((180 / Math.PI) * GameData.current().getCarData().forward().flatten().angleBetween(new Vector2(0, 1))));
+                    System.out.println("######");
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        ScenarioLoader.get().waitToCompletion(0);
+        System.out.println("Data saved");
+        //logger.save("..\\data\\turntime.csv");
+    }
+
 }

@@ -1,5 +1,6 @@
 package yangbot.util.math.vector;
 
+import net.jafama.FastMath;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -8,7 +9,6 @@ public class Matrix3x3 {
     private final float[] data = new float[9];
 
     public Matrix3x3() {
-        Arrays.fill(data, 0);
     }
 
     public Matrix3x3(@NotNull Matrix3x3 other) {
@@ -65,7 +65,7 @@ public class Matrix3x3 {
 
     @NotNull
     public static Matrix3x3 axisToRotation(@NotNull Vector3 omega) {
-        float norm_omega = (float) omega.magnitude();
+        double norm_omega = omega.magnitude();
 
         if (Math.abs(norm_omega) == 0)
             norm_omega = 1.1755e-38f;
@@ -73,22 +73,22 @@ public class Matrix3x3 {
         {
             Vector3 u = omega.div(norm_omega);
 
-            float c = (float) Math.cos(norm_omega);
-            float s = (float) Math.sin(norm_omega);
+            double c = FastMath.cos(norm_omega);
+            double s = FastMath.sin(norm_omega);
 
             Matrix3x3 mat = new Matrix3x3();
 
-            mat.assign(0, 0, u.get(0) * u.get(0) * (1.0f - c) + c);
-            mat.assign(0, 1, u.get(0) * u.get(1) * (1.0f - c) - u.get(2) * s);
-            mat.assign(0, 2, u.get(0) * u.get(2) * (1.0f - c) + u.get(1) * s);
+            mat.assign(0, 0, u.get(0) * u.get(0) * (1.0 - c) + c);
+            mat.assign(0, 1, u.get(0) * u.get(1) * (1.0 - c) - u.get(2) * s);
+            mat.assign(0, 2, u.get(0) * u.get(2) * (1.0 - c) + u.get(1) * s);
 
-            mat.assign(1, 0, u.get(1) * u.get(0) * (1.0f - c) + u.get(2) * s);
-            mat.assign(1, 1, u.get(1) * u.get(1) * (1.0f - c) + c);
-            mat.assign(1, 2, u.get(1) * u.get(2) * (1.0f - c) - u.get(0) * s);
+            mat.assign(1, 0, u.get(1) * u.get(0) * (1.0 - c) + u.get(2) * s);
+            mat.assign(1, 1, u.get(1) * u.get(1) * (1.0 - c) + c);
+            mat.assign(1, 2, u.get(1) * u.get(2) * (1.0 - c) - u.get(0) * s);
 
-            mat.assign(2, 0, u.get(2) * u.get(0) * (1.0f - c) - u.get(1) * s);
-            mat.assign(2, 1, u.get(2) * u.get(1) * (1.0f - c) + u.get(0) * s);
-            mat.assign(2, 2, u.get(2) * u.get(2) * (1.0f - c) + c);
+            mat.assign(2, 0, u.get(2) * u.get(0) * (1.0 - c) - u.get(1) * s);
+            mat.assign(2, 1, u.get(2) * u.get(1) * (1.0 - c) + u.get(0) * s);
+            mat.assign(2, 2, u.get(2) * u.get(2) * (1.0 - c) + c);
 
             return mat;
         }
@@ -231,6 +231,10 @@ public class Matrix3x3 {
         this.data[row + column * 3] = value;
     }
 
+    public void assign(int row, int column, double value) {
+        this.data[row + column * 3] = (float)value;
+    }
+
     public float get(int row, int column) {
         return this.data[row + column * 3];
     }
@@ -327,14 +331,11 @@ public class Matrix3x3 {
     }
 
     public Vector3 dot(Vector3 other) {
-        float[] vecArr = new float[3];
-        for (int i = 0; i < 3; i++) {
-            vecArr[i] = 0;
-            for (int j = 0; j < 3; j++) {
-                vecArr[i] += get(i, j) * other.get(j);
-            }
-        }
-        return new Vector3(vecArr[0], vecArr[1], vecArr[2]);
+        // this.data[row + column * 3]
+        float x = this.data[0] * other.x + this.data[3] * other.y + this.data[6] * other.z;
+        float y = this.data[1] * other.x + this.data[4] * other.y + this.data[7] * other.z;
+        float z = this.data[2] * other.x + this.data[5] * other.y + this.data[8] * other.z;
+        return new Vector3(x, y, z);
     }
 
     public Matrix3x3 matrixMul(Matrix3x3 other) {

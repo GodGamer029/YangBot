@@ -92,7 +92,7 @@ public class MainClass {
 
         SocketServer pythonInterface = pythonInterfaceSupplier.apply(portUsed, botManager);
         new Thread(pythonInterface::start).start();
-        //lazyPrepJit();
+        lazyPrepJit();
     }
 
     private static void setupMessageInfoBox(BotManager botManager, int port) {

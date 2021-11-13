@@ -13,7 +13,7 @@ public class DriveManeuver extends Maneuver {
     public static final float min_speed = 10f;
     public static final float max_throttle_speed = 1410.0f;
     public static final float boost_acceleration = 991.667f;
-    public static final float brake_acceleration = 3500.0f;
+    public static final float brake_acceleration = -3500.0f;
     public static final float coasting_acceleration = brake_acceleration * 0.15f;
     public float reaction_time = 0.04f;
 
@@ -84,7 +84,7 @@ public class DriveManeuver extends Maneuver {
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
         }
-        assert false;
+        assert false : input;
 
         return -1.0f;
     }
@@ -99,6 +99,34 @@ public class DriveManeuver extends Maneuver {
                 {1500.0f, 0.00138f},
                 {1750.0f, 0.00110f},
                 {2300.0f, 0.00088f}
+        };
+
+        float input = Math.abs(v);
+        if (input <= values[0][0])
+            return values[0][1];
+        if (input >= values[n - 1][0])
+            return values[n - 1][1];
+
+        for (int i = 0; i < (n - 1); i++) {
+            if (values[i][0] <= input && input <= values[i + 1][0]) {
+                float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
+                return MathUtils.lerp(values[i][1], values[i + 1][1], u);
+            }
+        }
+        assert false;
+        return -1;
+    }
+
+    public static float steerAngle(float v) {
+        final int n = 6;
+
+        float[][] values = {
+                {0.0f, 30.571f},
+                {500.0f, 18.294f},
+                {1000.0f, 10.430f},
+                {1500.0f, 6.056f},
+                {1750.0f, 4.874f},
+                {3000.0f, 1.989f}
         };
 
         float input = Math.abs(v);
@@ -141,18 +169,21 @@ public class DriveManeuver extends Maneuver {
 
     }
 
-    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime, boolean allowBoost) {
+    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime, boolean allowBoost){
+        DriveManeuver.speedController(dt, output, currentSpeed, minimumSpeed, maximumSpeed, reactionTime, allowBoost, 0);
+    }
+    public static void speedController(float dt, ControlsOutput output, float currentSpeed, float minimumSpeed, float maximumSpeed, float reactionTime, boolean allowBoost, float additionalAccel) {
         minimumSpeed = Math.min(minimumSpeed, CarData.MAX_VELOCITY);
         maximumSpeed = Math.min(maximumSpeed, CarData.MAX_VELOCITY);
         assert minimumSpeed <= maximumSpeed : "minimumSpeed (" + minimumSpeed + ") should always be equal or lower the maximumSpeed(" + maximumSpeed + ")";
 
-        float minimumAcceleration = (minimumSpeed - currentSpeed) / reactionTime;
-        float maximumAcceleration = (maximumSpeed - currentSpeed) / reactionTime;
+        float minimumAcceleration = (minimumSpeed - currentSpeed) / reactionTime - additionalAccel;
+        float maximumAcceleration = (maximumSpeed - currentSpeed) / reactionTime - additionalAccel;
 
         final float throttleAccel = throttleAcceleration(currentSpeed);
 
-        final float brake_coast_transition = -(MathUtils.lerp(brake_acceleration, coasting_acceleration, 0.7f));
-        final float coasting_throttle_transition = -0.3f * coasting_acceleration;
+        final float brake_coast_transition = (MathUtils.lerp(brake_acceleration, coasting_acceleration, 0.7f));
+        final float coasting_throttle_transition = 0.5f * coasting_acceleration;
         final float throttle_boost_transition = throttleAccel + 0.45f * boost_acceleration;
 
         //if (car.up().z < 0.7f) {
@@ -178,9 +209,14 @@ public class DriveManeuver extends Maneuver {
         Vector3 target_local = targetPos.sub(car.position).dot(car.orientation);
 
         float angle = (float) Math.atan2(target_local.y, target_local.x);
-        float d = 0.05f;
-        float p = 3.1f;
-        output.withSteer(MathUtils.clip(d * -car.angularVelocity.dot(car.up()) + multiplier * p * angle * Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
+        float angular = car.angularVelocity.dot(car.up());
+        float dd = -0.01f;
+        float d = -0.06f;
+        float p = 5f;
+        output.withSteer(MathUtils.clip(
+                dd * angular * angular * Math.signum(angular) +
+                d * (float)Math.sqrt(Math.abs(angular)) * Math.signum(angular) +
+                        multiplier * p * angle * Math.signum(car.velocity.dot(car.forward())), -1f, 1f));
     }
 
     public static void steerController(ControlsOutput output, CarData car, Vector3 targetPos) {
@@ -194,7 +230,8 @@ public class DriveManeuver extends Maneuver {
 
         steerController(controlsOutput, car, this.target);
         float steerSlowdown = car.slowdownForceFromSteering(controlsOutput.getSteer()); // include steering slowdown so that we don't brake too much
-        speedController(dt, controlsOutput, car.forwardSpeed() + steerSlowdown * dt, this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost);
+        //assert Math.signum(steerSlowdown) != Math.signum(car.forwardSpeed());
+        speedController(dt, controlsOutput, car.forwardSpeed(), this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost, steerSlowdown);
 
         if (car.position.sub(target).magnitude() < 100.f)
             this.setIsDone(true);

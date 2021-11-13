@@ -12,8 +12,7 @@ from numpy.polynomial.polynomial import Polynomial as Poly
 app = QtGui.QApplication([])
 #mw = QtGui.QMainWindow()
 #mw.resize(800,800)
-np.set_printoptions(suppress=True, precision=2, linewidth=200)
-
+np.set_printoptions(suppress=True, precision=5, linewidth=200)
 
 win = pg.GraphicsWindow(title="Basic plotting examples")
 win.resize(1000,600)
@@ -26,7 +25,7 @@ pg.setConfigOptions(antialias=True)
 
 p3 = win.addPlot(title="Drawing with points")
 
-names = ["distance", "startspeed", "boost"]
+names = ["t", "accel", "pred"]
 def loadSet(fName, rowUse):
 
     driftyBoi = np.genfromtxt(fName, skip_header=1)
@@ -40,7 +39,7 @@ def loadSet(fName, rowUse):
     for row in skippedRows:
         driftyBoi = np.delete(driftyBoi, row, 1)
 
-    return driftyBoi[20:-5]
+    return driftyBoi[1:-1]
 
 def polyDataFor(arr):
     ''' t -> vel fit
@@ -66,14 +65,45 @@ def polyDataFor(arr):
         prevV = nextV
     return data
 
-rows = [0, 1]
+ang = loadSet('data/turntime.csv', [0])
+speed = loadSet('data/turntime.csv', [1])[:-1]
+accel = loadSet('data/turntime.csv', [2])[1:]
+time = loadSet('data/turntime.csv', [3])
+throttleAccel = loadSet('data/turntime.csv', [4])
+maxTurnCurvature = loadSet('data/turntime.csv', [5])
+steer = loadSet('data/turntime.csv', [6])
 
-data = loadSet('data/yeet-000.csv', [2])
-print(data)
-y,x = np.histogram(data, bins=np.linspace(np.min(data), np.max(data), 100))
-curve = pg.PlotCurveItem(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
+x1 = np.empty((speed.shape[0]))
+x2 = np.empty_like(x1)
+s1 = np.empty((speed.shape[0]))
+s2 = np.empty_like(s1)
+s3 = np.empty_like(s1)
+pred_accel = np.empty_like(speed)
+corrected_accel = np.empty_like(speed)
+for i in range(pred_accel.shape[0]):
+    x1[i] = speed[i] * maxTurnCurvature[i]
+    x2[i] = x1[i] * speed[i]
+    pred_accel[i] = -36.34783 * x1[i] -0.09389 * x2[i] + 41.91971
+    s1[i] = steer[i] * pred_accel[i]
+    s2[i] = s1[i] * steer[i]
+    s3[i] = s2[i] * steer[i]
+    corrected_accel[i] = 0.01461 * s1[i] + 0.83 * s2[i] + 0.15 * s3[i]
+  
+    
+#y,x = np.histogram(data, bins=np.linspace(np.min(data), np.max(data), 100))
+#curve = pg.PlotCurveItem(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
+p3.plot(np.concatenate((speed, corrected_accel), axis=1), pen=None, symbolBrush=None, symbolPen='w')
+#p3.plot(np.concatenate((speed, throttleAccel), axis=1), pen='w', symbolBrush=None, symbolPen=None)
+p3.plot(np.concatenate((speed, accel), axis=1), pen=None, symbolBrush=None, symbolPen='g')
 
-p3.addItem(curve)
+# do a cool line fit
+A = np.vstack([s1, s2, s3]).T # 
+#A = np.vstack([x1, x2, np.ones((speed.shape[0]))]).T
+res = np.linalg.lstsq(A, accel, rcond=None)
+print(res[0])
+print(res)
+
+#p3.addItem(curve)
 #datasets = []
 #for i in range(5):
 #    datasets.append(loadSet('data/turnerror-00{}.csv'.format(i), rows))
@@ -83,8 +113,8 @@ p3.addItem(curve)
 #    p3.plot(data, pen='g', symbolBrush=None, symbolPen=None)
 #p3.plot(bolPoly, pen='w', symbolBrush=None, symbolPen=None)
 
-p3.setLabel('left', "")
-p3.setLabel('bottom', "distance")
+p3.setLabel('left', "accel")
+p3.setLabel('bottom', "speed")
 
 def getDude(start):
     return (driftyBoi[start+1,1] - driftyBoi[start, 1]) / (driftyBoi[start, 1] * (driftyBoi[start + 1, 0] - driftyBoi[start, 0]))

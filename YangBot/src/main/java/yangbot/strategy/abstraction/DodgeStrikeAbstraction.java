@@ -8,6 +8,9 @@ import yangbot.optimizers.DodgeStrikeOptimizer;
 import yangbot.optimizers.graders.Grader;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
+import yangbot.util.math.vector.Matrix3x3;
+
+import java.awt.*;
 
 public class DodgeStrikeAbstraction extends Abstraction {
 
@@ -41,10 +44,15 @@ public class DodgeStrikeAbstraction extends Abstraction {
         final GameData gameData = this.getGameData();
         final CarData car = gameData.getCarData();
         final ImmutableBallData ball = gameData.getBallData();
-        final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
-        if (!this.optimizer.solvedGoodStrike && !car.hasWheelContact && this.strikeDodge.timer >= this.strikeCalcDelay)
-            this.solveGoodStrike();
+        if (!this.optimizer.solvedGoodStrike && !car.hasWheelContact){
+            if(this.strikeDodge.preorientOrientation == null && this.optimizer.expectedBallHitTime > 0) {
+                var targetB = gameData.getBallPrediction().getFrameAtAbsoluteTime(this.optimizer.expectedBallHitTime);
+                targetB.ifPresent(yangPredictionFrame ->
+                        this.strikeDodge.preorientOrientation = Matrix3x3.lookAt(yangPredictionFrame.ballData.position.sub(car.position)));
+            } else if(this.strikeDodge.timer >= this.strikeCalcDelay)
+                this.solveGoodStrike();
+        }
 
         this.strikeDodge.step(dt, controlsOutput);
 
@@ -70,6 +78,13 @@ public class DodgeStrikeAbstraction extends Abstraction {
         }
 
         return RunState.CONTINUE;
+    }
+
+    @Override
+    public void draw(AdvancedRenderer r) {
+        r.drawString2d(String.format("timer=%.02f", this.strikeDodge.timer), Color.WHITE, new Point(500, 400), 2, 2);
+        if(this.optimizer.solvedGoodStrike)
+            this.optimizer.drawSolvedStrike(r);
     }
 
     @Override

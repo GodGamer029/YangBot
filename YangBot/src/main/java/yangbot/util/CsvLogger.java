@@ -18,7 +18,7 @@ public class CsvLogger {
     }
 
     public void log(float[] vals) {
-        assert vals.length == attributes.length;
+        assert vals.length == attributes.length : vals.length + " values passed, but expected " + attributes.length;
 
         this.values.add(vals);
     }

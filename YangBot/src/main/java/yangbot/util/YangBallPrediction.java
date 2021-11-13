@@ -141,7 +141,8 @@ public class YangBallPrediction {
         if (this.frames.size() == 0)
             return;
         if (length <= 0)
-            length = this.relativeTimeOfLastFrame();
+            length = 3;
+        length = Math.min(length, this.relativeTimeOfLastFrame());
 
         float time = 0;
         float lastAbsTime = this.frames.get(0).absoluteTime;
@@ -201,7 +202,7 @@ public class YangBallPrediction {
     private int binarySearchRelativeTime(float relative){
         if(this.frames.size() == 0)
             return 0;
-        assert relative < this.relativeTimeOfLastFrame();
+        assert relative < this.relativeTimeOfLastFrame() : "rel="+relative+" last="+this.relativeTimeOfLastFrame();
         int left = 0, right = this.frames.size();
         int mid;
         int timeout = 0;
@@ -229,27 +230,11 @@ public class YangBallPrediction {
             return Optional.of(this.firstFrame());
         assert relativeTime > 0;
 
-        /*assert false: "TODO";
-        // TODO: binary search
-        int first = 0;
-        int last = this.frames.size() - 1;
-        int mid = (first + last)/2;
-        while( first <= last ){
-            if ( frames.get(mid).relativeTime < relativeTime ){
-                first = mid + 1;
-            }else if ( arr[mid] == key ){
-                System.out.println("Element is found at index: " + mid);
-                break;
-            }else{
-                last = mid - 1;
-            }
-            mid = (first + last)/2;
-        }*/
-
-        return this.frames
-                .stream()
-                .filter((f) -> f.relativeTime >= relativeTime)
-                .findFirst();
+        for(int i = this.binarySearchRelativeTime(relativeTime); i < this.frames.size(); i++){
+            if(this.frames.get(i).relativeTime >= relativeTime)
+                return Optional.of(this.frames.get(i));
+        }
+        return Optional.empty();
     }
 
     public Optional<YangPredictionFrame> getFrameAfterRelativeTime(float relativeTime) {

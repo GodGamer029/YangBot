@@ -67,6 +67,7 @@ JNIEXPORT ByteBuffer __cdecl simulateBall(void* inputBall, int tickrate, float s
 	flatbuffers::FlatBufferBuilder builder(256);
 	
 	std::vector<flatbuffers::Offset<FlatPhysics>> physicsTicks;
+	physicsTicks.reserve(simulationSteps);
 	for (int i = 0; i < simulationSteps; i++) {
 		FlatPhysicsBuilder physData(builder);
 		auto newPos = FlatVec3(ball.position[0], ball.position[1], ball.position[2]);

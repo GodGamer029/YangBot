@@ -19,10 +19,9 @@ g.scale(2,2,1)
 g.setDepthValue(10)  # draw grid after surfaces since they may be translucent
 w.addItem(g)
 
-names = ["INSPEED", "ENDANGLE", "TOTALTICKS", "DRIFTTICKS", "OUTSPEED", "OUTOFFSETX", "OUTOFFSETY"]
-rows = [0, 4, 1]
+names = ["ang", "speed", "accel", "time", "rise","maxcurv", "steer"]
 
-def loadData(str):
+def loadData(str, rows):
     data = np.genfromtxt(str, skip_header=1)
 
     driftyBoi = np.reshape(data[:, rows[0]], (data.shape[0], 1))
@@ -41,16 +40,29 @@ def loadData(str):
 
     return (driftyBoi, driftColor)
 
-oldData, oldColor = loadData('turn.drift.txt')
-newData, newColor = loadData('turn.drift2.txt')
-newColor[:, 2] = 0
-newColor[:, 1] = 1 - newColor[:, 0]
+#oldData, oldColor = loadData('turn.drift.txt')
+#newData, newColor = loadData('turn.drift2.txt')
+#newColor[:, 2] = 0
+#newColor[:, 1] = 1 - newColor[:, 0]
 
-driftyBoi = np.append(oldData, newData, axis=0)
-driftColor = np.append(oldColor, newColor, axis=0)
+#driftyBoi = np.append(oldData, newData, axis=0)
+#driftColor = np.append(oldColor, newColor, axis=0)
+
+data, color = loadData('data/turntime.csv', [1, 6, 2])
+
+
+#speedData, _ = loadData('data/turntime.csv', [3, 4, 1])
+#data2, color2 = loadData('data/turntime.csv', [3, 4, 0])
+
+#for i in range(data.shape[0]):
+#    data[i][2] /= speedData[i][2] # accel /= speed
+
+#color2[:, 2] = 0
+#color2[:, 1] = 1 - color2[:, 0]
 
 #(0.5, 0.5, 1, 1)
-p1 = gl.GLScatterPlotItem(pos=driftyBoi, color=driftColor, size=5)
+p1 = gl.GLScatterPlotItem(pos=data, color=color, size=5)
+#p1 = gl.GLScatterPlotItem(pos=np.append(data, data2, axis=0), color=np.append(color, color2, axis=0), size=5)
 p1.scale(10, 10, 10)
 w.addItem(p1)
 

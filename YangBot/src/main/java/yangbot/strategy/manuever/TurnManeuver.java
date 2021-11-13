@@ -1,5 +1,6 @@
 package yangbot.strategy.manuever;
 
+import net.jafama.FastMath;
 import yangbot.input.*;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
@@ -25,13 +26,13 @@ public class TurnManeuver extends Maneuver {
     private Vector3 alpha = new Vector3();
     private Matrix3x3 target_prev = new Matrix3x3();
 
-    private Vector3 G(Vector3 q, Vector3 dq_dt) {
-        final Vector3 T = new Vector3(-400.f, -130.f, 95.f).div(10.5f);
-        final Vector3 D = new Vector3(-50.0, -30.0f, -20.0f).div(10.5f);
+    private static final Vector3 T = new Vector3(-400.f, -130.f, 95.f).div(10.5f);
+    private static final Vector3 D = new Vector3(-50.0, -30.0f, -20.0f).div(10.5f);
 
+    private Vector3 G(Vector3 q, Vector3 dq_dt) {
         float G_roll = -Math.signum(dq_dt.x) * (
                 (Math.abs(dq_dt.x) / D.x) +
-                        (T.x / (D.x * D.x)) * (float) Math.log(T.x / (T.x + D.x * Math.abs(dq_dt.x)))
+                        (T.x / (D.x * D.x)) * (float) FastMath.log(T.x / (T.x + D.x * Math.abs(dq_dt.x)))
         );
 
         float G_pitch = -Math.signum(dq_dt.y) * dq_dt.y * dq_dt.y / (2.0f * T.y);

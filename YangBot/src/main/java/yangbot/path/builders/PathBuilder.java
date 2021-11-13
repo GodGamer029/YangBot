@@ -115,8 +115,7 @@ public class PathBuilder {
 
                 var segment = segmentQueue.remove();
 
-                if (segment instanceof StraightLineSegment) {
-                    var straight = (StraightLineSegment) segment;
+                if (segment instanceof StraightLineSegment straight) {
 
                     if (startSpeed > 900 && startSpeed < 2100) {
                         if (FlipSegment.canReplace(straight, startSpeed)) {

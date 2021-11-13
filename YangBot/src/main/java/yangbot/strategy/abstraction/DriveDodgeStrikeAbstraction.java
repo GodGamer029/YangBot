@@ -4,16 +4,19 @@ import org.jetbrains.annotations.NotNull;
 import yangbot.input.*;
 import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
+import yangbot.optimizers.DodgeStrikeOptimizer;
 import yangbot.optimizers.graders.Grader;
 import yangbot.optimizers.graders.OffensiveGrader;
 import yangbot.optimizers.graders.ValueNetworkGrader;
 import yangbot.path.builders.SegmentedPath;
+import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
+import yangbot.util.scenario.ScenarioUtil;
 
 import java.awt.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -30,7 +33,7 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
 
     public float arrivalTime = 0;
     public boolean forceJump = false;
-    public static final float MAX_STRIKE_HEIGHT = 230f /*max jump height*/ + 66 /* height of car nose when tilted up*/ + BallData.COLLISION_RADIUS * 0.45f /*we can hit the lower half*/;
+    public static final float MAX_STRIKE_HEIGHT = 230f /*max jump height*/ + 66 /* height of car nose when tilted up*/ + BallData.COLLISION_RADIUS * 0.4f /*we can hit the lower half*/ + RLConstants.carElevation;
     public State state;
 
     private BallTouchInterrupt ballTouchInterrupt = null;
@@ -53,42 +56,27 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
 
     // Run methods over and over again to bait the runtime into optimizing them
     public static void prepJit() {
-        var simCar = new CarData(new Vector3(0, 0, 30), new Vector3(0, 0, 200), new Vector3(), Matrix3x3.identity());
-        var rng = ThreadLocalRandom.current();
-        var simBall = new ImmutableBallData(new Vector3(0, 200, 200), new Vector3(), new Vector3()).makeMutable();
-        for (int i = 0; i < 200; i++) {
-            if (rng.nextBoolean())
-                simCar.position = new Vector3(0, 0, 30).add(rng.nextFloat() * 80 - 40, rng.nextFloat() * 80 - 40, rng.nextFloat() * 80 - 40);
-            else
-                simCar.position = simBall.position.add(rng.nextFloat() * 80 - 40, rng.nextFloat() * 80 - 40, rng.nextFloat() * 80 - 40);
-            simBall.collide(simCar, 0);
+        String encoded = "eWFuZ3YxOmMoYj05MS4wLHA9KC0yMDExLjk0MCwyNzI1LjIzMCwyNy4xMjApLHY9KC0yODcuNzkxLDEyNDEuMzkxLDMwNy43NjEpLGE9KC0wLjAwMiwwLjAwMCwtMC4wMDApLG89KC0wLjAxNywxLjc5OSwwLjAwMCkpLGIocD0oLTIwODcuMzQwLDMyNDMuODMwLDkzLjEzMCksdj0oMTY4LjQzMSwtMTA5LjIyMSwwLjAwMCksYT0oMS4xOTcsMS44NDYsLTAuMjA2KSk7";
+        var simGameData = GameData.current();
+        ScenarioUtil.decodeApplyToGameData(simGameData, encoded);
+
+        DodgeStrikeOptimizer optimizer = new DodgeStrikeOptimizer();
+        optimizer.expectedBallHitTime = simGameData.getElapsedSeconds() + 0.5f;
+
+        DodgeManeuver strikeDodge = new DodgeManeuver();
+        strikeDodge.timer = 0.03f;
+        strikeDodge.duration = 0.2f;
+        strikeDodge.delay = 0.6f;
+
+        optimizer.maxJumpDelay = 1f;
+        optimizer.jumpDelayStep = 0.1f;
+
+        for(int i = 0; i < 5; i++){
+            optimizer.customGrader = new ValueNetworkGrader();
+            optimizer.solvedGoodStrike = false;
+            optimizer.debugMessages = false;
+            optimizer.solveGoodStrike(simGameData, strikeDodge);
         }
-        simCar.hasWheelContact = false;
-        simCar.boost = 100;
-        for (int i = 0; i < 250; i++) {
-            var ctrl = new ControlsOutput();
-            ctrl.withPitch(rng.nextFloat() * 2 - 1);
-            ctrl.withYaw(rng.nextFloat() * 2 - 1);
-            ctrl.withRoll(rng.nextFloat() * 2 - 1);
-            ctrl.withBoost(rng.nextBoolean());
-            simCar.step(ctrl, RLConstants.tickFrequency);
-        }
-        /*curGameData.update(simCar, simBall, List.of(simCar), RLConstants.gravity.z, RLConstants.tickFrequency, new DummyRenderer(0));
-        List<YangBallPrediction.YangPredictionFrame> frames = new ArrayList<>();
-        for(int i = 0; i < 60 * 4; i++){
-            frames.add(new YangBallPrediction.YangPredictionFrame(i * RLConstants.tickFrequency * 2, i * RLConstants.tickFrequency * 2, simBall));
-        }
-        curGameData.setBallPrediction(YangBallPrediction.from(frames, RLConstants.tickFrequency * 2));
-        for(int i = 0; i < 2; i++){
-            var strik = new StrikeAbstraction(new Curve(), new OffensiveGrader());
-            strik.arrivalTime = 0.6f;
-            strik.jumpBeforeStrikeDelay = 0.7f;
-            strik.state = State.STRIKE;
-            strik.maxJumpDelay = 1f;
-            strik.jumpDelayStep = 0.1f;
-            strik.strikeDodge.timer = 0.1f;
-            strik.step(RLConstants.tickFrequency, new ControlsOutput());
-        }*/
     }
 
     @Override
@@ -109,9 +97,8 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
 
             //var lolBallPred = YangBotJNAInterop.getBallPrediction(gameData.getBallData().makeMutable(), 120);
             var predBall = ballPrediction.getFrameAtAbsoluteTime(this.arrivalTime);
-            if (predBall.isPresent()) {
-                renderer.drawCentered3dCube(Color.DARK_GRAY, predBall.get().ballData.position, BallData.COLLISION_RADIUS * 2);
-            }
+            predBall.ifPresent(yangPredictionFrame ->
+                    renderer.drawCentered3dCube(Color.DARK_GRAY, yangPredictionFrame.ballData.position, BallData.COLLISION_RADIUS * 2));
         }
 
         switch (this.state) {
@@ -133,13 +120,12 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
                     this.state = State.STRIKE;
                     this.strikeAbstraction.setExpectedBallHitTime(this.arrivalTime);
                     float delay = MathUtils.clip(this.arrivalTime - car.elapsedSeconds, 0.1f, 2f);
-
                     if (this.forceJump)
                         break;
 
                     Vector2 futureBallPos = ballPrediction.getFrameAtRelativeTime(delay).get().ballData.position.flatten();
                     float dist = (float) car.position.flatten().add(car.velocity.flatten().mul(delay)).distance(futureBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getAverageHitboxExtent();
-                    if (dist > 450) {
+                    if (dist > 650) {
                         if (debugMessages)
                             System.out.println(car.playerIndex + ": Quitting strike because nowhere near hitting dist=" + dist + " delay=" + delay + " carp=" + car.position + " carv=" + car.velocity + " ballp=" + futureBallPos);
 
@@ -163,6 +149,18 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
             return false;
 
         return super.canInterrupt();
+    }
+
+    @Override
+    public void draw(AdvancedRenderer renderer) {
+        switch (state){
+            case DRIVE -> {
+                this.driveAbstraction.draw(renderer);
+            }
+            case STRIKE -> {
+                this.strikeAbstraction.draw(renderer);
+            }
+        }
     }
 
     enum State {

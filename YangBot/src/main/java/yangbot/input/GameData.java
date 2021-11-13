@@ -4,6 +4,7 @@ import rlbot.flat.GameInfo;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.List;
@@ -17,9 +18,9 @@ public class GameData {
     protected CarData carData = null;
     protected ImmutableBallData ballData = null;
     protected List<CarData> allCars = null;
-    protected float gravityZ = -650;
+    protected float gravityZ = RLConstants.gravity.z;
     protected float elapsedSeconds = 0;
-    protected float dt = 1 / 60f;
+    protected float dt = RLConstants.tickFrequency;
     protected GameInfoData gameInfoData = null;
     protected AdvancedRenderer advancedRenderer = null;
     private int botIndex = 0;
@@ -54,7 +55,7 @@ public class GameData {
         this.gravityZ = gameInfo.worldGravityZ();
         assert gravityZ <= 0;
         this.gameInfoData = new GameInfoData(gameInfo);
-        this.dt = dt;
+        this.dt = Math.max(RLConstants.tickFrequency, MathUtils.closestMultiple(dt, RLConstants.tickFrequency));
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = ballPrediction;
         this.botIndex = carData.playerIndex;
@@ -71,7 +72,7 @@ public class GameData {
         assert this.allCars.contains(carData);
         this.gravityZ = gravity;
         assert gravity <= 0;
-        this.dt = dt;
+        this.dt = Math.max(RLConstants.tickFrequency, MathUtils.closestMultiple(dt, RLConstants.tickFrequency));
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = ballPrediction;
         this.botIndex = carData.playerIndex;

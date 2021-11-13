@@ -67,7 +67,8 @@ public class DodgeManeuver extends Maneuver {
         if (duration >= 0 && timer < duration) {
             controlsOutput.withJump(true);
             didLeaveOutFrame = false;
-        }
+        }else if(this.delay <= 0)
+            this.setDone();
         this.timer += dt;
 
         float dodge_time = 0;

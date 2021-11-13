@@ -6,6 +6,7 @@ import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
+import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.Optional;
@@ -34,7 +35,7 @@ public class Scenario {
     public ControlsOutput processInput(DataPacket input) {
         if (this.lastTime == -1)
             this.lastTime = input.car.elapsedSeconds;
-        final float dt = input.car.elapsedSeconds - this.lastTime;
+        final float dt = MathUtils.closestMultiple(input.car.elapsedSeconds - this.lastTime, RLConstants.tickFrequency);
         this.lastTime = input.car.elapsedSeconds;
 
         final GameData gameData = GameData.current();

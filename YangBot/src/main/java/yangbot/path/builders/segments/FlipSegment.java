@@ -127,8 +127,7 @@ public class FlipSegment extends PathSegment {
 
             float curSpeed = car.forwardSpeed();
             if (Math.abs(curSpeed - this.getStartSpeed()) > 1) {
-                DriveManeuver.speedController(dt, output, curSpeed, this.getStartSpeed() + 0.5f, this.getStartSpeed() + 3.5f, 0.03f, false);
-            }
+                DriveManeuver.speedController(dt, output, curSpeed, this.getStartSpeed() + 0.5f, this.getStartSpeed() + 3.5f, 0.03f, false);            }
         }
 
         // Timeout

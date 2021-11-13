@@ -18,6 +18,7 @@ import yangbot.strategy.manuever.kickoff.KickoffTester;
 import yangbot.strategy.manuever.kickoff.SimpleKickoffManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
+import yangbot.util.math.MathUtils;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class VibeBot implements Bot {
     }
 
     private ControlsOutput processInput(DataPacket input) {
-        float dt = Math.max(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency * 0.9f);
+        float dt = Math.max(RLConstants.tickFrequency, MathUtils.closestMultiple(input.gameInfo.secondsElapsed() - lastTick, RLConstants.tickFrequency));
 
         AdvancedRenderer renderer = AdvancedRenderer.forBotLoop(this);
         if (!renderingActive)
@@ -55,7 +56,6 @@ public class VibeBot implements Bot {
         CarData car = input.car;
         BallData ball = input.ball;
         {
-
             gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(ball, RLConstants.tickRate, 5));
         }
 

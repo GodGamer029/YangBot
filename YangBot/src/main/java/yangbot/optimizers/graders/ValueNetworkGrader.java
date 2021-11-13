@@ -9,20 +9,17 @@ public class ValueNetworkGrader extends Grader {
     private float lastError = 1;
     private float bestPrediction = -1;
     public boolean careAboutCars = true;
-    private boolean didWRN = false;
+    public boolean usedAdvancedValuation = false;
 
     @Override
     public boolean isImproved(GameData gameData) {
         float myTeam = gameData.getCarData().team;
-        var simBall = gameData.getBallPrediction().getFrameAtRelativeTime(0.05f);
-        var ball = simBall.orElseThrow().ballData;
+        var simBall = gameData.getBallData();
+        var ball = simBall;
         float pred;
-        if(careAboutCars && gameData.getAllCars().size() > 1 && gameData.getAllCars().stream().anyMatch(c -> c.team != myTeam && !c.isDemolished)){
-            if(!didWRN){
-                didWRN = true;
-                System.out.println("USED NEW GAMSE TSATETET");
-            }
-            pred = ModelUtils.gameStateToPrediction(gameData);
+        if(careAboutCars && gameData.getAllCars().size() >= 1 && gameData.getAllCars().stream().anyMatch(c -> !c.isDemolished)){
+            pred = 0.75f * ModelUtils.gameStateToPrediction(gameData) + 0.25f * ModelUtils.ballToPrediction(ball).getKey();
+            this.usedAdvancedValuation = true;
         }else
             pred = ModelUtils.ballToPrediction(ball).getKey();
         float error = Math.abs(pred - myTeam);
@@ -36,11 +33,11 @@ public class ValueNetworkGrader extends Grader {
 
     @Override
     public String getAdditionalInfo() {
-        return "lastError=" + lastError + " t=" + (bestPrediction != -1 ? bestPrediction : -1);
+        return "lastError=" + lastError + " t=" + (bestPrediction != -1 ? bestPrediction : -1)+" usedAdvValue="+this.usedAdvancedValuation;
     }
 
     @Override
     public float requiredBallPredLength() {
-        return 0.2f;
+        return 0;
     }
 }

@@ -1,6 +1,7 @@
 package yangbot.util;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import org.jetbrains.annotations.NotNull;
 import rlbot.Bot;
 import rlbot.cppinterop.RLBotDll;
 import rlbot.render.RenderPacket;
@@ -47,7 +48,7 @@ public class AdvancedRenderer extends Renderer {
     }
 
     @SuppressWarnings("WeakerAccess")
-    public void drawCentered3dCube(Color c, Vector3 center, Vector3 size) {
+    public void drawCentered3dCube(Color c, @NotNull Vector3 center, Vector3 size) {
         Vector3 startPos = center.sub(size.div(2));
         Vector3 endPos = new Vector3(size);
 
@@ -113,5 +114,7 @@ public class AdvancedRenderer extends Renderer {
         this.drawString2d(String.format("Roll: %.1f", output.getRoll()), Color.WHITE, new Point(10, y += 20), 1, 1);
         this.drawString2d(String.format("Steer: %.2f", output.getSteer()), Color.WHITE, new Point(10, y += 20), 1, 1);
         this.drawString2d(String.format("Throttle: %.2f", output.getThrottle()), output.getThrottle() < 0 ? Color.RED : Color.WHITE, new Point(10, y += 20), 1, 1);
+        this.drawString2d(String.format("Boost: %s", output.holdBoost() ? "true" : "false"), output.holdBoost() ? Color.GREEN : Color.RED, new Point(10, y += 20), 1, 1 );
+        this.drawString2d(String.format("Jump: %s", output.holdJump() ? "true" : "false"), Color.WHITE, new Point(10, y += 20), 1, 1 );
     }
 }

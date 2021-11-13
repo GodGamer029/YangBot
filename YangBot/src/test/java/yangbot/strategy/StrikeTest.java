@@ -27,14 +27,16 @@ public class StrikeTest {
 
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = new ArrayList<>();
         Scenario s = new Scenario.Builder()
-                .withTransitionDelay(0.15f)
-                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj04Ni4wLHA9KDIwMzAuODkwLC0yMDAuNzEwLDE3LjA2MCksdj0oMTE0OC44NTEsLTE3NS4wNjEsLTAuMTExKSxhPSgtMC4wMDEsMC4wMDAsLTEuNjA1KSxvPSgtMC4wMTcsLTAuMjI2LDAuMDAwKSksYihwPSgzODg3Ljc4MCwyNTQuNTEwLDg4Ny4wNjApLHY9KC0zOS40NTEsLTUzOS4xMTEsLTY4Ny4xMTEpLGE9KDEuMDQwLDUuMzc3LDIuNDUxKSk7").withGameInfoState(new GameInfoState().withGameSpeed(0.5f)))
+                .withTransitionDelay(0.05f)
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xMDAuMCxwPSgzMzg4Ljk4MCwzMC4xNzAsMTcuMDYwKSx2PSgxMTI0LjE1MSwtMTcyLjg3MSwwLjE5MSksYT0oMC4wMDAsMC4wMDEsMC4wMDApLG89KC0wLjAxNywtMC4xNTMsMC4wMDApKSxiKHA9KDMxMjEuMTkwLDIxMzQuMjkwLDk4Ni42MjApLHY9KC0yNzUuOTkxLDM2My44MTEsLTYzNS4zMzEpLGE9KC00LjE0MCw0LjMxMSwwLjUzMSkpOw")
+                        .withGameInfoState(new GameInfoState().withGameSpeed(0.2f)))
                 .withInit((controlsOutput -> {
                     System.out.println("########## init");
                     var g = GameData.current();
                     var car = g.getCarData();
                     car.getPlayerInfo().resetInactive();
-                    strategy = new VibeStrategy();
+                    strategy = new LACStrategy();
+
                     strategy.planStrategy();
                     numResets--;
 
@@ -53,11 +55,14 @@ public class StrikeTest {
                     for (var fra : strikeableFrames) {
                         r.drawLine3d(Color.MAGENTA, fra.ballData.position, ballPredBeginn.getFrameAfterRelativeTime(fra.relativeTime).get().ballData.position);
                     }
-
+                    //GameData.current().getBallPrediction().draw(r, Color.MAGENTA, 3);
                     r.drawString2d(strategy.getAdditionalInformation(), Color.WHITE, new Point(100, 300), 1, 1);
 
-                    strategy.step(GameData.current().getDt(), output);
-                    return strategy.isDone() || timer > 5f ? (numResets <= 0 ? Scenario.RunState.COMPLETE : Scenario.RunState.DELAYED_RESET) : Scenario.RunState.CONTINUE;
+                    if(!strategy.isDone())
+                        strategy.step(GameData.current().getDt(), output);
+                    r.drawControlsOutput(output, 440);
+
+                    return timer > 4f || strategy.isDone() ? (numResets <= 0 ? Scenario.RunState.COMPLETE : Scenario.RunState.DELAYED_RESET) : Scenario.RunState.CONTINUE;
                 })
                 .withOnComplete((f) -> {
 

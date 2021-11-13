@@ -16,11 +16,13 @@ public class AtbaSegment extends PathSegment {
     protected final Vector3 startPos;
     protected Vector3 endPos;
     protected float targetSpeed = -1;
+    private DriveManeuver driveManeuver;
 
     public AtbaSegment(PathBuilder b, Vector3 endPos) {
         super(b);
         this.startPos = b.getCurrentPosition();
         this.endPos = endPos;
+        this.driveManeuver = new DriveManeuver();
     }
 
     @Override
@@ -48,12 +50,21 @@ public class AtbaSegment extends PathSegment {
         final GameData gameData = GameData.current();
         final CarData carData = gameData.getCarData();
 
-        if (targetSpeed > 0)
-            DriveManeuver.speedController(dt, output, carData.forwardSpeed(), targetSpeed - 10, targetSpeed + 10, 0.04f, false);
-        else
-            DriveManeuver.speedController(dt, output, carData.forwardSpeed(), DriveManeuver.max_throttle_speed, CarData.MAX_VELOCITY, 0.04f, false);
+        this.driveManeuver.target = this.endPos;
 
         DriveManeuver.steerController(output, carData, this.endPos);
+
+        if (targetSpeed > 0){
+            this.driveManeuver.minimumSpeed = targetSpeed - 5;
+            this.driveManeuver.maximumSpeed = targetSpeed + 10;
+            this.driveManeuver.allowBoost = targetSpeed > DriveManeuver.max_throttle_speed;
+        }else{
+            this.driveManeuver.allowBoost = false;
+            this.driveManeuver.minimumSpeed = DriveManeuver.max_throttle_speed;
+            this.driveManeuver.maximumSpeed = CarData.MAX_VELOCITY;
+        }
+
+        this.driveManeuver.step(dt, output);
 
         return carData.position.distance(endPos) < 100;
     }

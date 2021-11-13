@@ -1,6 +1,7 @@
 package yangbot.util.math.vector;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import net.jafama.FastMath;
 import rlbot.gamestate.DesiredRotation;
 import rlbot.gamestate.DesiredVector3;
 import yangbot.cpp.FlatVec3;
@@ -64,13 +65,14 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public static Vector3 rotationToAxis(Matrix3x3 R) {
-        float theta = (float) Math.acos(Math.min(1, Math.max(-1, 0.5f * (R.tr() - 1.0f))));
+        float x = Math.min(1, Math.max(-1, 0.5f * (R.tr() - 1.0f)));
+        float theta = (float) FastMath.acos(x);
         float scale;
 
         if (Math.abs(theta) < 0.00001f)
             scale = 0.5f + theta * theta / 12.0f;
         else
-            scale = 0.5f * theta / (float) Math.sin(theta);
+            scale = 0.5f * theta / (float) Math.sqrt(1 - x * x);
 
         return new Vector3(
                 R.get(2, 1) - R.get(1, 2),
@@ -202,7 +204,11 @@ public class Vector3 extends rlbot.vector.Vector3 {
     }
 
     public double magnitude() {
-        return Math.sqrt(magnitudeSquared());
+        return FastMath.sqrt(magnitudeSquared());
+    }
+
+    public float magnitudeF() {
+        return (float)FastMath.sqrt(magnitudeSquared());
     }
 
     public double magnitudeSquared() {
@@ -214,7 +220,7 @@ public class Vector3 extends rlbot.vector.Vector3 {
         if (len == 0) {
             return new Vector3();
         }
-        return this.mul(1 / Math.sqrt(len));
+        return this.mul(1 / FastMath.sqrt(len));
     }
 
     public float dot(Vector3 other) {
@@ -244,7 +250,7 @@ public class Vector3 extends rlbot.vector.Vector3 {
         double magnitude2 = magnitudeSquared();
         double vMagnitude2 = v.magnitudeSquared();
         double dot = dot(v);
-        return Math.acos(dot / Math.sqrt(magnitude2 * vMagnitude2));
+        return Math.acos(Math.min(1, dot / Math.sqrt(magnitude2 * vMagnitude2)));
     }
 
     public Vector3 crossProduct(Vector3 v) {

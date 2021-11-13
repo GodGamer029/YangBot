@@ -5,28 +5,21 @@ import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
-import yangbot.optimizers.graders.ValueNetworkGrader;
-import yangbot.path.EpicMeshPlanner;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.RecoverStrategy;
 import yangbot.strategy.Strategy;
 import yangbot.strategy.abstraction.*;
-import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.PosessionUtil;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
-import yangbot.util.math.Line2;
-import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector2;
-import yangbot.util.math.vector.Vector3;
-import yangbot.util.scenario.ScenarioUtil;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class LACStrategy extends Strategy {
@@ -34,25 +27,33 @@ public class LACStrategy extends Strategy {
     private State state = State.INVALID;
     private Abstraction boostAbstraction;
     private Abstraction strikeAbstraction;
-    private IdleAbstraction idleAbstraction;
+    private IdleAbstraction idleAbstraction = null;
     private boolean chargeAtBall = false;
     public boolean spoofNoBoost = false;
-    public static final float MIN_HEIGHT_AERIAL = 550;
+    public static final float MIN_HEIGHT_AERIAL = 600;
     public static  final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
     private BallTouchInterrupt ballTouchInterrupt;
 
     private boolean planStrategyAttack() {
         final GameData gameData = GameData.current();
         final CarData car = gameData.getCarData();
+        final var ball = gameData.getBallData();
         final int teamSign = car.getTeamSign();
         YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         final Vector2 enemyGoal = new Vector2(0, -teamSign * (RLConstants.goalDistance + 100));
+        final Vector2 ourGoal = new Vector2(0, teamSign * (RLConstants.goalDistance + 100));
 
         // Make sure we don't hit the ball back to our goal
         List<LACHelper.StrikeInfo> possibleStrikes = new ArrayList<>();
 
-        var myPosession = PosessionUtil.getPossession(gameData, ballPrediction);
+        AtomicReference<Float> myPosession = new AtomicReference<>(-5f);
+        if(ballPrediction.getFrameAtRelativeTime(0.25f).map(f -> f.ballData).or(() -> Optional.of(ball))
+                .get().position.flatten().distance(ourGoal) < 2500)
+            myPosession.set(0f); // allow defensive action
+
+        PosessionUtil.getPossession(gameData, ballPrediction)
+                .ifPresent(p -> myPosession.set(Math.max(myPosession.get(), p)));
 
         if (car.boost > 10) {
             var aerialStrikeFrames = YangBallPrediction.from(ballPrediction.getFramesBetweenRelative(0.3f, 3.5f)
@@ -66,7 +67,7 @@ public class LACStrategy extends Strategy {
             airStrike.ifPresent(possibleStrikes::add);
         }
 
-        if(myPosession.isPresent() && myPosession.get() > -0.5f)
+        if(myPosession.get() > -1f)
         {
             List<YangBallPrediction.YangPredictionFrame> strikeableFrames = ballPrediction.getFramesBetweenRelative(0.25f, 3.5f)
                     .stream()
@@ -81,7 +82,7 @@ public class LACStrategy extends Strategy {
             }
         }
 
-        if(myPosession.isPresent() && myPosession.get() > 0.25f)
+        if(myPosession.get() > 0)
         {
             List<YangBallPrediction.YangPredictionFrame> chipableFrames = ballPrediction.getFramesBetweenRelative(0.25f, 3.5f)
                     .stream()
@@ -140,7 +141,6 @@ public class LACStrategy extends Strategy {
         final CarData car = gameData.getCarData();
         final int teamSign = car.getTeamSign();
         final ImmutableBallData ball = gameData.getBallData();
-        final YangBallPrediction ballPrediction = gameData.getBallPrediction();
 
         this.state = State.INVALID;
         this.chargeAtBall = false;
@@ -152,7 +152,7 @@ public class LACStrategy extends Strategy {
             return;
         }
 
-        if (!car.getPlayerInfo().isActiveShooter() || car.boost < 70){
+        if (!car.getPlayerInfo().isActiveShooter() || car.boost < 60){
             var o = LACHelper.planGoForBoost();
             if(o.isPresent() && !this.spoofNoBoost){
                 this.state = State.GET_BOOST;
@@ -163,7 +163,7 @@ public class LACStrategy extends Strategy {
         // determine the car that is supposed to shoot
         var attackingCar = LACHelper.getAttackingCar();
 
-        if (attackingCar.isPresent() && attackingCar.get().playerIndex == car.playerIndex) {
+        if (attackingCar.isPresent() && attackingCar.get().playerIndex == car.playerIndex || true) {
             if (this.planStrategyAttack()) {
                return;
             }
@@ -172,17 +172,18 @@ public class LACStrategy extends Strategy {
                 RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_AllYours);
                 car.getPlayerInfo().setInactiveShooterUntil(car.elapsedSeconds + 2f);
             }
-            //else
-              //  this.chargeAtBall = true;
         }
 
         this.state = State.IDLE;
         if(!this.chargeAtBall){
-            this.idleAbstraction = new IdleAbstraction();
-            this.idleAbstraction.targetSpeed = 2000;
-            this.idleAbstraction.minIdleDistance = 800;
-            this.idleAbstraction.maxIdleDistance = RLConstants.arenaLength * 0.65f;
-            this.idleAbstraction.retreatPercentage = 0.8f;
+            if(this.idleAbstraction == null) {
+                this.idleAbstraction = new IdleAbstraction();
+                this.idleAbstraction.targetSpeed = 2000;
+                this.idleAbstraction.minIdleDistance = 2000;
+                this.idleAbstraction.maxIdleDistance = RLConstants.arenaLength * 0.5f;
+                this.idleAbstraction.retreatPercentage = 0.8f;
+            }
+
             if(!car.getPlayerInfo().isActiveShooter() || car.boost < 30)
                 this.idleAbstraction.forceRetreatTimeout = 0.5f;
         }
@@ -236,18 +237,17 @@ public class LACStrategy extends Strategy {
             break;
             case IDLE: {
 
-                if (this.reevaluateStrategy((this.chargeAtBall || this.idleAbstraction.canInterrupt()) ? 0.05f : 2.5f))
-                    return;
-
-                if (this.reevaluateStrategy(ballTouchInterrupt, (this.chargeAtBall || this.idleAbstraction.canInterrupt()) ? 0.05f : 2.5f))
-                    return;
-
                 if(this.chargeAtBall){
                     DefaultStrategy.smartBallChaser(dt, controlsOutput, true);
                 }else{
                     this.idleAbstraction.step(dt, controlsOutput);
                 }
 
+                if (this.reevaluateStrategy((this.chargeAtBall || this.idleAbstraction.canInterrupt()) ? 0.05f : 2.5f))
+                    return;
+
+                if (this.reevaluateStrategy(ballTouchInterrupt, (this.chargeAtBall || this.idleAbstraction.canInterrupt()) ? 0.05f : 2.5f))
+                    return;
             }
             break;
         }

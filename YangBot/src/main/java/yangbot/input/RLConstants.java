@@ -38,4 +38,10 @@ public class RLConstants {
 
         return x >= 3820 || y + tolerance >= 4920;
     }
+
+    public static boolean isPosOnBackWall(Vector3 pos, float tolerance){
+        return (Math.abs(pos.y) > RLConstants.arenaHalfLength - tolerance) &&
+                (Math.abs(pos.x) > RLConstants.goalCenterToPost - tolerance || pos.z > RLConstants.goalHeight - tolerance);
+
+    }
 }

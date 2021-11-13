@@ -18,7 +18,7 @@ public class ValueNetworkGrader extends Grader {
         var ball = simBall;
         float pred;
         if(careAboutCars && gameData.getAllCars().size() >= 1 && gameData.getAllCars().stream().anyMatch(c -> !c.isDemolished)){
-            pred = 0.75f * ModelUtils.gameStateToPrediction(gameData) + 0.25f * ModelUtils.ballToPrediction(ball).getKey();
+            pred = 0.8f * ModelUtils.gameStateToPrediction(gameData, false, true) + 0.2f * ModelUtils.ballToPrediction(ball).getKey();
             this.usedAdvancedValuation = true;
         }else
             pred = ModelUtils.ballToPrediction(ball).getKey();

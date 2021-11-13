@@ -5,6 +5,7 @@ import rlbot.flat.QuickChatSelection;
 import yangbot.input.*;
 import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
+import yangbot.optimizers.model.ModelUtils;
 import yangbot.strategy.DefaultStrategy;
 import yangbot.strategy.RecoverStrategy;
 import yangbot.strategy.Strategy;
@@ -59,8 +60,12 @@ public class LACStrategy extends Strategy {
             var aerialStrikeFrames = YangBallPrediction.from(ballPrediction.getFramesBetweenRelative(0.3f, 3.5f)
                     .stream()
                     .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * Math.max(0, frame.relativeTime * 0.6f - 0.1f))) == -teamSign) // Ball is closer to enemy goal than to own
-                    .filter((frame) -> (frame.ballData.position.z >= MIN_HEIGHT_AERIAL && frame.ballData.position.z < MAX_HEIGHT_AERIAL)
-                            && !frame.ballData.makeMutable().isInAnyGoal())
+                    .filter((frame) -> frame.ballData.position.z >= MIN_HEIGHT_AERIAL && frame.ballData.position.z < MAX_HEIGHT_AERIAL)
+                    .filter(f -> {
+                        if(Math.signum(f.ballData.position.y) == car.getTeamSign())
+                            return true; // defense
+                        return !RLConstants.isPosOnBackWall(f.ballData.position, 50 + 2 * BallData.COLLISION_RADIUS); // don't pinch the ball on the enemy wall
+                    })
                     .collect(Collectors.toList()), ballPrediction.tickFrequency);
 
             var airStrike = LACHelper.planAerialIntercept(aerialStrikeFrames, false);
@@ -73,6 +78,13 @@ public class LACStrategy extends Strategy {
                     .stream()
                     .filter((frame) -> (frame.ballData.position.z <= DriveDodgeStrikeAbstraction.MAX_STRIKE_HEIGHT))
                     .filter((frame) -> Math.signum(frame.ballData.position.y - (car.position.y + car.velocity.y * Math.max(0, frame.relativeTime * 0.6f - 0.1f))) == -teamSign) // Ball is closer to enemy goal than to own
+                    .filter(f -> {
+                        if(Math.signum(f.ballData.position.y) == car.getTeamSign())
+                            return true; // defense
+                        if(f.ballData.velocity.magnitudeF() < 100 && f.ballData.position.z < BallData.COLLISION_RADIUS * 2)
+                            return true;
+                        return !RLConstants.isPosOnBackWall(f.ballData.position, 50 + 2 * BallData.COLLISION_RADIUS); // don't pinch the ball on the enemy wall
+                    })
                     .collect(Collectors.toList());
 
             if (!strikeableFrames.isEmpty()) {
@@ -121,6 +133,14 @@ public class LACStrategy extends Strategy {
                             val *= 0.9f;
                             val -= 0.3f;
                             break;
+                        case DODGE:
+                            if(frame.isPresent()){
+                                var b = frame.get();
+                                if(Math.abs(b.ballData.position.y) > RLConstants.arenaHalfLength - 80 - BallData.COLLISION_RADIUS &&
+                                        Math.abs(b.ballData.position.x) > RLConstants.goalCenterToPost)
+                                    val *= 1.3f; // dont pinch it near the goal wall *duh*
+                            }
+                            break;
                     }
 
                     return new Tuple<>(s, val);
@@ -152,7 +172,8 @@ public class LACStrategy extends Strategy {
             return;
         }
 
-        if (!car.getPlayerInfo().isActiveShooter() || car.boost < 60){
+        var gameError = Math.abs(ModelUtils.gameStateToPrediction(gameData, true, true) - car.team);
+        if (!car.getPlayerInfo().isActiveShooter() || (car.boost < 60 && gameError < 0.5f)){
             var o = LACHelper.planGoForBoost();
             if(o.isPresent() && !this.spoofNoBoost){
                 this.state = State.GET_BOOST;

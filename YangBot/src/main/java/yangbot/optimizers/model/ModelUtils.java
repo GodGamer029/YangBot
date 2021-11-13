@@ -6,6 +6,7 @@ import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ModelUtils {
@@ -67,11 +68,13 @@ public class ModelUtils {
         return DeciderYangNet.GAME_STATE_PREDICTOR.deciderForward(ModelUtils.combine(carEnc, ballEnc))[0];
     }
 
-    public static float gameStateToPrediction(GameData g){
+    public static float gameStateToPrediction(GameData g, boolean allTeammates, boolean allEnemies){
+        var myTeam = GameData.current().getCarData().team;
         var ballEnc = ModelUtils.encodeBall(g.getBallData());
         Map<Integer, float[]> carData = new HashMap<>();
         g.getAllCars().forEach(c -> carData.put(c.playerIndex, ModelUtils.encodeCar(c, g.getBallData())));
         var carImportances = g.getAllCars().stream()
+                .filter(c -> !c.isDemolished)
                 .map(c -> {
                     var data = ModelUtils.combine(carData.get(c.playerIndex), ballEnc);
                     float importance = DeciderYangNet.GAME_STATE_PREDICTOR.deciderForward(data)[0];
@@ -79,28 +82,43 @@ public class ModelUtils {
                 })
                 .collect(Collectors.toList());
         var t0 = carImportances.stream()
-                .filter(c -> c.getKey().team == 0)
-                .max(Comparator.comparingDouble(Tuple::getValue))
-                .map(Tuple::getKey);
+                .filter(c -> c.getKey().team == 0 && !c.getKey().isDemolished)
+                .sorted(Collections.reverseOrder(Comparator.comparingDouble(Tuple::getValue)))
+                .map(Tuple::getKey).limit((myTeam == 0 ? allTeammates : allEnemies) ? 3 : 1).collect(Collectors.toList());
         var t1 = carImportances.stream()
-                .filter(c -> c.getKey().team == 1)
-                .max(Comparator.comparingDouble(Tuple::getValue))
-                .map(Tuple::getKey);
+                .filter(c -> c.getKey().team == 1 && !c.getKey().isDemolished)
+                .sorted(Collections.reverseOrder(Comparator.comparingDouble(Tuple::getValue)))
+                .map(Tuple::getKey).limit((myTeam == 1 ? allTeammates : allEnemies) ? 3 : 1).collect(Collectors.toList());
 
         if(t0.isEmpty() || t1.isEmpty()){
-            assert t0.isPresent() || t1.isPresent();
+            assert !t0.isEmpty() || !t1.isEmpty();
             int team = t0.isEmpty() ? -1 : 1;
             var sample = new CarData(new Vector3(0, team * -(RLConstants.goalDistance + 200), RLConstants.carElevation), new Vector3(), new Vector3(), Matrix3x3.lookAt(new Vector3(1, 0, 0)));
             sample.playerIndex = -999;
             carData.put(-999, ModelUtils.encodeCar(sample, g.getBallData()));
             if(t0.isEmpty())
-                t0 = Optional.of(sample);
+                t0 = List.of(sample);
             else
-                t1 = Optional.of(sample);
+                t1 = List.of(sample);
         }
-        var data = ModelUtils.combine(ballEnc, carData.get(t0.get().playerIndex));
-        data = ModelUtils.combine(data, carData.get(t1.get().playerIndex));
-        return DeciderYangNet.GAME_STATE_PREDICTOR.forward(data)[0];
+        Function<Tuple<Integer, Integer>, Float> predictOne = tuple -> {
+            var data = ModelUtils.combine(ballEnc, carData.get(tuple.getKey()));
+            data = ModelUtils.combine(data, carData.get(tuple.getValue()));
+            return DeciderYangNet.GAME_STATE_PREDICTOR.forward(data)[0];
+        };
+
+        float val = 0;
+        int numVal = 0;
+        for(var e0 : t0) {
+            for (var e1 : t1) {
+                val += predictOne.apply(new Tuple<>(e0.playerIndex, e1.playerIndex));
+                numVal++;
+            }
+        }
+
+        assert numVal > 0;
+
+        return val / numVal;
     }
 
     public static void preloadAllModels() {

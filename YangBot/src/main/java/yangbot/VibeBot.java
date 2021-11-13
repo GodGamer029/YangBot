@@ -11,6 +11,7 @@ import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.*;
 import yangbot.input.fieldinfo.BoostManager;
 import yangbot.input.playerinfo.PlayerInfoManager;
+import yangbot.optimizers.model.ModelUtils;
 import yangbot.strategy.*;
 import yangbot.strategy.lac.LACStrategy;
 import yangbot.strategy.manuever.Maneuver;
@@ -112,7 +113,7 @@ public class VibeBot implements Bot {
 
         car.hitbox.draw(renderer, car.position, 1, Color.GREEN);
 
-        if (car.hasWheelContact && output.holdBoost() && car.forward().dot(car.velocity) >= CarData.MAX_VELOCITY - 20)
+        if (car.hasWheelContact && output.holdBoost() && car.forward().dot(car.velocity) >= CarData.MAX_VELOCITY - 5)
             output.withBoost(false);
 
         // Print Throttle info
@@ -139,6 +140,7 @@ public class VibeBot implements Bot {
                 renderer.drawString3d(text, (this.currentPlan != null && this.currentPlan.getClass() == RecoverStrategy.class) ? Color.YELLOW : Color.WHITE, car.position.add(0, 0, 70), 1, 1);
             }
             renderer.drawControlsOutput(output, 440);
+
         }
 
         return output;

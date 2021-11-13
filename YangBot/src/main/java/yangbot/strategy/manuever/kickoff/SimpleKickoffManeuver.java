@@ -69,7 +69,7 @@ public class SimpleKickoffManeuver extends Maneuver {
                         var midPos = new Vector3(Math.signum(car.position.x) * 50, Math.signum(car.position.y) * 700, 17);
                         var endPos = new Vector3(Math.signum(car.position.x) * 0, Math.signum(car.position.y) * 300, 17);
                         planner = planner
-                                .addPoint(midPos, new Vector3(0, -Math.signum(car.position.y), 0))
+                                .addPoint(midPos, new Vector3(0, -Math.signum(car.position.y), 17))
                                 .withEnd(endPos, ball.position.sub(endPos).normalized().add(new Vector3(0, -1 * car.getTeamSign(), 0).mul(0.1f)).normalized())
                                 .withArrivalTime(car.elapsedSeconds + 1.9f)
                                 .withArrivalSpeed(1900);
@@ -95,7 +95,7 @@ public class SimpleKickoffManeuver extends Maneuver {
 
                 if (this.kickOffLocation == KickoffTester.KickOffLocation.OFF_CENTER) {
                     Vector3 padLoc = new Vector3(Math.signum(car.position.x) * 120f, 2816.0f * car.getTeamSign(), RLConstants.carElevation);
-                    planner.addPoint(padLoc, padLoc.sub(car.position).withZ(0).normalized());
+                    planner.addPoint(padLoc, padLoc.sub(car.position).withZ(17).normalized());
                 }
 
                 if (kickOffLocation == KickoffTester.KickOffLocation.UNKNOWN) {

@@ -190,7 +190,7 @@ public class LACHelper {
                     continue;
             }
 
-            final Vector2 closestScoringPosition = enemyGoalLine.center();
+            final Vector2 closestScoringPosition = enemyGoalLine.closestPointOnLine(targetBallPos.flatten());
             final Vector3 carToBall = targetBallPos.sub(car.position).normalized().withZ(0);
             final Vector3 ballTargetToGoalTarget = closestScoringPosition.sub(targetBallPos.flatten()).normalized().withZ(0);
 

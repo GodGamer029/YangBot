@@ -32,7 +32,7 @@ public class ValueGameStateTest {
                     float dt = gameData.getDt();
 
                     if(gameData.getAllCars().size() > 1){
-                        float pred = ModelUtils.gameStateToPrediction(gameData);
+                        float pred = ModelUtils.gameStateToPrediction(gameData, false, false);
                         float imp = ModelUtils.getImportanceOfCar(gameData.getAllCars().stream().filter(c -> c.playerIndex != car.playerIndex).findFirst().get(), ball);
                         renderer.drawString2d(String.format("%01.4f\n%01.4f", pred, imp), Color.WHITE, new Point(300, 300), 2, 2);
                     }

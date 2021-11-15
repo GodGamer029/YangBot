@@ -240,7 +240,7 @@ public class Matrix3x3 {
     }
 
     public Matrix2x2 flatten() {
-        return new Matrix2x2(this.forward().flatten(), this.right().flatten());
+        return new Matrix2x2(this.forward().flatten().normalized(), this.right().flatten().normalized());
     }
 
     public float det() {

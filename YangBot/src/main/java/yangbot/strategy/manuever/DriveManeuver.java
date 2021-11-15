@@ -21,6 +21,7 @@ public class DriveManeuver extends Maneuver {
     public float minimumSpeed = 1400f;
     public float maximumSpeed = CarData.MAX_VELOCITY;
     public boolean allowBoost = true;
+    private float lastSteer = 0;
 
     public DriveManeuver() {
     }
@@ -102,6 +103,7 @@ public class DriveManeuver extends Maneuver {
         };
 
         float input = Math.abs(v);
+        assert Float.isFinite(input) : v;
         if (input <= values[0][0])
             return values[0][1];
         if (input >= values[n - 1][0])
@@ -113,7 +115,7 @@ public class DriveManeuver extends Maneuver {
                 return MathUtils.lerp(values[i][1], values[i + 1][1], u);
             }
         }
-        assert false;
+        assert false : input;
         return -1;
     }
 
@@ -197,7 +199,7 @@ public class DriveManeuver extends Maneuver {
             output.withThrottle(0);
             output.withBoost(false);
         } else if (minimumAcceleration <= throttle_boost_transition) { // acceleration does not need boost accel
-            output.withThrottle(MathUtils.remapClip(minimumAcceleration / throttleAccel, 0, 1, 0.015f, 1));
+            output.withThrottle(MathUtils.remapClip(minimumAcceleration / Math.max(throttleAccel, 0.1f), 0, 1, 0.015f, 1));
             output.withBoost(false);
         } else {
             output.withThrottle(1.0f);
@@ -229,6 +231,15 @@ public class DriveManeuver extends Maneuver {
         final CarData car = gameData.getCarData();
 
         steerController(controlsOutput, car, this.target);
+        var steer = controlsOutput.getSteer();
+        if(Math.abs(steer) > 0.1f){
+            if(Math.signum(steer) != Math.signum(this.lastSteer))
+                this.lastSteer = 0;
+
+            steer = this.lastSteer + MathUtils.minAbs(steer - this.lastSteer, 1 / 0.05f * dt);
+            this.lastSteer = steer;
+        }
+        controlsOutput.withSteer(steer);
         float steerSlowdown = car.slowdownForceFromSteering(controlsOutput.getSteer()); // include steering slowdown so that we don't brake too much
         //assert Math.signum(steerSlowdown) != Math.signum(car.forwardSpeed());
         speedController(dt, controlsOutput, car.forwardSpeed(), this.minimumSpeed, this.maximumSpeed, reaction_time, this.allowBoost, steerSlowdown);

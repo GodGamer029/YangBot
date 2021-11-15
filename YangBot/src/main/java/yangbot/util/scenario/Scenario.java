@@ -143,7 +143,7 @@ public class Scenario {
 
                 // move ball out of the way if its not needed
                 if (staticGameState.getBallState() == null)
-                    staticGameState.withBallState(new BallState().withPhysics(new PhysicsState().withLocation(new Vector3(0, 0, RLConstants.arenaHeight + 300).toDesiredVector()).withVelocity(new DesiredVector3(0f, 0f, 0f))));
+                    staticGameState.withBallState(new BallState().withPhysics(new PhysicsState().withLocation(new Vector3(0, 0, RLConstants.arenaHeight + 300).toDesiredVector()).withVelocity(new DesiredVector3(0f, 0f, 0f)).withAngularVelocity(new DesiredVector3(0f, 0f, 0f))));
 
                 this.scenario.gameStateSupplier = (num) -> Optional.of(staticGameState);
             } else {

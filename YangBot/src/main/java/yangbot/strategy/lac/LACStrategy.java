@@ -31,6 +31,7 @@ public class LACStrategy extends Strategy {
     private IdleAbstraction idleAbstraction = null;
     private boolean chargeAtBall = false;
     public boolean spoofNoBoost = false;
+    public boolean spoofIdle = false;
     public static final float MIN_HEIGHT_AERIAL = 600;
     public static  final float MAX_HEIGHT_AERIAL = RLConstants.arenaHeight - 200;
     private BallTouchInterrupt ballTouchInterrupt;
@@ -164,7 +165,6 @@ public class LACStrategy extends Strategy {
 
         this.state = State.INVALID;
         this.chargeAtBall = false;
-        this.idleAbstraction = null;
         this.ballTouchInterrupt = InterruptManager.get().getBallTouchInterrupt();
 
         if (!car.hasWheelContact) {
@@ -172,7 +172,7 @@ public class LACStrategy extends Strategy {
             return;
         }
 
-        var gameError = Math.abs(ModelUtils.gameStateToPrediction(gameData, true, true) - car.team);
+        var gameError = Math.abs(gameData.getGameValue() - car.team);
         if (!car.getPlayerInfo().isActiveShooter() || (car.boost < 60 && gameError < 0.5f)){
             var o = LACHelper.planGoForBoost();
             if(o.isPresent() && !this.spoofNoBoost){
@@ -185,7 +185,7 @@ public class LACStrategy extends Strategy {
         var attackingCar = LACHelper.getAttackingCar();
 
         if (attackingCar.isPresent() && attackingCar.get().playerIndex == car.playerIndex || true) {
-            if (this.planStrategyAttack()) {
+            if (!this.spoofIdle && this.planStrategyAttack()) {
                return;
             }
             // Determine if we should rather rotate back
@@ -202,7 +202,7 @@ public class LACStrategy extends Strategy {
                 this.idleAbstraction.targetSpeed = 2000;
                 this.idleAbstraction.minIdleDistance = 2000;
                 this.idleAbstraction.maxIdleDistance = RLConstants.arenaLength * 0.5f;
-                this.idleAbstraction.retreatPercentage = 0.8f;
+                this.idleAbstraction.retreatPercentage = 1f;
             }
 
             if(!car.getPlayerInfo().isActiveShooter() || car.boost < 30)
@@ -213,7 +213,7 @@ public class LACStrategy extends Strategy {
     @Override
     protected void stepInternal(float dt, ControlsOutput controlsOutput) {
         var oldState = state;
-        assert !this.reevaluateStrategy(4f) : "States/Abstractions didn't finish automatically! (" + oldState.name() + ")";
+        assert !this.reevaluateStrategy(6f) : "States/Abstractions didn't finish automatically! (" + oldState.name() + ")";
         assert this.state != State.INVALID : "Invalid state! ";
 
         final GameData gameData = GameData.current();
@@ -238,18 +238,22 @@ public class LACStrategy extends Strategy {
             }
             break;
             case STRIKE: {
-                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(3.5f)){
+                if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(4.5f)){
                     car.getPlayerInfo().setInactiveShooterUntil(car.elapsedSeconds + 2f);
                     RLBotDll.sendQuickChat(car.playerIndex, true, QuickChatSelection.Information_AllYours);
+                    System.out.println(car.playerIndex+": Strike timed out");
                     return;
                 }
 
                 if (this.strikeAbstraction.canInterrupt() && this.reevaluateStrategy(ballTouchInterrupt)){
+                    System.out.println(car.playerIndex+": Quitting strike, ballTouchInterrupt");
                     return;
                 }
 
                 this.strikeAbstraction.draw(renderer);
-                this.strikeAbstraction.step(dt, controlsOutput);
+                var rs = this.strikeAbstraction.step(dt, controlsOutput);
+                if(rs == Abstraction.RunState.FAILED)
+                    System.out.println(car.playerIndex+": Strike failed ");
 
                 if (this.strikeAbstraction.isDone() && this.reevaluateStrategy(0)) {
                     return;
@@ -290,7 +294,7 @@ public class LACStrategy extends Strategy {
         var attacking = LACHelper.getAttackingCar();
         String attStr = attacking.map(carData -> (GameData.current().getCarData().playerIndex == carData.playerIndex ? "me" : ""+carData.playerIndex))
                 .orElse("none");
-        return "State: " + this.state + "\nActive in: " + active+"\nAttacker: "+attStr;
+        return "State: " + this.state + "\nActive in: " + active+"\nAttacker: "+attStr+"\nretreat: "+(this.state == State.IDLE ? this.idleAbstraction.forceRetreatTimeout : 0);
     }
 
     /***

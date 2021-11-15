@@ -10,6 +10,7 @@ import yangbot.path.builders.PathBuilder;
 import yangbot.path.builders.PathSegment;
 import yangbot.path.builders.SegmentedPath;
 import yangbot.path.builders.segments.ArcLineArc;
+import yangbot.path.builders.segments.CompositeBakeSegment;
 import yangbot.path.builders.segments.StraightLineSegment;
 import yangbot.path.builders.segments.TurnCircleSegment;
 import yangbot.strategy.manuever.DriveManeuver;
@@ -22,6 +23,7 @@ import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
 import yangbot.util.scenario.Scenario;
 import yangbot.util.scenario.ScenarioLoader;
+import yangbot.util.scenario.ScenarioUtil;
 
 import java.awt.*;
 import java.util.List;
@@ -150,26 +152,17 @@ public class SimplePathTests {
                     float dt = gameData.getDt();
 
                     var rend = gameData.getAdvancedRenderer();
+                    var arcOpt = ArcLineArc.findOptimalALA(gameData.getAllCars().stream().filter(c -> c.playerIndex != car.playerIndex).findFirst().get().toPhysics2d(),
+                            100, new Vector2(1000, -900), new Vector2(1, 1).normalized(),
+                            50, -1 / DriveManeuver.maxTurningCurvature(1400),
+                            50, 1 / DriveManeuver.maxTurningCurvature(2000));
+                    if(arcOpt.isPresent()){
+                        var arc = arcOpt.get();
+                        arc.bake(16);
+                        arc.draw(rend, Color.WHITE);
+                    }
 
-                    var startPos = new Vector2(1866.4, 1014.4);
-                    var turnCircleStartPos = new Vector2(2110.6, 1615.2);
-                    var circlePos = new Vector2(1742, 1765.1);
-                    var tangentPoint = new Vector2(2137.3, 1810.7);
-                    float ccw = -1;
-
-                    var startDir = turnCircleStartPos.sub(circlePos).normalized();
-                    var endDir = tangentPoint.sub(circlePos).normalized();
-
-                    float startAngle = (float) startDir.angle();
-                    float corrAng = (float) startDir.angleBetween(endDir);
-                    if (Math.signum(-ccw) != Math.signum(corrAng))
-                        corrAng = (float) (Math.signum(-ccw) * (Math.PI - Math.abs(corrAng) + Math.PI));
-                    float endAngle = startAngle + corrAng;
-
-                    rend.drawCircle(Color.YELLOW, circlePos.withZ(20), (float) circlePos.distance(tangentPoint), startAngle, endAngle);
-                    rend.drawLine3d(Color.YELLOW, startPos.withZ(20), turnCircleStartPos.withZ(20));
-
-                    return timer > 10f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
+                    return timer > 60f ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
                 })
                 .withOnComplete((f) -> {
 
@@ -296,6 +289,44 @@ public class SimplePathTests {
                 })
                 .withOnComplete((f) -> {
                     logger.save("..\\data\\turntime.csv");
+                })
+                .build();
+
+        ScenarioLoader.loadScenario(s);
+        assert ScenarioLoader.get().waitToCompletion(4000);
+    }
+
+    @Test
+    public void testDrive() {
+        Scenario s = new Scenario.Builder()
+                .withTransitionDelay(0.1f)
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xNS4wLHA9KC0yMDA1Ljk5MCwzNTgyLjM4MCwxNy4wMzApLHY9KC0yODIuMzIxLC0xOC42NTEsMS4wODEpLGE9KDAuMDAwLC0wLjAwNSwwLjM3MSksbz0oLTAuMDE2LC0zLjEwMiwwLjAwMCkpLGIocD0oLTIwMjQuODMwLDE2MS41NDAsMzgyLjM0MCksdj0oLTEzNjEuMzgxLDc5Ljk4MSwtMjg3LjI0MSksYT0oLTUuMDk5LDMuMTA2LC0wLjYwMCkpOw==")
+                        .withGameInfoState(new GameInfoState().withGameSpeed(0.2f)))
+                .withInit(c -> {
+                    var car = GameData.current().getCarData();
+                    path = new EpicMeshPlanner()
+                            .withStart(car)
+                            .withEnd(car.position.flatten().mul(-1).withZ(RLConstants.carElevation), new Vector3(0, 1, 0))
+                            .withArrivalSpeed(2300)
+                            .withArrivalTime(3)
+                            .allowDodge(false)
+                            .plan().get();
+                })
+                .withRun((output, timer) -> {
+                    final var gameData = GameData.current();
+                    final var car = gameData.getCarData();
+                    float dt = gameData.getDt();
+
+                    var rend = gameData.getAdvancedRenderer();
+                    path.step(dt, output);
+                    path.draw(rend);
+
+                    rend.drawControlsOutput(output, 400);
+
+                    return timer > 60f || path.isDone() ? Scenario.RunState.COMPLETE : Scenario.RunState.CONTINUE;
+                })
+                .withOnComplete((f) -> {
+
                 })
                 .build();
 

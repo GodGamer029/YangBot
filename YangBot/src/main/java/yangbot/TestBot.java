@@ -110,7 +110,7 @@ public class TestBot implements Bot {
                             .withEnd(new Vector3(3268.63f, 1030, 17f), new Vector3(-0.20f, 0.98f, 0))
                             .withArrivalTime(controlCar.elapsedSeconds + 2.18f - 0.05f)
                             .withArrivalSpeed(2300)
-                            .allowOptimize(false)
+                            .allowDodge(false)
                             .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                             .plan().get();
                     System.out.println("Est: " + this.path.getTotalTimeEstimate());

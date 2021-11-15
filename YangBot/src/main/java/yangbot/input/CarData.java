@@ -149,6 +149,25 @@ public class CarData {
         this.hasWheelContact = this.position.z < 7 + RLConstants.carElevation;
     }
 
+    // https://www.desmos.com/calculator/mplxfpbnej
+    public static float getJumpHeightAtTime(float time){
+        if(time > 1.73 || time <= 0)
+            return 0;
+        float g = RLConstants.gravity.z;
+        float x = MathUtils.clip(time, 0, 0.025f);
+        float z = 0.5f * ((DodgeManeuver.acceleration * 0.75f) + g) * x * x + DodgeManeuver.speed * x;
+
+        if(time <= 0.025f)
+            return z;
+        x = MathUtils.clip(time, 0.025f, 0.2f) - 0.025f;
+        z += 0.5f * (DodgeManeuver.acceleration + g) * x * x + DodgeManeuver.speed * x;
+        if(time <= 0.2f)
+            return z;
+        x = time - 0.2f;
+        z += 0.5f * g * x * x + ((DodgeManeuver.acceleration + g) * 0.2f + DodgeManeuver.speed) * x;
+        return z;
+    }
+
     // From L0laapk3
     // assumes jump duration = 0.2
     public static float getJumpTimeForHeight(float heightIncrease, float gravity) {
@@ -167,6 +186,8 @@ public class CarData {
         float x1 = vf * DriveManeuver.maxTurningCurvature(vf);
         float x2 = vf * x1;
         float predAccel = -36.34783f * x1 -0.09389f * x2 + 41.91971f;
+        if(predAccel > 0)
+            return 0;
         // Scale according to steer
         float s1 = steer * predAccel;
         float s2 = s1 * steer;
@@ -351,7 +372,7 @@ public class CarData {
         if (Math.abs(in.getPitch()) + Math.abs(in.getRoll()) + Math.abs(in.getYaw()) >= DodgeManeuver.input_threshold) {
             // directional dodge
 
-            float vf = (float) this.velocity.dot(this.forward());
+            float vf = this.velocity.dot(this.forward());
             float scalar = Math.abs(vf) / CarData.MAX_VELOCITY;
 
             Vector2 dodgeDir = new Vector2(-in.getPitch(), in.getYaw()).normalized();

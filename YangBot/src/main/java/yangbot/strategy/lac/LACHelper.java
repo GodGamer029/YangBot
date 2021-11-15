@@ -22,7 +22,6 @@ import yangbot.util.scenario.ScenarioUtil;
 
 import java.util.Comparator;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class LACHelper {
@@ -179,12 +178,12 @@ public class LACHelper {
 
             float jumpDelay;
             {
-                float zDiff = targetBallPos.z - BallData.COLLISION_RADIUS * 0.2f - car.position.z;
+                float zDiff = targetBallPos.z - BallData.COLLISION_RADIUS * 0.1f - car.position.z;
 
                 if (zDiff < 5)
                     jumpDelay = 0.2f;
                 else
-                    jumpDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z) + 0.1f, 0.2f, 1.1f);
+                    jumpDelay = MathUtils.clip(CarData.getJumpTimeForHeight(zDiff, gameData.getGravity().z), 0.2f, 1.1f);
 
                 if (interceptFrame.relativeTime < jumpDelay)
                     continue;
@@ -209,7 +208,7 @@ public class LACHelper {
 
                 var currentPath = p.get();
 
-                if(currentPath.getEndSpeed() < 400)
+                if(currentPath.getEndSpeed() < (Math.signum(ballHitTarget.y) == car.getTeamSign() ? 400 : 800))
                     return Optional.empty();
 
                 float tEstimate = currentPath.getTotalTimeEstimate();
@@ -224,6 +223,7 @@ public class LACHelper {
 
                         System.out.println(s);
                     }
+
                     return Optional.empty();
                 }
 
@@ -236,7 +236,6 @@ public class LACHelper {
                     System.out.println();
                 }
                 return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.DODGE, (o) -> {
-
                     var dodgeStrikeAbstraction = new DriveDodgeStrikeAbstraction(currentPath, new ValueNetworkGrader());
 
                     dodgeStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;
@@ -255,10 +254,10 @@ public class LACHelper {
             var potentialStrike = testPath.apply(
                     new EpicMeshPlanner()
                         .withStart(car, 0.05f)
-                        .withEnd(ballHitTarget, endTangent)
+                        .withEnd(ballHitTarget, endTangent, 0.3f)
                         .withArrivalTime(interceptFrame.absoluteTime)
                         .withArrivalSpeed(2300)
-                        .allowOptimize(false)
+                        .allowDodge(false)
                         .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANG_ARC)
                     .plan()
             ).or(() -> testPath.apply(
@@ -267,7 +266,7 @@ public class LACHelper {
                         .withEnd(ballHitTarget, endTangent)
                         .withArrivalTime(interceptFrame.absoluteTime)
                         .withArrivalSpeed(2300)
-                        .allowOptimize(false)
+                        .allowDodge(false)
                         .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                         .plan()
             ));
@@ -336,7 +335,7 @@ public class LACHelper {
                     .withEnd(ballHitTarget, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(2300)
-                    .allowOptimize(car.boost < 30)
+                    .allowDodge(car.boost < 30)
                     .withCreationStrategy(car.position.distance(ballHitTarget) > 2000 ? EpicMeshPlanner.PathCreationStrategy.YANG_ARC : EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
@@ -356,14 +355,14 @@ public class LACHelper {
                 continue;
 
             var relativeVel = currentPath.getEndTangent().mul(currentPath.getEndSpeed()).sub(interceptFrame.ballData.velocity).flatten();
-            if (relativeVel.magnitude() < 1400)
+            if (relativeVel.magnitude() < 1200)
                 continue; // We want boomers, not atbas
 
             // Check if path is valid
             {
                 if (currentPath.getTotalTimeEstimate() <= interceptFrame.relativeTime) {
                     return Optional.of(new StrikeInfo(interceptFrame.absoluteTime, StrikeInfo.StrikeType.CHIP, (o) -> {
-                        System.out.println(car.playerIndex+": Executing Chip << relative vel: "+relativeVel.magnitude() + " endSpeed="+currentPath.getEndSpeed() + " endTang="+currentPath.getEndTangent()+" ballV="+interceptFrame.ballData.velocity+" ballP="+interceptFrame.ballData.position);
+                        System.out.println(car.playerIndex+": Executing Chip << relative vel: "+relativeVel.magnitude() + " endSpeed="+currentPath.getEndSpeed() + " endTang="+currentPath.getEndTangent()+" ballV="+interceptFrame.ballData.velocity+" >> "+ScenarioUtil.getEncodedGameState(gameData));
                         var chipStrikeAbstraction = new DriveChipAbstraction(currentPath);
 
                         chipStrikeAbstraction.arrivalTime = interceptFrame.absoluteTime;

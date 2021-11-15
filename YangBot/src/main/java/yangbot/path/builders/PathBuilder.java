@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import yangbot.input.CarData;
 import yangbot.input.Physics2D;
 import yangbot.input.Physics3D;
+import yangbot.path.builders.segments.CompositeBakeSegment;
 import yangbot.path.builders.segments.FlipSegment;
 import yangbot.path.builders.segments.StraightLineSegment;
 import yangbot.util.math.vector.Matrix2x2;
@@ -20,9 +21,10 @@ public class PathBuilder {
     private final List<PathSegment> pathSegments;
     private final Physics3D start;
     private final float startBoost;
-    private boolean optimize = false;
+    private boolean allowDodge = false;
+    private float arrivalTime = -1, arrivalSpeed = -1;
 
-    public PathBuilder() {
+    protected PathBuilder() {
         // not recommended
         this.pathSegments = new ArrayList<>();
         this.start = null;
@@ -30,7 +32,7 @@ public class PathBuilder {
         assert false;
     }
 
-    public PathBuilder(CarData start) {
+    protected PathBuilder(CarData start) {
         this.start = start.toPhysics3d();
         this.startBoost = (float) start.boost;
         this.pathSegments = new ArrayList<>();
@@ -42,13 +44,23 @@ public class PathBuilder {
         this.pathSegments = new ArrayList<>();
     }
 
+    public PathBuilder withArrivalTime(float arrivalTime) {
+        this.arrivalTime = arrivalTime;
+        return this;
+    }
+
+    public PathBuilder withArrivalSpeed(float arrivalSpeed) {
+        this.arrivalSpeed = arrivalSpeed;
+        return this;
+    }
+
     public PathBuilder add(PathSegment pathSegment) {
         this.pathSegments.add(pathSegment);
         return this;
     }
 
     public PathBuilder optimize() {
-        this.optimize = true;
+        this.allowDodge = true;
         return this;
     }
 
@@ -96,9 +108,13 @@ public class PathBuilder {
         return this.pathSegments.get(segment).getEndSpeed();
     }
 
+    public int getNumSegments(){
+        return this.pathSegments.size();
+    }
+
     @NotNull
     public SegmentedPath build() {
-        if (this.optimize) {
+        if (this.allowDodge) {
             final List<PathSegment> optimizedSegments = new ArrayList<>(this.pathSegments.size());
             final Deque<PathSegment> segmentQueue = new ArrayDeque<>(this.pathSegments.size() * 2);
             segmentQueue.addAll(this.pathSegments);
@@ -117,16 +133,18 @@ public class PathBuilder {
 
                 if (segment instanceof StraightLineSegment straight) {
 
-                    if (startSpeed > 900 && startSpeed < 2100) {
+                    if (startSpeed > 400 && startSpeed < 2100) {
                         if (FlipSegment.canReplace(straight, startSpeed)) {
                             /*System.out.println("Replaced straight segment at "+optimizedSegments.size()+" speed "+startSpeed);
                             if(optimizedSegments.size() > 0)
                                 System.out.println("Segment before was: "+optimizedSegments.get(optimizedSegments.size() - 1).getClass().getSimpleName());*/
                             var flipSegment = new FlipSegment(straight.getStartPos(), straight.getStartTangent(), startSpeed, startBoost);
-
-                            optimizedSegments.add(flipSegment);
-                            segmentQueue.addFirst(new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos(), straight.arrivalSpeed, straight.arrivalTime, straight.allowBoost, flipSegment.getEndBoost()));
-                            continue;
+                            var newStraight = new StraightLineSegment(flipSegment.getEndPos(), flipSegment.getEndSpeed(), straight.getEndPos(), straight.arrivalSpeed, straight.arrivalTime, straight.allowBoost, flipSegment.getEndBoost());
+                            if(flipSegment.getTimeEstimate() + newStraight.getTimeEstimate() < straight.getTimeEstimate()){
+                                optimizedSegments.add(flipSegment);
+                                segmentQueue.addFirst(newStraight);
+                                continue;
+                            }
                         }
                     }
                 }
@@ -136,6 +154,35 @@ public class PathBuilder {
             this.pathSegments.clear();
             this.pathSegments.addAll(optimizedSegments);
         }
+        // stitch together curve segments
+        {
+            final List<PathSegment> optimizedSegments = new ArrayList<>(this.pathSegments.size());
+            List<BakeablePathSegment> bakeSegments = new ArrayList<>(3);
+            final Deque<PathSegment> segmentQueue = new ArrayDeque<>(this.pathSegments.size() * 2);
+            segmentQueue.addAll(this.pathSegments);
+            while (segmentQueue.size() > 0) {
+                var segment = segmentQueue.remove();
+
+                if(!(segment instanceof BakeablePathSegment)){
+                    if(bakeSegments.size() > 1)
+                        optimizedSegments.add(new CompositeBakeSegment(bakeSegments, this.arrivalSpeed, this.arrivalTime));
+                    else
+                        optimizedSegments.addAll(bakeSegments);
+                    bakeSegments = new ArrayList<>();
+                    optimizedSegments.add(segment);
+                    continue;
+                }
+
+                bakeSegments.add((BakeablePathSegment) segment);
+            }
+            if(bakeSegments.size() > 1){
+                optimizedSegments.add(new CompositeBakeSegment(bakeSegments, this.arrivalSpeed, this.arrivalTime));
+            }else
+                optimizedSegments.addAll(bakeSegments);
+            this.pathSegments.clear();
+            this.pathSegments.addAll(optimizedSegments);
+        }
+
         if (false) {
             System.out.println("Path: ");
             StringBuilder builder = new StringBuilder();

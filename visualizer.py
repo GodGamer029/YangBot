@@ -23,9 +23,7 @@ pg.setConfigOptions(antialias=True)
 
 #p1 = win.addPlot(title="Basic array plotting", y=np.genfromtxt('yeet.dat'))
 
-p3 = win.addPlot(title="Drawing with points")
-
-names = ["t", "accel", "pred"]
+names = ["ang", "speed", "accel", "time", "rise","maxcurv", "steer"]
 def loadSet(fName, rowUse):
 
     driftyBoi = np.genfromtxt(fName, skip_header=1)
@@ -90,11 +88,17 @@ for i in range(pred_accel.shape[0]):
     corrected_accel[i] = 0.01461 * s1[i] + 0.83 * s2[i] + 0.15 * s3[i]
   
     
-#y,x = np.histogram(data, bins=np.linspace(np.min(data), np.max(data), 100))
-#curve = pg.PlotCurveItem(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
+p3 = win.addPlot(title="")
 p3.plot(np.concatenate((speed, corrected_accel), axis=1), pen=None, symbolBrush=None, symbolPen='w')
-#p3.plot(np.concatenate((speed, throttleAccel), axis=1), pen='w', symbolBrush=None, symbolPen=None)
 p3.plot(np.concatenate((speed, accel), axis=1), pen=None, symbolBrush=None, symbolPen='g')
+p3.setLabel('left', "accel")
+p3.setLabel('bottom', "speed")
+
+p4 = win.addPlot(title="")
+p4.plot(np.concatenate((speed, corrected_accel / speed), axis=1), pen=None, symbolBrush=None, symbolPen='w')
+p4.plot(np.concatenate((speed, accel / speed), axis=1), pen=None, symbolBrush=None, symbolPen='g')
+p4.setLabel('left', "accel / speed")
+p4.setLabel('bottom', "speed")
 
 # do a cool line fit
 A = np.vstack([s1, s2, s3]).T # 
@@ -112,9 +116,6 @@ print(res)
 #for data in datasets:
 #    p3.plot(data, pen='g', symbolBrush=None, symbolPen=None)
 #p3.plot(bolPoly, pen='w', symbolBrush=None, symbolPen=None)
-
-p3.setLabel('left', "accel")
-p3.setLabel('bottom', "speed")
 
 def getDude(start):
     return (driftyBoi[start+1,1] - driftyBoi[start, 1]) / (driftyBoi[start, 1] * (driftyBoi[start + 1, 0] - driftyBoi[start, 0]))

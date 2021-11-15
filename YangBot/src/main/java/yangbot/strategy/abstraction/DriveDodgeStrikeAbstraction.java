@@ -124,17 +124,20 @@ public class DriveDodgeStrikeAbstraction extends Abstraction {
                         break;
 
                     Vector2 futureBallPos = ballPrediction.getFrameAtRelativeTime(delay).get().ballData.position.flatten();
-                    float dist = (float) car.position.flatten().add(car.velocity.flatten().mul(delay)).distance(futureBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getAverageHitboxExtent();
-                    if (dist > 650) {
+                    float dist = (float) car.position.flatten().distance(futureBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getDiagonalExtent();
+                    if (dist / delay > MathUtils.clip(car.velocity.flatten().magnitudeF() + 700, 0, CarData.MAX_VELOCITY + 200)) {
                         if (debugMessages)
                             System.out.println(car.playerIndex + ": Quitting strike because nowhere near hitting dist=" + dist + " delay=" + delay + " carp=" + car.position + " carv=" + car.velocity + " ballp=" + futureBallPos);
-
                         return RunState.FAILED;
                     }
                 }
                 break;
             case STRIKE:
-                return this.strikeAbstraction.step(dt, controlsOutput);
+                var rs = this.strikeAbstraction.step(dt, controlsOutput);;
+                if (rs.isFail() && debugMessages)
+                    System.out.println(car.playerIndex + ": Quitting strike, strikeAbstraction failed ");
+
+                return rs;
         }
 
         return RunState.CONTINUE;

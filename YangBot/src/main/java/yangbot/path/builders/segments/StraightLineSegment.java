@@ -18,28 +18,20 @@ public class StraightLineSegment extends BakeablePathSegment {
     private final Vector3 startPos, endPos, normal;
     private float timeEstimate = -1, endSpeed = -1;
 
-    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, float startBoost) {
-        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), -1, -1, false, startBoost);
-    }
-
     public StraightLineSegment(PathBuilder b, Vector3 endPos, float endSpeed, float arrivalTime, boolean allowBoost) {
-        this(b.getCurrentPosition(), b.getCurrentSpeed(), endPos, new Vector3(0, 0, 1), endSpeed, arrivalTime, allowBoost, b.getCurrentBoost());
+        this(b.getCurrentPosition(), b.getCurrentSpeed(), endPos, endSpeed, arrivalTime, allowBoost, b.getCurrentBoost());
     }
 
     public StraightLineSegment(Physics3D state, float startBoost, Vector3 endPos, float endSpeed, float arrivalTime, boolean allowBoost) {
-        this(state.position, state.forwardSpeed(), endPos, new Vector3(0, 0, 1), endSpeed, arrivalTime, allowBoost, startBoost);
+        this(state.position, state.forwardSpeed(), endPos, endSpeed, arrivalTime, allowBoost, startBoost);
     }
 
     public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, float endSpeed, float arrivalTime, boolean allowBoost, float startBoost) {
-        this(startPos, startSpeed, endPos, new Vector3(0, 0, 1), endSpeed, arrivalTime, allowBoost, startBoost);
-    }
-
-    public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, Vector3 normal, float endSpeed, float arrivalTime, boolean allowBoost, float startBoost) {
         super(startSpeed, startBoost, endSpeed, arrivalTime);
         this.allowBoost = allowBoost;
         this.startPos = startPos;
         this.endPos = endPos;
-        this.normal = normal;
+        this.normal = new Vector3(0, 0, 1);
         this.endSpeed = startSpeed;
     }
 

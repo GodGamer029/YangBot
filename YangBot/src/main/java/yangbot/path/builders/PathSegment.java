@@ -36,6 +36,10 @@ public abstract class PathSegment {
         return this.startSpeed;
     }
 
+    public float getStartBoost() {
+        return startBoost;
+    }
+
     public abstract Vector3 getEndPos();
 
     public abstract Vector3 getEndTangent();

@@ -278,7 +278,7 @@ public class IdleAbstraction extends Abstraction {
         final AdvancedRenderer renderer = gameData.getAdvancedRenderer();
 
         if (this.forceRetreatTimeout > 0)
-            this.forceRetreatTimeout -= dt;
+            this.forceRetreatTimeout = Math.max(0, this.forceRetreatTimeout - dt);
 
         // Use position of the ball in x seconds
         float futureBallPosDelay = 0.4f;
@@ -311,6 +311,15 @@ public class IdleAbstraction extends Abstraction {
                 futureBallPosTemp = ball.position.flatten();
 
             futureBallPos = futureBallPosTemp;
+        }
+
+        if(Math.signum(futureBallPos.y) == teamSign &&
+                Math.abs(futureBallPos.y - car.position.y) > BallData.COLLISION_RADIUS + 300 &&
+                Math.signum(futureBallPos.y - car.position.y) == car.getTeamSign() &&
+                Math.abs(car.position.y) < RLConstants.goalDistance - 2000){
+            var gameValue = 1 - Math.abs(car.team - gameData.getGameValue());
+            if(gameValue < 0.3f)
+                this.forceRetreatTimeout = 0.4f;
         }
 
         // find out where my teammates are idling
@@ -348,11 +357,11 @@ public class IdleAbstraction extends Abstraction {
             targetArrivalSpeed = MathUtils.clip(targetArrivalSpeed, 200, CarData.MAX_VELOCITY);
 
             var pathOptional = new EpicMeshPlanner()
-                    .withStart(car, RLConstants.tickFrequency * 4)
+                    .withStart(car, 0.05f)
                     .withEnd(idleTarget, idleTarget.sub(car.position).normalized())
                     .withArrivalSpeed(targetArrivalSpeed)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
-                    .snapToBoost(200)
+                    .snapToBoost(car.boost < 90 ? 300 : 10)
                     .plan();
 
             if (pathOptional.isEmpty()) {

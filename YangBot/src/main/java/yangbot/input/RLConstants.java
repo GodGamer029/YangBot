@@ -39,6 +39,33 @@ public class RLConstants {
         return x >= 3820 || y + tolerance >= 4920;
     }
 
+    public static boolean isOutOfBounds(Vector3 pos){
+        if(pos.z < 0 || pos.z > RLConstants.arenaHeight)
+            return true;
+
+        float x = Math.abs(pos.x);
+        float y = Math.abs(pos.y);
+
+        if(x - 50 >= RLConstants.arenaHalfWidth)
+            return true;
+
+        if (x - 200 >= 2700) {
+            // https://www.wolframalpha.com/input/?i=Line+between+%283850%2C+3850%29+%282700%2C+4950%29
+            float val = 173250f / 23f - (22f * (x - 200)) / 23f;
+            if (val <= y - 200)
+                return true;
+        }
+
+        if(y - 50 > RLConstants.goalDistance){
+            if(isPosOnBackWall(pos, 0))
+                return true;
+            if(y > RLConstants.goalDistance + 1000)
+                return true;
+        }
+
+        return false;
+    }
+
     public static boolean isPosOnBackWall(Vector3 pos, float tolerance){
         return (Math.abs(pos.y) > RLConstants.arenaHalfLength - tolerance) &&
                 (Math.abs(pos.x) > RLConstants.goalCenterToPost - tolerance || pos.z > RLConstants.goalHeight - tolerance);

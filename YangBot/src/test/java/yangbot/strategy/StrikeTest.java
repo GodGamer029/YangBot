@@ -27,16 +27,16 @@ public class StrikeTest {
 
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = new ArrayList<>();
         Scenario s = new Scenario.Builder()
-                .withTransitionDelay(0.05f)
-                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xMDAuMCxwPSgzMzg4Ljk4MCwzMC4xNzAsMTcuMDYwKSx2PSgxMTI0LjE1MSwtMTcyLjg3MSwwLjE5MSksYT0oMC4wMDAsMC4wMDEsMC4wMDApLG89KC0wLjAxNywtMC4xNTMsMC4wMDApKSxiKHA9KDMxMjEuMTkwLDIxMzQuMjkwLDk4Ni42MjApLHY9KC0yNzUuOTkxLDM2My44MTEsLTYzNS4zMzEpLGE9KC00LjE0MCw0LjMxMSwwLjUzMSkpOw")
-                        .withGameInfoState(new GameInfoState().withGameSpeed(0.2f)))
+                .withTransitionDelay(0.2f)
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xNS4wLHA9KDMwNS45OTAsODIuMzgwLDE3LjAzMCksdj0oLTI4Mi4zMjEsLTE4LjY1MSwxLjA4MSksYT0oMC4wMDAsLTAuMDA1LDAuMzcxKSxvPSgtMC4wMTYsLTMuMTAyLDAuMDAwKSksYihwPSgtMjAyNC44MzAsMTYxLjU0MCwzODIuMzQwKSx2PSgtMTM2MS4zODEsNzkuOTgxLC0yODcuMjQxKSxhPSgtNS4wOTksMy4xMDYsLTAuNjAwKSk7")
+                        .withGameInfoState(new GameInfoState().withGameSpeed(0.1f)))
                 .withInit((controlsOutput -> {
                     System.out.println("########## init");
                     var g = GameData.current();
                     var car = g.getCarData();
                     car.getPlayerInfo().resetInactive();
                     strategy = new LACStrategy();
-
+                    ((LACStrategy)strategy).spoofNoBoost = true;
                     strategy.planStrategy();
                     numResets--;
 
@@ -62,7 +62,7 @@ public class StrikeTest {
                         strategy.step(GameData.current().getDt(), output);
                     r.drawControlsOutput(output, 440);
 
-                    return timer > 4f || strategy.isDone() ? (numResets <= 0 ? Scenario.RunState.COMPLETE : Scenario.RunState.DELAYED_RESET) : Scenario.RunState.CONTINUE;
+                    return timer > 6f || strategy.isDone() ? (numResets <= 0 ? Scenario.RunState.COMPLETE : Scenario.RunState.DELAYED_RESET) : Scenario.RunState.CONTINUE;
                 })
                 .withOnComplete((f) -> {
 

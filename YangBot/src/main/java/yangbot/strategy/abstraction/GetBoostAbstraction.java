@@ -119,7 +119,7 @@ public class GetBoostAbstraction extends Abstraction {
                             .withStart(car)
                             .withEnd(padLocation, car.position.sub(padLocation).normalized())
                             .allowFullSend(pad.isFullBoost())
-                            .allowOptimize(!pad.isFullBoost() || car.boost < 30)
+                            .allowDodge()
                             .withArrivalSpeed(900) // We want to get outta there afterwards, don't faceplant into the next wall
                             .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                             .plan();
@@ -167,6 +167,7 @@ public class GetBoostAbstraction extends Abstraction {
             return RunState.FAILED;
 
         this.pathToBoost.step(dt, controlsOutput);
+        this.pathToBoost.draw(gameData.getAdvancedRenderer());
 
         if (this.pathToBoost.canInterrupt()) {
             var myBoost = BoostManager.getAllBoosts().stream()

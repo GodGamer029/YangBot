@@ -141,6 +141,8 @@ public class VibeBot implements Bot {
             }
             renderer.drawControlsOutput(output, 440);
 
+            var gameError = Math.abs(ModelUtils.gameStateToPrediction(gameData, true, true) - car.team);
+            renderer.drawString2d(String.format("Value: %.3f", 1 - gameError), Color.GREEN, new Point(500, 200), 2, 2);
         }
 
         return output;

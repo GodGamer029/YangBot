@@ -1,9 +1,6 @@
 package yangbot.strategy.abstraction;
 
-import yangbot.input.CarData;
-import yangbot.input.ControlsOutput;
-import yangbot.input.GameData;
-import yangbot.input.ImmutableBallData;
+import yangbot.input.*;
 import yangbot.optimizers.DodgeStrikeOptimizer;
 import yangbot.optimizers.graders.Grader;
 import yangbot.strategy.manuever.DodgeManeuver;
@@ -48,8 +45,14 @@ public class DodgeStrikeAbstraction extends Abstraction {
         if (!this.optimizer.solvedGoodStrike && !car.hasWheelContact){
             if(this.strikeDodge.preorientOrientation == null && this.optimizer.expectedBallHitTime > 0) {
                 var targetB = gameData.getBallPrediction().getFrameAtAbsoluteTime(this.optimizer.expectedBallHitTime);
-                targetB.ifPresent(yangPredictionFrame ->
-                        this.strikeDodge.preorientOrientation = Matrix3x3.lookAt(yangPredictionFrame.ballData.position.sub(car.position)));
+                targetB.ifPresent(yangPredictionFrame -> {
+                    var predCarZ = car.position.z + CarData.getJumpHeightAtTime(this.optimizer.expectedBallHitTime - car.elapsedSeconds + this.strikeDodge.timer) - CarData.getJumpHeightAtTime(this.strikeDodge.timer);
+                    var predContact = yangPredictionFrame.ballData.position;
+                    predContact = predContact.add(car.position.withZ(predCarZ).sub(predContact).normalized().mul(BallData.COLLISION_RADIUS));
+
+                    this.strikeDodge.preorientOrientation = Matrix3x3.lookAt(predContact.sub(car.position.withZ(predCarZ)).normalized());
+                });
+
             } else if(this.strikeDodge.timer >= this.strikeCalcDelay)
                 this.solveGoodStrike();
         }
@@ -82,7 +85,7 @@ public class DodgeStrikeAbstraction extends Abstraction {
 
     @Override
     public void draw(AdvancedRenderer r) {
-        r.drawString2d(String.format("timer=%.02f", this.strikeDodge.timer), Color.WHITE, new Point(500, 400), 2, 2);
+        r.drawString2d(String.format("timer=%.02f vz=%.1f", this.strikeDodge.timer, GameData.current().getCarData().velocity.z), Color.WHITE, new Point(500, 400), 2, 2);
         if(this.optimizer.solvedGoodStrike)
             this.optimizer.drawSolvedStrike(r);
     }

@@ -2,6 +2,8 @@ package yangbot.input;
 
 import rlbot.flat.GameInfo;
 import yangbot.input.interrupt.InterruptManager;
+import yangbot.optimizers.Optimizeable;
+import yangbot.optimizers.model.ModelUtils;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.MathUtils;
@@ -9,6 +11,7 @@ import yangbot.util.math.vector.Vector3;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GameData {
@@ -26,6 +29,7 @@ public class GameData {
     private int botIndex = 0;
     private static final Map<Long, GameData> botLoopMap = new ConcurrentHashMap<>();
     private YangBallPrediction ballPrediction = null;
+    private Optional<Float> gameValue;
 
     public GameData(Long threadId) {
     }
@@ -59,6 +63,7 @@ public class GameData {
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = ballPrediction;
         this.botIndex = carData.playerIndex;
+        this.gameValue = Optional.empty();
 
         if (this.ballData.hasBeenTouched() && !this.isFoolGameData())
             InterruptManager.ballTouchInterrupt(this.ballData.getLatestTouch());
@@ -76,6 +81,7 @@ public class GameData {
         this.advancedRenderer = advancedRenderer;
         this.ballPrediction = ballPrediction;
         this.botIndex = carData.playerIndex;
+        this.gameValue = Optional.empty();
     }
 
     public void update(CarData carData, ImmutableBallData ballData, List<CarData> allCars, float gravity, float dt, AdvancedRenderer advancedRenderer) {
@@ -84,6 +90,13 @@ public class GameData {
 
     public void update(CarData car, ImmutableBallData ball) {
         this.update(car, ball, List.of(car), RLConstants.gravity.z, RLConstants.tickFrequency, null);
+    }
+
+    public float getGameValue(){
+        if(this.gameValue.isEmpty())
+            this.gameValue = Optional.of(ModelUtils.gameStateToPrediction(this, true, true));
+
+        return this.gameValue.get();
     }
 
     public YangBallPrediction getBallPrediction() {

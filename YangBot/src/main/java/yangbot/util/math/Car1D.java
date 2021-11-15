@@ -17,8 +17,6 @@ public class Car1D {
 
     // Returns: time | speed
     public static Car1D simulateDriveDistanceForwardAccel(float distance, float startSpeed, float boost) {
-        assert boost <= 100;
-
         final float totalDist = distance;
         if (distance <= 0)
             return new Car1D(0, startSpeed, boost, 0);

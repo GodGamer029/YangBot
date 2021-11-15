@@ -44,8 +44,8 @@ public class SegmentedPath {
         this(segments, GameData.current().getElapsedSeconds());
     }
 
-    public static SegmentedPath from(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed) {
-        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, arrivalTime, arrivalSpeed, 0)));
+    public static SegmentedPath from(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed, float startBoost) {
+        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, arrivalTime, arrivalSpeed, startBoost)));
     }
 
     public static SegmentedPath from(Curve c, float startSpeed) {

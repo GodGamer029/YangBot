@@ -2,7 +2,6 @@ package yangbot.path;
 
 import yangbot.cpp.YangBotJNAInterop;
 import yangbot.input.CarData;
-import yangbot.input.Physics2D;
 import yangbot.input.Physics3D;
 import yangbot.input.RLConstants;
 import yangbot.input.fieldinfo.BoostManager;
@@ -13,7 +12,6 @@ import yangbot.path.navmesh.Navigator;
 import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.Tuple;
 import yangbot.util.math.MathUtils;
-import yangbot.util.math.vector.Matrix2x2;
 import yangbot.util.math.vector.Matrix3x3;
 import yangbot.util.math.vector.Vector3;
 
@@ -26,11 +24,12 @@ public class EpicMeshPlanner {
     private Vector3 startPos = null, startTangent;
     private float startSpeed = DriveManeuver.max_throttle_speed;
     private Vector3 endPos = null, endTangent;
+    private float endOffset = 0;
     private boolean avoidBall = false;
     private float boostAvailable = 100;
     private float snapToBoostDist = 0;
     private boolean ballAvoidanceNecessary = false;
-    private boolean allowOptimize = true;
+    private boolean allowDodge = true;
     private boolean allowFullSend = false; // Enable boost, even when arrival speed < 1400
     private float arrivalTime = -1, arrivalSpeed = DriveManeuver.max_throttle_speed;
     private PathCreationStrategy pathCreationStrategy;
@@ -41,15 +40,21 @@ public class EpicMeshPlanner {
         this.pathCreationStrategy = PathCreationStrategy.YANGPATH;
     }
 
-    public EpicMeshPlanner allowOptimize(boolean allow) {
-        this.allowOptimize = allow;
+    public EpicMeshPlanner allowDodge(){
+        return this.allowDodge(true);
+    }
+
+    public EpicMeshPlanner allowDodge(boolean allow) {
+        this.allowDodge = allow;
         return this;
+    }
+
+    public EpicMeshPlanner allowFullSend(){
+        return this.allowFullSend(true);
     }
 
     public EpicMeshPlanner allowFullSend(boolean allow) {
         this.allowFullSend = allow;
-        // the fact that you're reading this means that my bot is performing well :O
-        // how neat!
         return this;
     }
 
@@ -99,10 +104,10 @@ public class EpicMeshPlanner {
     }
 
     public EpicMeshPlanner withEnd(Vector3 pos, Vector3 tangent, float offset) {
-        assert offset < 50 && offset >= 0 : offset; // Don't be stupid
-
+        assert offset < 5 && offset >= 0 : offset; // Don't be stupid
+        this.endOffset = offset;
         this.endTangent = tangent;
-        this.endPos = pos.sub(this.endTangent.mul(offset));
+        this.endPos = pos;
         return this;
     }
 
@@ -137,6 +142,10 @@ public class EpicMeshPlanner {
         assert this.startPos != null && this.startTangent != null;
         assert this.endPos != null && this.endTangent != null;
 
+        if(this.pathCreationStrategy != PathCreationStrategy.YANG_ARC){
+            this.endPos = this.endPos.sub(this.endTangent.mul(this.endOffset * this.arrivalSpeed));
+        }
+
         if (this.snapToBoostDist > 0 && this.endPos.z < 100 && !RLConstants.isPosNearWall(this.endPos.flatten(), 30)) {
             // Snap to nearest boost pad at destination
             var closestBoost = BoostManager.getAllBoosts().stream()
@@ -147,11 +156,12 @@ public class EpicMeshPlanner {
                     .map(Tuple::getKey);
             closestBoost.ifPresent(boostPad -> this.endPos = boostPad.getLocation().withZ(RLConstants.carElevation));
         }
+        if(this.allowFullSend)
+            this.boostAvailable = 999;
 
         Optional<SegmentedPath> currentPath;
         switch (this.pathCreationStrategy) {
             case SIMPLE -> {
-                assert !this.allowFullSend;
                 List<Curve.ControlPoint> controlPoints = new ArrayList<>();
                 // Construct Path
                 {
@@ -160,7 +170,7 @@ public class EpicMeshPlanner {
                         controlPoints.add(new Curve.ControlPoint(p.getKey(), p.getValue()));
                     controlPoints.add(new Curve.ControlPoint(this.endPos, this.endTangent));
 
-                    currentPath = Optional.of(SegmentedPath.from(new Curve(controlPoints, 32), this.startSpeed, this.arrivalTime, this.arrivalSpeed));
+                    currentPath = Optional.of(SegmentedPath.from(new Curve(controlPoints, 32), this.startSpeed, this.arrivalTime, this.arrivalSpeed, this.boostAvailable));
                 }
             }
             case NAVMESH -> {
@@ -170,7 +180,7 @@ public class EpicMeshPlanner {
                 if (curveOptional.isEmpty() || curveOptional.get().length <= 0)
                     currentPath = Optional.empty();
                 else
-                    currentPath = Optional.of(SegmentedPath.from(curveOptional.get(), this.startSpeed, this.arrivalTime, this.arrivalSpeed));
+                    currentPath = Optional.of(SegmentedPath.from(curveOptional.get(), this.startSpeed, this.arrivalTime, this.arrivalSpeed, this.boostAvailable));
             }
             case JAVA_NAVMESH -> {
                 assert this.additionalPoints.size() == 0;
@@ -183,14 +193,15 @@ public class EpicMeshPlanner {
                 if (curve == null || curve.length == 0)
                     currentPath = Optional.empty();
                 else
-                    currentPath = Optional.of(SegmentedPath.from(curve, this.startSpeed, this.arrivalTime, this.arrivalSpeed));
+                    currentPath = Optional.of(SegmentedPath.from(curve, this.startSpeed, this.arrivalTime, this.arrivalSpeed, this.boostAvailable));
             }
             case YANG_ARC -> {
                 assert this.additionalPoints.size() == 0;
                 assert !this.avoidBall;
 
                 var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1)), new Vector3()), this.boostAvailable);
-                if (this.allowOptimize)
+                builder.withArrivalSpeed(this.arrivalSpeed).withArrivalTime(this.arrivalTime);
+                if (this.allowDodge)
                     builder.optimize();
 
                 if (Math.abs(this.startPos.y) > RLConstants.goalDistance - 50 && Math.abs(this.startPos.x) < RLConstants.goalCenterToPost && this.startPos.z < RLConstants.goalHeight) {
@@ -210,26 +221,32 @@ public class EpicMeshPlanner {
                     neededTangent = this.endPos.sub(builder.getCurrentPosition()).flatten().normalized();
                     turnAngle = (float) Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent));
                 }*/
-
                 var neededTangent = this.endPos.sub(builder.getCurrentPosition()).flatten().normalized();
                 var turnAngle = (float) Math.abs(builder.getCurrentTangent().flatten().angleBetween(neededTangent));
-                float wantedSpeed = MathUtils.clip(builder.getCurrentSpeed(), 1100, 2200);
-                float illegalSpeed = wantedSpeed - 1100;
-                if (illegalSpeed < 0)
-                    illegalSpeed = 0;
+                if(builder.getCurrentPosition().distance(this.endPos) > 5 || turnAngle > 0.1f){
 
-                // 1 if we can keep all speed, 0 if we should throttle down to 1100
-                float allowance = MathUtils.remapClip(turnAngle, (float) (15 * (Math.PI / 180)), (float) (70 * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0 : 0.3f);
+                    float wantedSpeed = MathUtils.clip(builder.getCurrentSpeed(), 1100, 2200);
+                    float illegalSpeed = wantedSpeed - 1100;
+                    if (illegalSpeed < 0)
+                        illegalSpeed = 0;
 
-                float targetSpeed = 1100 + illegalSpeed * allowance;
+                    // 1 if we can keep all speed, 0 if we should throttle down to 1100
+                    float allowance = MathUtils.remapClip(turnAngle, (float) (15 * (Math.PI / 180)), (float) (70 * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0 : 0.3f);
 
-                var arc = new ArcLineArc(builder.getCurrentPhysics(),
-                        builder.getCurrentBoost(), this.endPos.flatten(), this.endTangent.flatten(), 5, 1 / DriveManeuver.maxTurningCurvature(targetSpeed), 50 + this.arrivalSpeed * 0.1f, 1 / DriveManeuver.maxTurningCurvature(this.arrivalSpeed));
-                arc.setArrivalSpeed(this.arrivalSpeed);
-                arc.setArrivalTime(this.arrivalTime);
-                if(!arc.isValid())
-                    return Optional.empty();
-                builder.add(arc);
+                    float targetSpeed = 1100 + illegalSpeed * allowance;
+
+                    var arcOpt = ArcLineArc.findOptimalALA(builder.getCurrentPhysics(),
+                            builder.getCurrentBoost(), this.endPos.flatten(), this.endTangent.flatten(), 5, 1 / DriveManeuver.maxTurningCurvature(targetSpeed), 30 + this.endOffset * this.arrivalSpeed, 1 / DriveManeuver.maxTurningCurvature(this.arrivalSpeed));
+                    if(arcOpt.isEmpty())
+                        return Optional.empty();
+                    var arc = arcOpt.get();
+                    arc.setArrivalSpeed(this.arrivalSpeed);
+                    arc.setArrivalTime(this.arrivalTime);
+                    builder.add(arc);
+                }
+
+                if(builder.getNumSegments() == 0)
+                    builder.add(new StraightLineSegment(builder, this.endPos, this.arrivalSpeed, this.arrivalTime, this.allowFullSend || this.arrivalTime > 0));
 
                 currentPath = Optional.of(builder.build());
             }
@@ -238,7 +255,8 @@ public class EpicMeshPlanner {
                 assert !this.avoidBall;
 
                 var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1)), new Vector3()), this.boostAvailable);
-                if (this.allowOptimize)
+                builder.withArrivalSpeed(this.arrivalSpeed).withArrivalTime(this.arrivalTime);
+                if (this.allowDodge)
                     builder.optimize();
 
                 if (Math.abs(this.startPos.y) > RLConstants.goalDistance - 50 && Math.abs(this.startPos.x) < RLConstants.goalCenterToPost && this.startPos.z < RLConstants.goalHeight) {
@@ -282,7 +300,7 @@ public class EpicMeshPlanner {
                 if (turnImpossible && builder.getCurrentTangent().dot(this.endPos.sub(builder.getCurrentPosition())) < 0.7f)
                     return Optional.empty(); // Path doesn't quite work
 
-                builder.add(new StraightLineSegment(builder, this.endPos, this.arrivalSpeed, this.arrivalTime, this.allowFullSend));
+                builder.add(new StraightLineSegment(builder, this.endPos, this.arrivalSpeed, this.arrivalTime, this.allowFullSend || this.arrivalTime > 0));
 
                 currentPath = Optional.of(builder.build());
 
@@ -292,7 +310,8 @@ public class EpicMeshPlanner {
                 assert !this.avoidBall;
 
                 var builder = new PathBuilder(new Physics3D(this.startPos, this.startTangent.mul(this.startSpeed), Matrix3x3.lookAt(this.startTangent, new Vector3(0, 0, 1)), new Vector3()), this.boostAvailable);
-                if (this.allowOptimize)
+                builder.withArrivalSpeed(this.arrivalSpeed).withArrivalTime(this.arrivalTime);
+                if (this.allowDodge)
                     builder.optimize();
 
                 builder.add(new AtbaSegment(builder, this.endPos));

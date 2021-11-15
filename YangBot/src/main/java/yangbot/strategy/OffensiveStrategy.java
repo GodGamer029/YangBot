@@ -166,7 +166,7 @@ public class OffensiveStrategy extends Strategy {
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(2300)
                     .allowFullSend(car.boost > 20)
-                    .allowOptimize(false)
+                    .allowDodge(false)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
@@ -277,7 +277,7 @@ public class OffensiveStrategy extends Strategy {
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(2300)
                     .allowFullSend(car.boost > 20)
-                    .allowOptimize(car.boost < 30)
+                    .allowDodge(car.boost < 30)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 

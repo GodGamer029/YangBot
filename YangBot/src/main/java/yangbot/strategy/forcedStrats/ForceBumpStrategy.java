@@ -73,7 +73,7 @@ public class ForceBumpStrategy extends Strategy {
                     .withEnd(simCar.position, simCar.position.sub(car.position))
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .withArrivalSpeed(2300)
-                    .allowOptimize(false)
+                    .allowDodge(false)
                     .plan();
 
             if (pathOpt.isEmpty()) {

@@ -7,7 +7,6 @@ import yangbot.input.interrupt.BallTouchInterrupt;
 import yangbot.input.interrupt.InterruptManager;
 import yangbot.optimizers.graders.DefensiveGrader;
 import yangbot.path.EpicMeshPlanner;
-import yangbot.path.builders.SegmentedPath;
 import yangbot.strategy.abstraction.*;
 import yangbot.strategy.manuever.DodgeManeuver;
 import yangbot.util.AdvancedRenderer;
@@ -156,7 +155,7 @@ public class DefendStrategy extends Strategy {
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(CarData.MAX_VELOCITY)
                     .allowFullSend(car.boost > 20)
-                    .allowOptimize(car.boost < 30)
+                    .allowDodge(car.boost < 30)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();
 
@@ -247,7 +246,7 @@ public class DefendStrategy extends Strategy {
                     .withEnd(ballHitTarget, endTangent)
                     .withArrivalTime(interceptFrame.absoluteTime)
                     .withArrivalSpeed(CarData.MAX_VELOCITY)
-                    .allowOptimize(car.boost < 30)
+                    .allowDodge(car.boost < 30)
                     .allowFullSend(car.boost > 20)
                     .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                     .plan();

@@ -120,6 +120,10 @@ public class Vector2 implements Serializable {
         return Math.sqrt(magnitudeSquared());
     }
 
+    public float magnitudeF() {
+        return (float)Math.sqrt(magnitudeSquared());
+    }
+
     public double magnitudeSquared() {
         return x * x + y * y;
     }

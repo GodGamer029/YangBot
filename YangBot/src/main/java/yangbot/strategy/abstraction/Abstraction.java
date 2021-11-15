@@ -50,5 +50,7 @@ public abstract class Abstraction {
         public boolean isDone() {
             return this == DONE || this == FAILED;
         }
+
+        public boolean isFail() { return this == FAILED;}
     }
 }

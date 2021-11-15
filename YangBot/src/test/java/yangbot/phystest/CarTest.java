@@ -285,12 +285,13 @@ public class CarTest {
                         //throttleIter.next();
                     }
                     steerIter.next();
+                    steerIter.next();
                     //var speedVal = speedIter.next();
                     var speedVal = 1000;
                     this.lastVel = 0;
                     this.nextThrottleAccel = -1;
                     return Optional.of(new GameState()
-                            .withGameInfoState(new GameInfoState().withGameSpeed(0.2f))
+                            .withGameInfoState(new GameInfoState().withGameSpeed(1f))
                             .withCarState(0, new CarState()
                                     .withBoostAmount(100f)
                                     .withPhysics(new PhysicsState()
@@ -351,7 +352,7 @@ public class CarTest {
         ScenarioLoader.loadScenario(s);
         ScenarioLoader.get().waitToCompletion(0);
         System.out.println("Data saved");
-        //logger.save("..\\data\\turntime.csv");
+        logger.save("..\\data\\turntime.csv");
     }
 
 }

@@ -19,7 +19,7 @@ public class FollowPathManeuver extends Maneuver {
     //float expected_speed;
     public DriveManeuver driveManeuver;
     public boolean allowBackwardsDriving = false;
-    public float speedReactionTime = 5 * RLConstants.tickFrequency;
+    public float speedReactionTime = 4 * RLConstants.tickFrequency;
 
     public FollowPathManeuver() {
         driveManeuver = new DriveManeuver();
@@ -88,24 +88,28 @@ public class FollowPathManeuver extends Maneuver {
         float currentPos = this.path.findNearest(car.position);
         float distanceOffPath = this.getDistanceOffPath(car);
         final float timeUntilArrival = Math.max(this.arrivalTime - car.elapsedSeconds, 0.01f);
-        float maxSpeed = path.maxSpeedAt(currentPos);
+        float maxSpeed = path.maxSpeedAt(currentPos - car.forwardSpeed() * this.speedReactionTime);
         float maxSpeedCalc = DriveManeuver.maxTurningSpeed(path.curvatureAt(currentPos));
         float perc = 100 - (100 * currentPos / this.path.length);
         int yPos = 540;
         renderer.drawString2d(String.format("TimeUntilArrival %.2f", timeUntilArrival), Color.WHITE, new Point(500, yPos += 20), 1, 1);
-        renderer.drawString2d(String.format("Speed %.1f", currentPos / timeUntilArrival), Color.WHITE, new Point(500, yPos += 20), 1, 1);
-        renderer.drawString2d(String.format("Current %.1f", perc), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        renderer.drawString2d(String.format("ReqSpeed %.1f", currentPos / timeUntilArrival), Color.WHITE, new Point(500, yPos += 20), 1, 1);
+        renderer.drawString2d(String.format("Current %.1f %.1f", perc, currentPos), Color.WHITE, new Point(500, yPos += 20), 1, 1);
         renderer.drawString2d(String.format("Length %.1f", this.path.length), Color.WHITE, new Point(500, yPos += 20), 1, 1);
         if (this.arrivalTime > 0)
-            renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs)", timeUntilArrival, this.arrivalTime), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+            renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs, s=%.1f)", timeUntilArrival, this.arrivalTime, this.arrivalSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         else //  Max: %.1f MaxCalc: %.1f
             renderer.drawString2d(String.format("MySpeed %.1fs", car.forwardSpeed(), maxSpeed, maxSpeedCalc), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         //renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
-        renderer.drawString2d(String.format("Max drive: %.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
-        renderer.drawString2d(String.format("Min drive: %.0fuu/s", this.driveManeuver.minimumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Max drive: %04.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Min drive: %04.0fuu/s e: %04.0f", this.driveManeuver.minimumSpeed, this.driveManeuver.minimumSpeed - car.forwardSpeed()), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         renderer.drawString2d(String.format("Off path: %.0fuu", distanceOffPath), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+        renderer.drawString2d(String.format("Max Speed: %.0fuu/s", maxSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         if(this.driveManeuver.target != null)
             renderer.drawCentered3dCube(Color.GREEN, this.driveManeuver.target, 55);
+        renderer.drawCentered3dCube(Color.RED, path.pointAt(currentPos), 45);
+
+        //System.out.printf("%03f.1f: %04.1f %04.1f %03.1f\n", perc, car.forwardSpeed(), maxSpeed, maxSpeed - car.forwardSpeed());
     }
 
     @Override
@@ -122,22 +126,23 @@ public class FollowPathManeuver extends Maneuver {
         }
 
         if (path.maxSpeeds.length == 0)
-            path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, true);
+            path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, car.boost);
 
         float currentPredSpeed = Math.max(1, car.velocity.magnitudeF());
-        currentPredSpeed += Math.signum(currentPredSpeed) * 4 * RLConstants.tickFrequency * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration);
-        currentPredSpeed = MathUtils.clip(currentPredSpeed, 300, CarData.MAX_VELOCITY);
+        currentPredSpeed += Math.signum(currentPredSpeed) * 0.5f * this.speedReactionTime * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration);
+        currentPredSpeed = MathUtils.clip(currentPredSpeed, 50, CarData.MAX_VELOCITY);
 
         CarData simCar = new CarData(car);
         simCar.smartPrediction(0.05f);
         final float predPathDistanceFromTarget = path.findNearest(simCar.position);
+        final float truePathDistanceFromTarget = path.findNearest(car.position);
         final float sAhead = predPathDistanceFromTarget - currentPredSpeed * tReact;
 
         if (sAhead < 0) {
             // we add an invisible point after the curve's tail to keep the car aligned with the end tangent
             var lastPoint = path.pointAt(0);
             var lastTangent = path.tangentAt(0);
-            float leeway = currentPredSpeed * 0.3f;
+            float leeway = currentPredSpeed * 0.4f;
 
             driveManeuver.target = lastPoint.add(lastTangent.mul(Math.min(leeway, -sAhead)));
 
@@ -152,7 +157,7 @@ public class FollowPathManeuver extends Maneuver {
                 driveManeuver.minimumSpeed = determineSpeedPlan(predPathDistanceFromTarget, timeUntilArrival, dt, car.forwardSpeed(), this.arrivalSpeed, this.path);
                 driveManeuver.maximumSpeed = driveManeuver.minimumSpeed + 5;
             } else {
-                driveManeuver.minimumSpeed = predPathDistanceFromTarget / timeUntilArrival;
+                driveManeuver.minimumSpeed = CarData.MAX_VELOCITY;
                 driveManeuver.maximumSpeed = driveManeuver.minimumSpeed + 5;
             }
 
@@ -176,7 +181,7 @@ public class FollowPathManeuver extends Maneuver {
             }
         }
 
-        final float maxSpeedAtPathSection = path.maxSpeedAt(predPathDistanceFromTarget - currentPredSpeed * speedReactionTime);
+        final float maxSpeedAtPathSection = path.maxSpeedAt(truePathDistanceFromTarget - currentPredSpeed * speedReactionTime);
 
         driveManeuver.maximumSpeed = Math.min(maxSpeedAtPathSection + 5, driveManeuver.maximumSpeed);
         driveManeuver.minimumSpeed = Math.min(driveManeuver.minimumSpeed, driveManeuver.maximumSpeed - 5);
@@ -188,7 +193,6 @@ public class FollowPathManeuver extends Maneuver {
 
             driveManeuver.target = driveManeuver.target.add(car.position.sub(driveManeuver.target).mul(-1));
         }
-
         driveManeuver.reaction_time = speedReactionTime;
         driveManeuver.step(dt, controlsOutput);
     }

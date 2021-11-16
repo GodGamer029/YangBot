@@ -415,10 +415,8 @@ public class Curve {
 
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
-                float deltaTheta = (float) tangents.get(i + 1).angle(tangents.get(i));
-                float deltaS = distances[i] - distances[i + 1];
-                assert Float.isFinite(deltaTheta) : deltaTheta + " " + tangents.get(i + 1) + " " + tangents.get(i);
-                return deltaTheta / deltaS;
+                float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
+                return MathUtils.lerp(curvatures[i + 1], curvatures[i], u);
             }
         }
 
@@ -455,6 +453,20 @@ public class Curve {
             }
         }
         return (points.size() - 2f) / numSubDivisions;
+    }
+
+    public float findIndex(float s){
+        s = MathUtils.clip(s, 0, distances[0]);
+
+        for (int i = 0; i < (points.size() - 1); i++) {
+            if (distances[i] >= s && s >= distances[i + 1]) {
+                float u = (s - distances[i + 1]) / (distances[i] - distances[i + 1]);
+                assert u >= 0 && u <= 1 : u + " " + s + " " + distances[i] + " " + distances[i + 1];
+                return u + i;
+            }
+        }
+        assert false;
+        return 0;
     }
 
     public float findNearest(Vector3 c) {
@@ -644,7 +656,7 @@ public class Curve {
         return time;
     }
 
-    public float maximizeSpeedWithThrottleSteer(float additionalAcceleration, float v0, float distance, float curvature) {
+    public static float maximizeSpeedWithThrottleSteer(float additionalAcceleration, float v0, float distance, float curvature) {
         if (distance == 0)
             return v0;
         final float dt = RLConstants.simulationTickFrequency;

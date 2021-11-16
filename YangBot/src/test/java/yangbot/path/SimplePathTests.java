@@ -301,15 +301,16 @@ public class SimplePathTests {
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.1f)
                 .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xNS4wLHA9KC0yMDA1Ljk5MCwzNTgyLjM4MCwxNy4wMzApLHY9KC0yODIuMzIxLC0xOC42NTEsMS4wODEpLGE9KDAuMDAwLC0wLjAwNSwwLjM3MSksbz0oLTAuMDE2LC0zLjEwMiwwLjAwMCkpLGIocD0oLTIwMjQuODMwLDE2MS41NDAsMzgyLjM0MCksdj0oLTEzNjEuMzgxLDc5Ljk4MSwtMjg3LjI0MSksYT0oLTUuMDk5LDMuMTA2LC0wLjYwMCkpOw==")
-                        .withGameInfoState(new GameInfoState().withGameSpeed(0.2f)))
+                        .withGameInfoState(new GameInfoState().withGameSpeed(0.5f)))
                 .withInit(c -> {
                     var car = GameData.current().getCarData();
                     path = new EpicMeshPlanner()
                             .withStart(car)
                             .withEnd(car.position.flatten().mul(-1).withZ(RLConstants.carElevation), new Vector3(0, 1, 0))
-                            .withArrivalSpeed(2300)
-                            .withArrivalTime(3)
+                            .withArrivalSpeed(600)
+                            .withArrivalTime(car.elapsedSeconds + 10)
                             .allowDodge(false)
+                            .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANG_ARC)
                             .plan().get();
                 })
                 .withRun((output, timer) -> {

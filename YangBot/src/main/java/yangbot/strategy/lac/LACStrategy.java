@@ -15,6 +15,7 @@ import yangbot.util.PosessionUtil;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
 import yangbot.util.math.vector.Vector2;
+import yangbot.util.math.vector.Vector3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -173,7 +174,7 @@ public class LACStrategy extends Strategy {
         }
 
         var gameError = Math.abs(gameData.getGameValue() - car.team);
-        if (!car.getPlayerInfo().isActiveShooter() || (car.boost < 60 && gameError < 0.5f)){
+        if (!car.getPlayerInfo().isActiveShooter() || (car.boost < 60 && gameError < 0.4f)){
             var o = LACHelper.planGoForBoost();
             if(o.isPresent() && !this.spoofNoBoost){
                 this.state = State.GET_BOOST;
@@ -183,9 +184,12 @@ public class LACStrategy extends Strategy {
         }
         // determine the car that is supposed to shoot
         var attackingCar = LACHelper.getAttackingCar();
+        boolean shouldAttack = true; // attackingCar.isPresent() && attackingCar.get().playerIndex == car.playerIndex
+        if(car.position.z > 50 || car.up().dot(new Vector3(0, 0, 1)) < 0.5f)
+            shouldAttack = false;
 
-        if (attackingCar.isPresent() && attackingCar.get().playerIndex == car.playerIndex || true) {
-            if (!this.spoofIdle && this.planStrategyAttack()) {
+        if (shouldAttack && !this.spoofIdle) {
+            if (this.planStrategyAttack()) {
                return;
             }
             // Determine if we should rather rotate back

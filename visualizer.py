@@ -63,49 +63,38 @@ def polyDataFor(arr):
         prevV = nextV
     return data
 
-ang = loadSet('data/turntime.csv', [0])
-speed = loadSet('data/turntime.csv', [1])[:-1]
-accel = loadSet('data/turntime.csv', [2])[1:]
-time = loadSet('data/turntime.csv', [3])
-throttleAccel = loadSet('data/turntime.csv', [4])
-maxTurnCurvature = loadSet('data/turntime.csv', [5])
-steer = loadSet('data/turntime.csv', [6])
 
-x1 = np.empty((speed.shape[0]))
-x2 = np.empty_like(x1)
-s1 = np.empty((speed.shape[0]))
-s2 = np.empty_like(s1)
-s3 = np.empty_like(s1)
-pred_accel = np.empty_like(speed)
-corrected_accel = np.empty_like(speed)
-for i in range(pred_accel.shape[0]):
-    x1[i] = speed[i] * maxTurnCurvature[i]
-    x2[i] = x1[i] * speed[i]
-    pred_accel[i] = -36.34783 * x1[i] -0.09389 * x2[i] + 41.91971
-    s1[i] = steer[i] * pred_accel[i]
-    s2[i] = s1[i] * steer[i]
-    s3[i] = s2[i] * steer[i]
-    corrected_accel[i] = 0.01461 * s1[i] + 0.83 * s2[i] + 0.15 * s3[i]
-  
-    
+
 p3 = win.addPlot(title="")
-p3.plot(np.concatenate((speed, corrected_accel), axis=1), pen=None, symbolBrush=None, symbolPen='w')
-p3.plot(np.concatenate((speed, accel), axis=1), pen=None, symbolBrush=None, symbolPen='g')
-p3.setLabel('left', "accel")
-p3.setLabel('bottom', "speed")
+def doPlot(name, pen):
 
-p4 = win.addPlot(title="")
-p4.plot(np.concatenate((speed, corrected_accel / speed), axis=1), pen=None, symbolBrush=None, symbolPen='w')
-p4.plot(np.concatenate((speed, accel / speed), axis=1), pen=None, symbolBrush=None, symbolPen='g')
-p4.setLabel('left', "accel / speed")
-p4.setLabel('bottom', "speed")
+    maxspeed = loadSet(name, [0])
+    dist = loadSet(name, [1])
+    its = loadSet(name, [2])
+    ts = loadSet(name, [3])
+    v0 = loadSet(name, [4])
+
+    p3.plot(np.concatenate((-dist, maxspeed), axis=1), pen=pen, symbolBrush=None, symbolPen=None)
+    p3.plot(np.concatenate((-dist, ts), axis=1), pen=pen, symbolBrush=None, symbolPen=None)
+    p3.plot(np.concatenate((-dist, its), axis=1), pen=None, symbolBrush=pen, symbolPen=None)
+    p3.plot(np.concatenate((-dist, v0), axis=1), pen=None, symbolBrush=None, symbolPen=pen)
+
+
+#doPlot('data/6093dot3374lol.csv', 'w')
+#doPlot('data/5094dot484lol.csv', 'g')
+doPlot('data/2348dot8652lol.csv', 'r')
+
+
+
+p3.setLabel('left', "speed")
+p3.setLabel('bottom', "dist")
 
 # do a cool line fit
-A = np.vstack([s1, s2, s3]).T # 
+#A = np.vstack([s1, s2, s3]).T # 
 #A = np.vstack([x1, x2, np.ones((speed.shape[0]))]).T
-res = np.linalg.lstsq(A, accel, rcond=None)
-print(res[0])
-print(res)
+#res = np.linalg.lstsq(A, accel, rcond=None)
+#print(res[0])
+#print(res)
 
 #p3.addItem(curve)
 #datasets = []

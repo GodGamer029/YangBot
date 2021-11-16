@@ -13,6 +13,7 @@ import yangbot.util.math.vector.Vector3;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public class FollowPathManeuver extends Maneuver {
 
@@ -83,9 +84,16 @@ public class FollowPathManeuver extends Maneuver {
         return expected_speed;
     }
 
-    private float determineSpeedForArrival(float distToTarget, float T, float v0, float boost, Curve path){
+    private float determineSpeedForArrival(float distToTarget, float T, float v0, final float boost, Curve path){
         if(T < RLConstants.tickFrequency * 5)
             return Math.max(20, v0);
+
+        T -= RLConstants.tickFrequency * 2;
+        distToTarget -= v0 * RLConstants.tickFrequency * 2;
+
+        if(distToTarget <= 0)
+            return v0;
+
         float targetSpeed = distToTarget / T;
         if(path.minimumSpeed >= targetSpeed)
             return targetSpeed;
@@ -149,153 +157,75 @@ public class FollowPathManeuver extends Maneuver {
             localMaxSpeeds[0] = Math.min(localMaxSpeeds[0], localMaxSpeeds[1]);
 
         // we cannot just continue going at this speed, let's do some magic
-        int numIter = 0;
-        float lastError = 0;
-        while(numIter < 10){
-            numIter++;
-            // Find transitions from targetSpeed > maxSpeed
-            List<Float> transitions = new ArrayList<>(2);
-            if(v0 < targetSpeed || MathUtils.lerp(localMaxSpeeds[0], localMaxSpeeds[1], startIndF - startInd) < targetSpeed)
-                transitions.add(startIndF);
-            for(int ind = startInd + 1; ind < path.maxSpeeds.length; ind++){
-                if(transitions.size() % 2 == 0){
-                    // waiting for an entry
-                    if(localMaxSpeeds[ind - startInd] < targetSpeed){
-                        // find transition point
-                        float prevV = localMaxSpeeds[ind - startInd - 1];
+        float finalV = v0;
+        float finalDistToTarget = distToTarget;
+        float finalT = T;
+        Function<Float, Float> arrivalError = (speed) -> {
+            assert speed >= 0;
+            float dt = RLConstants.tickFrequency;
+            float s = finalDistToTarget;
+            float v = finalV;
+            float et = 0;
 
-                        float diff = prevV - localMaxSpeeds[ind - startInd];
-                        float what = prevV - targetSpeed;
-                        assert (what / diff) >= 0 && (what / diff) <= 1 : (what / diff) + " " + what + " " + diff + " vp="+prevV+ " cur="+localMaxSpeeds[ind - startInd]+" targ="+targetSpeed+" trans="+transitions.size()+" v0="+v0+" ind="+(ind - startInd);
-
-                        float t = ind - 1 + (what / diff);
-                        if(t > startIndF)
-                            transitions.add(t);
-                    }
-                }else{
-                    // waiting for exit
-                    if(localMaxSpeeds[ind - startInd] >= targetSpeed){
-                        // find transition point
-                        float prevV = localMaxSpeeds[ind - startInd - 1];
-
-                        float diff = prevV - localMaxSpeeds[ind - startInd];
-                        float what = prevV - targetSpeed;
-                        assert (what / diff) >= 0 && (what / diff) <= 1 : (what / diff) + " " + what + " " + diff + " vp="+prevV+ " cur="+localMaxSpeeds[ind - startInd]+" targ="+targetSpeed+" trans="+transitions.size()+" v0="+v0+" ind="+(ind - startInd);
-
-                        float t = ind - 1 + (what / diff);
-                        if(t > startIndF)
-                            transitions.add(t);
-                    }
-                }
-            }
-            if(transitions.size() == 0)
-                break;
-            if(transitions.size() % 2 == 1){
-                transitions.add(path.maxSpeeds.length - 1f);
-            }
-
-            float totalError = 0;
-            float totalDist = 0;
-            for(int tr = 0; tr < transitions.size(); tr += 2){
-                float entry = transitions.get(tr);
-                float exit = transitions.get(tr + 1);
-                assert exit >= entry : entry + " " + exit + " "+startIndF;
-
-                float e = 0;
-
-                int entryEnd = (int)Math.ceil(entry);
-                int exitStart = (int)exit;
-
-                if(entryEnd > exitStart) {
-                    // edge case
-                    int lol = (int)entry;
-                    float dStart = MathUtils.lerp(path.distances[lol], path.distances[lol + 1], entry - lol);
-                    float dEnd = MathUtils.lerp(path.distances[lol], path.distances[lol + 1], exit - lol);
-                    float dd = -(dEnd - dStart);
-                    assert dd >= 0;
-                    float s = MathUtils.lerp(localMaxSpeeds[lol - startInd], localMaxSpeeds[lol + 1 - startInd], entry - lol);
-                    assert s < targetSpeed;
-                    totalError += 0.5f * dd * (s - targetSpeed);
-                    totalDist += dd;
-                    continue;
+            for (; et < (finalT + 0.2f) * 2f; et += dt){
+                if(et > finalT + 0.2f)
+                    dt = RLConstants.simulationTickFrequency;
+                float curv = path.curvatureAt(s);
+                float curIndF = path.findIndex(s);
+                curIndF = Math.max(curIndF, startIndF) - startInd;
+                var t = path.tangentAt(s);
+                float gAccel = RLConstants.gravity.dot(t);
+                int curInd = (int) curIndF;
+                float maxCurv = DriveManeuver.maxTurningCurvature(v);
+                float ratio = MathUtils.clip(Math.abs(curv) / maxCurv, 0, 1);
+                float steerSlowdown = CarData.slowdownForceFromSteering(ratio * ratio, v);
+                assert steerSlowdown <= 0 : steerSlowdown;
+                var c = new ControlsOutput();
+                float myTargetSpeed;
+                if(curInd == localMaxSpeeds.length - 1)
+                    myTargetSpeed = localMaxSpeeds[localMaxSpeeds.length - 1];
+                else{
+                    myTargetSpeed = MathUtils.lerp(localMaxSpeeds[curInd], localMaxSpeeds[curInd + 1], curIndF - curInd);
+                    assert myTargetSpeed >= 0 : myTargetSpeed + " " + curInd + " " + curIndF + " " + localMaxSpeeds.length + " " + localMaxSpeeds[curInd];
                 }
 
-                if(entryEnd > entry){
-                    // entry
-                    float dd = -(path.distances[entryEnd] - MathUtils.lerp(path.distances[entryEnd - 1], path.distances[entryEnd], entry - (entryEnd - 1)));
-                    float vEntry = MathUtils.lerp(localMaxSpeeds[entryEnd - 1 - startInd], localMaxSpeeds[entryEnd - startInd], entry - (entryEnd - 1));
-                    float v = (0.5f * (vEntry + localMaxSpeeds[entryEnd - startInd]) - targetSpeed);
-                    e += dd * v;
-                    assert dd >= 0;
-                    totalDist += dd;
+                myTargetSpeed = Math.min(myTargetSpeed, speed);
+                assert Float.isFinite(myTargetSpeed);
+                assert Float.isFinite(v);
+                assert Float.isFinite(steerSlowdown);
+
+                float change = (v + 0.5f * (myTargetSpeed - v)) * dt;
+                v = myTargetSpeed;
+                s -= change;
+                if (s <= 0) {
+                    et += (s + change) / change * dt;
+                    break;
                 }
+                v = MathUtils.clip(v, -CarData.MAX_VELOCITY, CarData.MAX_VELOCITY);
+            };
 
-                if(exitStart < exit){
-                    float dd = -(MathUtils.lerp(path.distances[exitStart], path.distances[exitStart + 1], exit - exitStart) - path.distances[exitStart]);
-                    float vExit = MathUtils.lerp(localMaxSpeeds[exitStart - startInd], localMaxSpeeds[exitStart + 1 - startInd], exit - exitStart);
-                    float v = (0.5f * (vExit + localMaxSpeeds[exitStart - startInd]) - targetSpeed);
-                    e += dd * v;
-                    assert dd >= 0;
-                    totalDist += dd;
-                }
+            return et - finalT;
+        };
 
-                assert entryEnd <= exitStart : exitStart + " " + entryEnd + " " + entry + " " + exit + " " + startIndF + " " + startInd;
-                for(int o = entryEnd; o < exitStart; o++){
-                    float dd = -(path.distances[o + 1] - path.distances[o]);
-                    assert dd >= 0;
-                    float v = (0.5f * (localMaxSpeeds[o - startInd] + localMaxSpeeds[o + 1 - startInd]) - targetSpeed);
-                    e += dd * v;
-                }
+        float cE = arrivalError.apply(v0);
+        float e1 = arrivalError.apply(0f);
+        float e2 = arrivalError.apply(2300f);
 
-                if(entryEnd < exitStart)
-                    totalDist += -(path.distances[exitStart] - path.distances[entryEnd]);
+        if(Math.abs(cE) < 0.01f)
+            targetSpeed = v0;
+        else if(Math.signum(e1) != Math.signum(e2)){
+            targetSpeed = MathUtils.smartBisectionMethod(arrivalError, 0, CarData.MAX_VELOCITY, MathUtils.clip(v0, 0, CarData.MAX_VELOCITY)).getKey();
+            if(Math.abs(cE) < 0.04f)
+                targetSpeed = MathUtils.remapClip(Math.abs(cE), 0.01f, 0.04f, v0, targetSpeed);
+        } else if(Math.signum(e1) < 0)
+            targetSpeed = 0;
+        else if(Math.signum(e1) > 0)
+            targetSpeed = CarData.MAX_VELOCITY;
+        targetSpeed = MathUtils.clip(targetSpeed, 10, curMaxSpeed);
 
-                assert e <= 0 : e;
-                totalError += e;
-            }
-            assert totalDist >= 0;
-            if(lastError != 0){
-                float temp = totalError;
-                totalError -= lastError;
-                lastError = temp;
-            }else
-                lastError = totalError;
-            assert distToTarget >= totalDist;
+        //System.out.printf("%04.1f v0=%04.1f cE=%.2f e1=%.2f e2=%.2f\n", targetSpeed, v0, cE, e1, e2);
 
-            //totalError = totalError / totalDist - totalError / distToTarget;
-            totalError /= distToTarget - totalDist;
-            System.out.printf("it=%d: err=%03.2f dis=%04.1f tran=%d targ=%.1f t0=%.3f t1=%.3f start=%d\n", numIter, totalError, totalDist, transitions.size(), targetSpeed, transitions.get(0), transitions.get(1), startInd);
-
-            targetSpeed -= totalError;
-            if(targetSpeed >= curMaxSpeed || targetSpeed <= 10){
-                System.out.println("Quitting loop, target speed out of bound targ="+targetSpeed+" max="+curMaxSpeed);
-                if(Math.random() < 0.3f){
-                    String name = (distToTarget + "").replaceAll("\\.", "dot")+"lol.csv";
-                    System.out.println("Saving as csv "+name);
-                    CsvLogger c = new CsvLogger(new String[]{"maxspeed", "dist", "initialtarget", "targ", "v0"});
-                    for(int i = 0; i < localMaxSpeeds.length; i++){
-                        c.log(new float[]{localMaxSpeeds[i], path.distances[i + startInd], distToTarget / T, MathUtils.clip(targetSpeed, 0, 2300), v0});
-                    }
-                    c.save("..\\data\\"+name);
-                }
-                break;
-            }
-            if(Math.abs(totalError) < 1){
-                System.out.println("Quitting loop, all work done err="+totalError+" targ="+targetSpeed);
-                if(Math.random() < 0.1f){
-                    String name = (distToTarget + "").replaceAll("\\.", "dot")+"lol.csv";
-                    System.out.println("Saving as csv "+name);
-                    CsvLogger c = new CsvLogger(new String[]{"maxspeed", "dist", "initialtarget", "targ", "v0"});
-                    for(int i = 0; i < localMaxSpeeds.length; i++){
-                        c.log(new float[]{localMaxSpeeds[i], path.distances[i + startInd], distToTarget / T, targetSpeed, v0});
-                    }
-                    c.save("..\\data\\"+name);
-                }
-                break;
-            }
-        }
-
-        return MathUtils.clip(targetSpeed, 10, curMaxSpeed);
+        return targetSpeed;
     }
 
     public float getDistanceOffPath(CarData car) {

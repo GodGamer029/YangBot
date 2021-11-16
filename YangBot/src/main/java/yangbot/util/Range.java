@@ -70,6 +70,11 @@ public class Range implements Serializable {
     }
 
     public static boolean isInRange(float val, float start, float end) {
+        if(start > end){
+            float temp = start;
+            start = end;
+            end = temp;
+        }
         return val >= start && val <= end;
     }
 

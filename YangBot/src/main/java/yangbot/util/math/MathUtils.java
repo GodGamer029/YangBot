@@ -1,5 +1,6 @@
 package yangbot.util.math;
 
+import yangbot.util.Range;
 import yangbot.util.Tuple;
 import yangbot.util.math.vector.Vector2;
 import yangbot.util.math.vector.Vector3;
@@ -148,11 +149,33 @@ public class MathUtils {
         return new Tuple<>(x1, error);
     }
 
-    public static Tuple<Float, Float> smartBisectionMethod(Function<Float, Float> errorFunc, float x1, float x2) {
-        float error1 = errorFunc.apply(x1);
-        float error2 = errorFunc.apply(x2);
+    public static Tuple<Float, Float> smartBisectionMethod(Function<Float, Float> errorFunc, float x1, float x2){
+        return smartBisectionMethod(errorFunc, x1, x2, Float.NaN);
+    }
 
-        assert Math.signum(error1) != Math.signum(error2);
+    public static Tuple<Float, Float> smartBisectionMethod(Function<Float, Float> errorFunc, float x1, float x2, float x3Suggest) {
+        boolean debug = false;
+        float error1 = errorFunc.apply(x1);
+        if(Math.abs(error1) < 0.001f)
+            return new Tuple<>(x1, error1);
+        float error2 = errorFunc.apply(x2);
+        if(Math.abs(error2) < 0.001f)
+            return new Tuple<>(x2, error2);
+        if(!Float.isNaN(x3Suggest)){
+            assert Range.isInRange(x3Suggest, x1, x2);
+            float e3 = errorFunc.apply(x3Suggest);
+            if(Math.abs(e3) < 0.001f)
+                return new Tuple<>(x3Suggest, e3);
+            if(Math.signum(e3) == Math.signum(error1) && Math.abs(e3) < Math.abs(error1)){
+                x1 = x3Suggest;
+                error1 = e3;
+            } else if(Math.signum(e3) == Math.signum(error2) && Math.abs(e3) < Math.abs(error2)){
+                x2 = x3Suggest;
+                error2 = e3;
+            }
+        }
+
+        assert Math.signum(error1) != Math.signum(error2) : x1 + ": "+error1 + " " + x2 + ": " + error2;
 
         if (error1 > error2) {
             float temp = x1, tempE = error1;
@@ -164,16 +187,19 @@ public class MathUtils {
 
         int i = 0;
 
-        //System.out.println("######");
+        if(debug)
+            System.out.println("######");
         float lastCompE = 0;
         boolean failure = false;
         for (; i < 24; i++) {
+            if(debug)
+                System.out.println("x1="+x1+" x2="+x2+" e1="+error1+" e2="+error2);
+
             if (Math.abs(error1) < 0.001 || Float.isNaN(error1) || Float.isInfinite(error1))
                 break;
             if (Math.abs(error2) < 0.001 || Float.isNaN(error2) || Float.isInfinite(error2))
                 break;
 
-            //System.out.println("x1="+x1+" x2="+x2+" e1="+error1+" e2="+error2);
             float newX;
             if (failure) {
                 // regula falsi failure correction

@@ -28,7 +28,7 @@ public class StrikeTest {
         List<YangBallPrediction.YangPredictionFrame> strikeableFrames = new ArrayList<>();
         Scenario s = new Scenario.Builder()
                 .withTransitionDelay(0.2f)
-                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0xNS4wLHA9KDMwNS45OTAsODIuMzgwLDE3LjAzMCksdj0oLTI4Mi4zMjEsLTE4LjY1MSwxLjA4MSksYT0oMC4wMDAsLTAuMDA1LDAuMzcxKSxvPSgtMC4wMTYsLTMuMTAyLDAuMDAwKSksYihwPSgtMjAyNC44MzAsMTYxLjU0MCwzODIuMzQwKSx2PSgtMTM2MS4zODEsNzkuOTgxLC0yODcuMjQxKSxhPSgtNS4wOTksMy4xMDYsLTAuNjAwKSk7")
+                .withGameState(ScenarioUtil.decodeToGameState("eWFuZ3YxOmMoYj0wLjAscD0oMzk1Ljg3MCwyODMuNzYwLDE5LjU1MCksdj0oMjYzLjQwMSwyMTUuNTAxLC0yMDQuMTkxKSxhPSgwLjA5Myw0LjE5NCwxLjg0Miksbz0oLTAuMDk5LC0zLjEwNCwtMC4wMDIpKSxiKHA9KC0yNTM1Ljg3MCw1NDUuODMwLDEwNzkuODkwKSx2PSgtMjA0Ny45MzEsNDM4LjY3MSwzODEuNTExKSxhPSgtNS4wMDAsMS45NDksLTIuNjg0KSk7")
                         .withGameInfoState(new GameInfoState().withGameSpeed(0.1f)))
                 .withInit((controlsOutput -> {
                     System.out.println("########## init");

@@ -173,12 +173,13 @@ public class LACStrategy extends Strategy {
             return;
         }
 
-        var gameError = Math.abs(gameData.getGameValue() - car.team);
-        if (!car.getPlayerInfo().isActiveShooter() || (car.boost < 60 && gameError < 0.4f)){
+        var gameValue = 1 - Math.abs(gameData.getGameValue() - car.team);
+        if ((!car.getPlayerInfo().isActiveShooter() || car.boost < 60) && gameValue > 0.65f){
             var o = LACHelper.planGoForBoost();
             if(o.isPresent() && !this.spoofNoBoost){
                 this.state = State.GET_BOOST;
                 this.boostAbstraction = o.get();
+                System.out.println(car.playerIndex+": Going for boost: gameValue="+gameValue+" curboost="+car.boost);
                 return;
             }
         }

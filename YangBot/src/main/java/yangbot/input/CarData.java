@@ -429,7 +429,7 @@ public class CarData {
         Vector3 rpy = new Vector3(in.getRoll(), in.getPitch(), in.getYaw());
         if (in.holdBoost() && boost > 0) {
             this.velocity = this.velocity.add(this.forward().mul((AerialManeuver.boost_airthrottle_acceleration + AerialManeuver.throttle_acceleration) * dt));
-            boost--;
+            boost -= CarData.BOOST_CONSUMPTION * dt;
         } else {
             this.velocity = this.velocity.add(this.forward().mul(in.getThrottle() * AerialManeuver.throttle_acceleration * dt));
         }

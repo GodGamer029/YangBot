@@ -64,8 +64,8 @@ public class GetOutOfGoalSegment extends PathSegment {
                 if (intersect.isPresent()) {
                     this.endPos = intersect.get().withZ(RLConstants.carElevation);
                     this.endTangent = startTangent;
-                    this.endSpeed = startSpeed;
-                    this.timeEstimate = (float) startPos.distance(endPos) / MathUtils.clip(startSpeed, 100, 2300);
+                    this.endSpeed = MathUtils.clip(startSpeed, 100, 2300);
+                    this.timeEstimate = (float) startPos.distance(endPos) / endSpeed;
                 }
             }
         }

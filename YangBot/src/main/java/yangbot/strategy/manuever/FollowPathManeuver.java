@@ -20,8 +20,6 @@ public class FollowPathManeuver extends Maneuver {
     public Curve path = null;
     public float arrivalTime = -1;
     public float arrivalSpeed = -1;
-    //float expected_error;
-    //float expected_speed;
     public DriveManeuver driveManeuver;
     public boolean allowBackwardsDriving = false;
     public float speedReactionTime = 4 * RLConstants.tickFrequency;
@@ -248,7 +246,7 @@ public class FollowPathManeuver extends Maneuver {
         if (this.arrivalTime > 0)
             renderer.drawString2d(String.format("Arriving in %.1fs (%.1fs, s=%.1f)", timeUntilArrival, this.arrivalTime, this.arrivalSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         else //  Max: %.1f MaxCalc: %.1f
-            renderer.drawString2d(String.format("MySpeed %.1fs", car.forwardSpeed(), maxSpeed, maxSpeedCalc), Color.WHITE, new Point(500, yPos += 40), 2, 2);
+            renderer.drawString2d(String.format("MySpeed %.1fs (as=%.1f)", car.forwardSpeed(), this.arrivalSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         //renderer.drawString2d(String.format("Max speed: %.0fuu/s", this.path.maxSpeedAt(this.path.findNearest(car.position))), Color.WHITE, new Point(500, 490), 2, 2);
         renderer.drawString2d(String.format("Max drive: %04.0fuu/s", this.driveManeuver.maximumSpeed), Color.WHITE, new Point(500, yPos += 40), 2, 2);
         renderer.drawString2d(String.format("Min drive: %04.0fuu/s e: %04.0f", this.driveManeuver.minimumSpeed, this.driveManeuver.minimumSpeed - car.forwardSpeed()), Color.WHITE, new Point(500, yPos += 40), 2, 2);
@@ -278,7 +276,7 @@ public class FollowPathManeuver extends Maneuver {
             path.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, car.boost);
 
         float currentPredSpeed = Math.max(1, car.velocity.magnitudeF());
-        currentPredSpeed += Math.signum(currentPredSpeed) * 0.5f * this.speedReactionTime * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration);
+        currentPredSpeed += (allowBackwardsDriving ? Math.signum(currentPredSpeed) : 1) * 0.5f * this.speedReactionTime * (DriveManeuver.throttleAcceleration(currentPredSpeed) + DriveManeuver.boost_acceleration);
         currentPredSpeed = MathUtils.clip(currentPredSpeed, 50, CarData.MAX_VELOCITY);
 
         CarData simCar = new CarData(car);

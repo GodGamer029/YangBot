@@ -16,6 +16,7 @@ public class AerialGroundPrepManeuver extends Maneuver {
     public Vector3 targetPos;
     public float arrivalTime = 0;
     private double lastDeltaXMag = -1;
+    private float timer = 0;
 
     @Override
     public void step(float dt, ControlsOutput controlsOutput) {
@@ -45,7 +46,7 @@ public class AerialGroundPrepManeuver extends Maneuver {
         double deltaMag = deltaXLocal.div(Math.max(0.1f, this.arrivalTime - car.elapsedSeconds)).magnitude();
         boolean deltaCond = false;
         double da = 0;
-        if(this.lastDeltaXMag >= 0 && dt > 0){
+        if(this.lastDeltaXMag >= 0 && dt > 0 && timer > RLConstants.tickFrequency * 2.5f){
             da = Math.abs((deltaMag - this.lastDeltaXMag) / dt);
             deltaCond = da < AerialManeuver.boost_airthrottle_acceleration;
         }
@@ -54,10 +55,11 @@ public class AerialGroundPrepManeuver extends Maneuver {
         //    System.out.printf("deltaMag=%.1f t=%.2f angle=%.2f da=%.1f vF=%.1f"+System.lineSeparator(),
         //        deltaX.magnitude(), this.arrivalTime - car.elapsedSeconds, Math.abs(angle) / Math.PI, da, car.forwardSpeed());
 
-        if ((Math.abs(angle) < Math.PI * 0.5f || deltaXLocal.flatten().magnitude() < 300) && deltaCond && !this.isDone()) {
+        if (((Math.abs(angle) < Math.PI * 0.3f && timer > 0.1f) || deltaXLocal.flatten().magnitude() < 300) && deltaCond && !this.isDone()) {
             //System.out.println("End condition: angle="+angle+" da="+da);
             this.setDone();
         }
+        timer += dt;
     }
 
     public void draw(AdvancedRenderer r){

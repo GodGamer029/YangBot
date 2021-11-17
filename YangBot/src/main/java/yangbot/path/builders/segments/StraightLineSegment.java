@@ -27,7 +27,7 @@ public class StraightLineSegment extends BakeablePathSegment {
     }
 
     public StraightLineSegment(Vector3 startPos, float startSpeed, Vector3 endPos, float endSpeed, float arrivalTime, boolean allowBoost, float startBoost) {
-        super(startSpeed, startBoost, endSpeed, arrivalTime);
+        super(startSpeed, allowBoost ? startBoost : 0, endSpeed, arrivalTime);
         this.allowBoost = allowBoost;
         this.startPos = startPos;
         this.endPos = endPos;
@@ -62,7 +62,7 @@ public class StraightLineSegment extends BakeablePathSegment {
         if(this.timeEstimate >= 0)
             return this.timeEstimate;
         if (this.hasMontoneSpeed()) {
-            var estimate = DriveManeuver.driveArriveAt(this.getStartSpeed(), (float) this.startPos.distance(this.endPos), this.arrivalTime - this.startTime - 0.1f, allowBoost);
+            var estimate = DriveManeuver.driveArriveAt(Math.max(0, this.getStartSpeed()), (float) this.startPos.distance(this.endPos), this.arrivalTime - this.startTime - 0.1f, allowBoost);
             this.timeEstimate = estimate.getKey();
         } else {
             var sim = Car1D.simulateDriveDistanceForwardAccel((float) this.endPos.distance(this.startPos), this.startSpeed, this.startBoost);
@@ -75,7 +75,7 @@ public class StraightLineSegment extends BakeablePathSegment {
     @Override
     public float getEndSpeed() {
         if (this.hasMontoneSpeed())
-            return DriveManeuver.driveArriveAt(this.getStartSpeed(), (float) this.startPos.distance(this.endPos), this.arrivalTime - this.startTime - 0.1f, allowBoost).getValue();
+            return DriveManeuver.driveArriveAt(Math.max(0, this.getStartSpeed()), (float) this.startPos.distance(this.endPos), this.arrivalTime - this.startTime - 0.1f, allowBoost).getValue();
         if (this.endSpeed < 0)
             getTimeEstimate();
         return this.endSpeed;

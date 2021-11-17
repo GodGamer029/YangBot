@@ -9,8 +9,8 @@ import java.util.Objects;
 
 public class AerialManeuver extends Maneuver {
 
-    public static final float boost_airthrottle_acceleration = 1060.0f;
     public static final float throttle_acceleration = 66.66667f;
+    public static final float boost_airthrottle_acceleration = DriveManeuver.boost_acceleration + throttle_acceleration;
 
     public float arrivalTime = 0.0f;
     public Vector3 target = null;

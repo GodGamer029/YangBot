@@ -90,7 +90,7 @@ public class EpicMeshPlanner {
     }
 
     public EpicMeshPlanner withStart(CarData car, float offset) {
-        this.startSpeed = MathUtils.clip(car.forwardSpeed(), 0, CarData.MAX_VELOCITY);
+        this.startSpeed = car.forwardSpeed();
         this.boostAvailable = car.boost;
         return this.withStart(car.position, car.getPathStartTangent(), offset);
     }
@@ -170,7 +170,7 @@ public class EpicMeshPlanner {
                         controlPoints.add(new Curve.ControlPoint(p.getKey(), p.getValue()));
                     controlPoints.add(new Curve.ControlPoint(this.endPos, this.endTangent));
 
-                    currentPath = Optional.of(SegmentedPath.from(new Curve(controlPoints, 32), this.startSpeed, this.arrivalTime, this.arrivalSpeed, this.boostAvailable));
+                    currentPath = Optional.of(SegmentedPath.from(new Curve(controlPoints, 32), MathUtils.clip(this.startSpeed, 0, CarData.MAX_VELOCITY), this.arrivalTime, this.arrivalSpeed, this.boostAvailable));
                 }
             }
             case NAVMESH -> {
@@ -226,14 +226,14 @@ public class EpicMeshPlanner {
                 if(builder.getCurrentPosition().distance(this.endPos) > 5 || turnAngle > 0.1f){
 
                     float wantedSpeed = MathUtils.clip(builder.getCurrentSpeed(), 1100, 2200);
-                    float illegalSpeed = wantedSpeed - 1100;
+                    float illegalSpeed = wantedSpeed - 1200;
                     if (illegalSpeed < 0)
                         illegalSpeed = 0;
 
                     // 1 if we can keep all speed, 0 if we should throttle down to 1100
-                    float allowance = MathUtils.remapClip(turnAngle, (float) (15 * (Math.PI / 180)), (float) (70 * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0 : 0.3f);
+                    float allowance = MathUtils.remapClip(turnAngle, (float) (20 * (Math.PI / 180)), (float) (90 * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0.1f : 0.3f);
 
-                    float targetSpeed = 1100 + illegalSpeed * allowance;
+                    float targetSpeed = 1200 + illegalSpeed * allowance;
 
                     var arcOpt = ArcLineArc.findOptimalALA(builder.getCurrentPhysics(),
                             builder.getCurrentBoost(), this.endPos.flatten(), this.endTangent.flatten(), 5, 1 / DriveManeuver.maxTurningCurvature(targetSpeed), 30 + this.endOffset * this.arrivalSpeed, 1 / DriveManeuver.maxTurningCurvature(this.arrivalSpeed));
@@ -280,15 +280,14 @@ public class EpicMeshPlanner {
                 boolean turnImpossible = false;
                 if (turnAngle > 1 * (Math.PI / 180)) {
                     float wantedSpeed = MathUtils.clip(builder.getCurrentSpeed(), 1100, 2200);
-                    float illegalSpeed = wantedSpeed - 1100;
+                    float illegalSpeed = wantedSpeed - 1200;
                     if (illegalSpeed < 0)
                         illegalSpeed = 0;
 
                     // 1 if we can keep all speed, 0 if we should throttle down to 1100
-                    float allowance = MathUtils.remapClip(turnAngle, 0, (float) (70.f * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0 : 0.3f);
+                    float allowance = MathUtils.remapClip(turnAngle, (float) (20.f * (Math.PI / 180)), (float) (90.f * (Math.PI / 180)), 1f, this.arrivalTime != -1 ? 0.1f : 0.3f);
 
                     float targetSpeed = 1100 + illegalSpeed * allowance;
-                    targetSpeed = wantedSpeed;
                     //System.out.println("Allowance: "+allowance+" target: "+targetSpeed);
 
                     var turn = new TurnCircleSegment(builder.getCurrentPhysics(), 1 / DriveManeuver.maxTurningCurvature(targetSpeed), this.endPos.flatten(), builder.getCurrentBoost(), allowFullSend);

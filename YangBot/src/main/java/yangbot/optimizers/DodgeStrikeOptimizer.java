@@ -136,7 +136,7 @@ public class DodgeStrikeOptimizer {
             if (simCar.position.z < RLConstants.carElevation - 5)
                 break;
 
-            simContact = simBall.collide(simCar, 0);
+            simContact = simBall.collide(simCar, -3);
 
             if (simBall.hasBeenTouched)
                 break;

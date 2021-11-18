@@ -296,10 +296,10 @@ public class LACStrategy extends Strategy {
         float active = (GameData.current().getCarData().getPlayerInfo().getInactiveShooterUntil() - GameData.current().getCarData().elapsedSeconds);
         if (active < 0)
             active = 0;
-        var attacking = LACHelper.getAttackingCar();
-        String attStr = attacking.map(carData -> (GameData.current().getCarData().playerIndex == carData.playerIndex ? "me" : ""+carData.playerIndex))
-                .orElse("none");
-        return "State: " + this.state + "\nActive in: " + active+"\nAttacker: "+attStr+"\nretreat: "+(this.state == State.IDLE ? this.idleAbstraction.forceRetreatTimeout : 0);
+        //var attacking = LACHelper.getAttackingCar();
+        //String attStr = attacking.map(carData -> (GameData.current().getCarData().playerIndex == carData.playerIndex ? "me" : ""+carData.playerIndex))
+        //        .orElse("none");
+        return "State: " + this.state + "\nActive in: " + active + "\nretreat: "+(this.state == State.IDLE ? this.idleAbstraction.forceRetreatTimeout : 0);
     }
 
     /***

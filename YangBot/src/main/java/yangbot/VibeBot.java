@@ -57,7 +57,7 @@ public class VibeBot implements Bot {
         CarData car = input.car;
         BallData ball = input.ball;
         {
-            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(ball, RLConstants.tickRate, 5));
+            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(ball, RLConstants.tickRate, 4.5f));
         }
 
         drawDebugLines(input, gameData.getCarData());
@@ -141,8 +141,8 @@ public class VibeBot implements Bot {
             }
             renderer.drawControlsOutput(output, 440);
 
-            var gameError = Math.abs(ModelUtils.gameStateToPrediction(gameData, true, true) - car.team);
-            renderer.drawString2d(String.format("Value: %.3f", 1 - gameError), Color.GREEN, new Point(500, 200), 2, 2);
+            //var gameError = Math.abs(ModelUtils.gameStateToPrediction(gameData, true, true) - car.team);
+            //renderer.drawString2d(String.format("Value: %.3f", 1 - gameError), Color.GREEN, new Point(500, 200), 2, 2);
         }
 
         return output;

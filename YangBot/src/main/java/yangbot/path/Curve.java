@@ -502,22 +502,19 @@ public class Curve {
 
     public void calculateTangents() {
         tangents = new ArrayList<>(points.size());
-        while (tangents.size() < points.size())
-            tangents.add(new Vector3());
 
-        int last = tangents.size() - 1;
+        int last = points.size() - 1;
 
-        tangents.set(0,
-                points.get(0).mul(-3f)
+        tangents.add(points.get(0).mul(-3f)
                         .add(points.get(1).mul(4f))
                         .sub(points.get(2))
                         .normalized()
         );
 
         for (int i = 1; i < last; i++)
-            tangents.set(i, points.get(i + 1).sub(points.get(i - 1)).normalized());
+            tangents.add(points.get(i + 1).sub(points.get(i - 1)).normalized());
 
-        tangents.set(last,
+        tangents.add(
                 points.get(last).mul(3f)
                         .sub(points.get(last - 1).mul(4f))
                         .add(points.get(last - 2))
@@ -525,6 +522,7 @@ public class Curve {
         );
 
         assert !tangents.get(tangents.size() - 1).isZero();
+        assert tangents.size() == points.size();
     }
 
 

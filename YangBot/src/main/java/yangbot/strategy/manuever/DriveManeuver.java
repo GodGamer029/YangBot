@@ -90,33 +90,37 @@ public class DriveManeuver extends Maneuver {
         return -1.0f;
     }
 
-    public static float maxTurningCurvature(float v) {
-        final int n = 6;
-
-        float[][] values = {
-                {0.0f, 0.00690f},
-                {500.0f, 0.00398f},
-                {1000.0f, 0.00235f},
-                {1500.0f, 0.00138f},
-                {1750.0f, 0.00110f},
-                {2300.0f, 0.00088f}
-        };
-
+    public static float maxTurningCurvature(float v){
         float input = Math.abs(v);
-        assert Float.isFinite(input) : v;
-        if (input <= values[0][0])
-            return values[0][1];
-        if (input >= values[n - 1][0])
-            return values[n - 1][1];
-
-        for (int i = 0; i < (n - 1); i++) {
-            if (values[i][0] <= input && input <= values[i + 1][0]) {
-                float u = (input - values[i][0]) / (values[i + 1][0] - values[i][0]);
-                return MathUtils.lerp(values[i][1], values[i + 1][1], u);
+        if(input >= 1000.f){
+            // 1000 - 2300
+            if(input >= 1500f){
+                // 1500 - 2300
+                if(input >= 1750f){
+                    if(input >= 2300.f)
+                        return 0.00088f;
+                    // 1750 - 2300
+                    return MathUtils.lerp(0.0011f, 0.00088f, (input - 1750f) / 550f);
+                }else{
+                    // 1500 - 1750
+                    return MathUtils.lerp(0.00138f, 0.0011f, (input - 1500f) / 250f);
+                }
+            }else{
+                // 1000 - 1500
+                return MathUtils.lerp(0.00235f, 0.00138f, (input - 1000f) / 500f);
+            }
+        }else{
+            if(input == 0.f)
+                return 0.0069f;
+            // 0 - 1000
+            if(input >= 500f){
+                // 500 - 1000
+                return MathUtils.lerp(0.00398f, 0.00235f, (input - 500f) / 500f);
+            }else{
+                // 0 - 500
+                return MathUtils.lerp(0.0069f, 0.00398f, input / 500f);
             }
         }
-        assert false : input;
-        return -1;
     }
 
     public static float steerAngle(float v) {

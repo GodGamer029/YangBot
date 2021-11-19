@@ -366,13 +366,14 @@ public class Curve {
 
     public void draw(AdvancedRenderer renderer, Color color) {
         Vector3 lastPoint = null;
+        int c = renderer.insertColor(color);
         for (Vector3 point : this.points) {
             if (lastPoint == null) {
                 lastPoint = point;
                 continue;
             }
             if (lastPoint.distance(point) > 10) {
-                renderer.drawLine3d(color, lastPoint, point);
+                renderer.drawLine3dRaw(c, lastPoint, point);
                 lastPoint = point;
             }
 

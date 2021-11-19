@@ -14,16 +14,10 @@ public class CurveSegment extends BakeablePathSegment {
     private final Curve curve;
 
     public CurveSegment(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed, float startBoost) {
-        this(c, startSpeed, startBoost);
-        this.arrivalTime = arrivalTime;
-        this.arrivalSpeed = arrivalSpeed;
+        super(startSpeed, startBoost, arrivalSpeed, arrivalTime);
+        this.curve = c;
 
         this.bake(SegmentedPath.MAX_SAMPLES); // prepare time estimate
-    }
-
-    public CurveSegment(Curve c, float startSpeed, float startBoost) {
-        super(startSpeed, startBoost, -1, -1);
-        this.curve = c;
     }
 
     @Override

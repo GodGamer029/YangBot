@@ -21,7 +21,6 @@ public class SegmentedPath {
     private float arrivalTime = 0;
     private float startTime = 0;
     private Vector3 endTangent = new Vector3(), endPos = new Vector3();
-    private float t = 0;
 
     public SegmentedPath(List<PathSegment> segments, float startTime) {
         this.segmentList = Collections.unmodifiableList(segments);
@@ -46,10 +45,6 @@ public class SegmentedPath {
 
     public static SegmentedPath from(Curve c, float startSpeed, float arrivalTime, float arrivalSpeed, float startBoost) {
         return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, arrivalTime, arrivalSpeed, startBoost)));
-    }
-
-    public static SegmentedPath from(Curve c, float startSpeed) {
-        return new SegmentedPath(List.of(new CurveSegment(c, startSpeed, 0)));
     }
 
     public List<PathSegment> getSegmentList() {
@@ -134,14 +129,12 @@ public class SegmentedPath {
     public boolean step(float dt, ControlsOutput output) {
         assert this.currentSegment < this.segmentList.size() : "Segmented path already done (" + this.currentSegment + " >= " + this.segmentList.size() + ")";
 
-        t += dt;
         if (this.startTime == 0)
             this.startTime = GameData.current().getCarData().elapsedSeconds;
         var current = this.segmentList.get(this.currentSegment);
         var isDone = current.step(dt, output);
         if (isDone) {
             //System.out.println("Segment completed t="+t+ " pred="+current.getTimeEstimate()+" Sstart="+current.getStartSpeed()+" Send="+current.getEndSpeed()+" now="+GameData.current().getCarData().velocity.flatten().magnitude());
-            t = 0;
             this.currentSegment++;
 
             return this.currentSegment >= this.segmentList.size();

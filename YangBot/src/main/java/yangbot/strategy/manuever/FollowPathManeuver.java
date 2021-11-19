@@ -159,7 +159,7 @@ public class FollowPathManeuver extends Maneuver {
         float finalDistToTarget = distToTarget;
         float finalT = T;
         Function<Float, Float> arrivalError = (speed) -> {
-            assert speed >= 0;
+            assert speed >= 0 : speed + " " + finalV + " " + curMaxSpeed;
             float dt = RLConstants.tickFrequency;
             float s = finalDistToTarget;
             float v = finalV;

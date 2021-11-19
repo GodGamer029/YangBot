@@ -9,6 +9,7 @@ import yangbot.MainClass;
 import yangbot.input.BallData;
 import yangbot.input.ImmutableBallData;
 import yangbot.input.RLConstants;
+import yangbot.strategy.DummyRenderer;
 import yangbot.util.math.vector.Vector3;
 
 import java.awt.*;
@@ -140,6 +141,8 @@ public class YangBallPrediction {
     public void draw(AdvancedRenderer renderer, Color color, float length) {
         if (this.frames.size() == 0)
             return;
+        if(renderer instanceof DummyRenderer)
+            return;
         if (length <= 0)
             length = 3;
         length = Math.min(length, this.relativeTimeOfLastFrame());
@@ -152,9 +155,9 @@ public class YangBallPrediction {
             if (frame.isEmpty())
                 break;
 
-            if (Math.floor(lastAbsTime) < Math.floor(frame.get().absoluteTime)) {
+            if (Math.floor(lastAbsTime) < Math.floor(frame.get().absoluteTime))
                 renderer.drawLine3d(color.brighter(), frame.get().ballData.position, frame.get().ballData.position.add(0, 0, 50));
-            }
+
             lastAbsTime = frame.get().absoluteTime;
             time = frame.get().relativeTime;
             ImmutableBallData ball = frame.get().ballData;

@@ -9,6 +9,10 @@ import java.util.function.Function;
 
 public class MathUtils {
 
+    public static float lerpUNSAFE(float a, float b, float t) {
+        return a * (1.0f - t) + b * t;
+    }
+
     public static float lerp(float a, float b, float t) {
         assert t >= 0 && t <= 1 : "t=" + t;
         return a * (1.0f - t) + b * t;

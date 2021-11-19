@@ -79,18 +79,6 @@ public class SimpleKickoffManeuver extends Maneuver {
                         this.dontJump = true;
 
                         this.path = planner.plan().get();
-
-                        /*this.driveStrikeAbstraction = new DriveStrikeAbstraction(path);
-                        this.driveStrikeAbstraction.jumpBeforeStrikeDelay = 0.15f; // depend on path being done
-                        this.driveStrikeAbstraction.strikeCalcDelay = 0.3f;
-                        this.driveStrikeAbstraction.maxJumpDelay = 0.45f;
-                        this.driveStrikeAbstraction.jumpDelayStep = 0.05f;
-                        this.driveStrikeAbstraction.strikeDodge.duration = 0.08f;
-                        this.driveStrikeAbstraction.arrivalTime = car.elapsedSeconds + path.getTotalTimeEstimate();
-                        this.driveStrikeAbstraction.forceJump = true;
-
-                        //this.kickOffState = KickOffState.DRIVESTRIKE;
-                        //return;*/
                     }
                 }
 

@@ -59,6 +59,9 @@ public class DodgeStrikeAbstraction extends Abstraction {
 
         this.strikeDodge.step(dt, controlsOutput);
 
+        if(this.strikeDodge.timer > this.optimizer.optimizedEnableBoostAt && !this.strikeDodge.isDone() && car.forwardSpeed() > 100 && car.forwardSpeed() < 2200)
+            controlsOutput.withBoost(true);
+
         if (ball.hasBeenTouched() && ball.getLatestTouch().playerIndex == car.playerIndex && car.elapsedSeconds - ball.getLatestTouch().gameSeconds - this.strikeDodge.timer < -0.1f) {
             this.strikeDodge.setDone();
             this.terminateAt = Math.min(this.terminateAt, car.elapsedSeconds + 0.2f);

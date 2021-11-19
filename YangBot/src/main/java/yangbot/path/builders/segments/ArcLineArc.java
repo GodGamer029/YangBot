@@ -149,6 +149,7 @@ public class ArcLineArc extends BakeablePathSegment {
 
         for (int i = 0; i < 5; i++) {
             segments[i] = (int) Math.ceil(L[i] / ds);
+            assert segments[i] > 0 : i + " " + segments[i] + " " + ds + " " + L[i] + " " + this.length;
             capacity += segments[i];
         }
 
@@ -166,7 +167,7 @@ public class ArcLineArc extends BakeablePathSegment {
         ds = L[0] / segments[0];
         for (int i = 0; i < segments[0]; i++) {
             c.points.add(MathUtils.lerp(m1, startPos, (float)i / segments[0]).withZ(RLConstants.carElevation));
-            c.curvatures[id] = 0.0f;
+            //c.curvatures[id] = 0.0f;
             c.distances[id] = s;
             id++;
             s -= ds;
@@ -184,16 +185,14 @@ public class ArcLineArc extends BakeablePathSegment {
             r = Q.dot(r);
         }
 
-
         ds = L[2] / segments[2];
         for (int i = 0; i < segments[2]; i++) {
             c.points.add(MathUtils.lerp(q1, q2, (float)i / segments[2]).withZ(RLConstants.carElevation));
-            c.curvatures[id] = 0;
+            //c.curvatures[id] = 0;
             c.distances[id] = s;
             id++;
             s -= ds;
         }
-
 
         ds = L[3] / segments[3];
         r = q2.sub(c2Center);
@@ -210,14 +209,11 @@ public class ArcLineArc extends BakeablePathSegment {
         ds = L[4] / segments[4];
         for (int i = 0; i <= segments[4]; i++) {
             c.points.add(MathUtils.lerp(endPos, m2, (float)i / segments[4]).withZ(RLConstants.carElevation));
-            c.curvatures[id] = 0;
+            //c.curvatures[id] = 0;
             c.distances[id] = i == segments[4] ? 0 : s;
             id++;
             s -= ds;
         }
-
-        c.calculateTangents();
-
         return c;
     }
 }

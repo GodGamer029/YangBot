@@ -173,9 +173,6 @@ public class LACHelper {
 
             final Vector3 targetBallPos = interceptFrame.ballData.position;
 
-            //if(car.position.distance(targetBallPos) - BallData.COLLISION_RADIUS - car.hitbox.getForwardExtent() - 50 > CarData.MAX_VELOCITY * interceptFrame.relativeTime * 1.1f)
-            //    continue; // impossible to get there in time
-
             float jumpDelay;
             {
                 float zDiff = targetBallPos.z - BallData.COLLISION_RADIUS * 0.1f - car.position.z;
@@ -254,7 +251,7 @@ public class LACHelper {
             var potentialStrike = testPath.apply(
                     new EpicMeshPlanner()
                         .withStart(car, 0.05f)
-                        .withEnd(ballHitTarget, endTangent, 0.3f)
+                        .withEnd(ballHitTarget, endTangent, MathUtils.clip(jumpDelay * 0.9f - 0.05f, 0.1f, 0.3f))
                         .withArrivalTime(interceptFrame.absoluteTime)
                         .withArrivalSpeed(2300)
                         .allowDodge(false)
@@ -266,7 +263,7 @@ public class LACHelper {
                         .withEnd(ballHitTarget, endTangent)
                         .withArrivalTime(interceptFrame.absoluteTime)
                         .withArrivalSpeed(2300)
-                        .allowDodge(false)
+                        .allowDodge(car.position.distance(ballHitTarget) > 4000)
                         .withCreationStrategy(EpicMeshPlanner.PathCreationStrategy.YANGPATH)
                         .plan()
             ));

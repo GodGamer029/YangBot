@@ -26,6 +26,7 @@ public class DodgeStrikeOptimizer {
     public boolean debugMessages = true;
     public boolean strikeSolved = false;
     public float expectedBallHitTime = -1;
+    public float optimizedEnableBoostAt = 999;
 
     public float maxJumpDelay = 0.6f;
     public float jumpDelayStep = 0.1f;
@@ -88,10 +89,13 @@ public class DodgeStrikeOptimizer {
         return true;
     }
 
-    private boolean testParameters(float delay, float duration, Vector2 direction, Matrix3x3 preorientMatrix, float T, BiPredicate<CarData, BallData> onCollide, YangBallPrediction ballPrediction) {
+    private boolean testParameters(float delay, float duration, Vector2 direction, Matrix3x3 preorientMatrix, float enableBoostAt, float T, BiPredicate<CarData, BallData> onCollide, YangBallPrediction ballPrediction) {
         assert !ballPrediction.isEmpty();
         final CarData car = gameData.getCarData();
         final ImmutableBallData ball = gameData.getBallData();
+
+        if(enableBoostAt == -1)
+            enableBoostAt = 999;
 
         CarData simCar = new CarData(car);
         simCar.hasWheelContact = false;
@@ -126,6 +130,8 @@ public class DodgeStrikeOptimizer {
             simDodge.fool(foolGameData);
 
             simDodge.step(SIMULATION_DT, simControls);
+            if(simDodge.timer > enableBoostAt && !simDodge.isDone() && simCar.forwardSpeed() > 100 && simCar.forwardSpeed() < 2200)
+                simControls.withBoost(true);
 
             simCar.step(simControls, SIMULATION_DT);
             // Don't let the car escape the arena
@@ -175,6 +181,8 @@ public class DodgeStrikeOptimizer {
 
             if (!simCar.doubleJumped)
                 this.strikeDodge.delay = 9999;
+
+            this.optimizedEnableBoostAt = enableBoostAt;
 
             this.strikeSolved = true;
             this.hitCar = simCar;
@@ -252,6 +260,7 @@ public class DodgeStrikeOptimizer {
         }
 
         float chosenAngleDiff = 0;
+        float chosenEnableBoost = 999;
         for (float duration = MathUtils.clip(this.strikeDodge.timer, 0.1f, 0.2f); duration <= 0.2f; duration = duration < 0.2f ? 0.2f : 999f) {
             float jumpDelayStep = this.jumpDelayStep;
             float angleDiffStep = (float) (Math.PI * 0.15f);
@@ -262,18 +271,25 @@ public class DodgeStrikeOptimizer {
             for (float delay = duration + 0.05f; delay <= (duration < 0.2f ? 0.3f : this.maxJumpDelay); delay += jumpDelayStep) {
                 statistics.hadNonDodgeHit = false;
                 for (float angleDiff = (float) (Math.PI * -0.9f); angleDiff < (float) (Math.PI * 0.9f); angleDiff += angleDiffStep) {
-                    statistics.simulationCount++;
+                    boolean allowBoost = car.boost > 10 && duration == 0.2f && delay > 0.3f;
+                    allowBoost &= Math.abs(angleDiff) < Math.PI * 0.2f;
+                    for(int enableBoost = 0; enableBoost <= (allowBoost ? 1 : 0); enableBoost++){
+                        statistics.simulationCount++;
 
-                    boolean hasImproved = this.testParameters(
-                            delay,
-                            duration,
-                            carToBallDirection.rotateBy(angleDiff),
-                            delay >= 0.2f ? preorientMatrix : null,
-                            T,
-                            (simCar, simBall) -> this.evaluateCollisionState(simCar, simBall, statistics),
-                            ballPrediction);
-                    if(hasImproved)
-                        chosenAngleDiff = angleDiff;
+                        boolean hasImproved = this.testParameters(
+                                delay,
+                                duration,
+                                carToBallDirection.rotateBy(angleDiff),
+                                delay >= 0.2f ? preorientMatrix : null,
+                                enableBoost == 1 ? this.strikeDodge.timer + 0.1f : 999,
+                                T,
+                                (simCar, simBall) -> this.evaluateCollisionState(simCar, simBall, statistics),
+                                ballPrediction);
+                        if(hasImproved){
+                            chosenAngleDiff = angleDiff;
+                            chosenEnableBoost = enableBoost == 1 ? this.strikeDodge.timer + 0.1f : 999;
+                        }
+                    }
                 }
             }
         }
@@ -281,8 +297,8 @@ public class DodgeStrikeOptimizer {
         if (this.strikeSolved) { // Found shot
 
             if (debugMessages){
-                System.out.printf("%d: >> Optimized dodgeManeuver: delay=%.2f duration=%.2f grader=%s doesHitNotInvolveDodge=%s angleDiff=%.3f "+System.lineSeparator(),
-                        car.playerIndex, this.strikeDodge.delay, this.strikeDodge.duration, this.customGrader.getClass().getSimpleName(), doesHitNotInvolveDodge, chosenAngleDiff);
+                System.out.printf("%d: >> Optimized dodgeManeuver: delay=%.2f duration=%.2f grader=%s doesHitNotInvolveDodge=%s angleDiff=%.3f boostAt=%.3f "+System.lineSeparator(),
+                        car.playerIndex, this.strikeDodge.delay, this.strikeDodge.duration, this.customGrader.getClass().getSimpleName(), doesHitNotInvolveDodge, chosenAngleDiff, chosenEnableBoost);
 
                 System.out.println(car.playerIndex + ": > Additional grader info: " + this.customGrader.getAdditionalInfo());
             }

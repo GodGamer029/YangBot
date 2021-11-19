@@ -294,8 +294,11 @@ public class Curve {
             return this.pathCheckStatus;
         }
 
-        if (this.maxSpeeds.length == 0)
+        if (this.maxSpeeds.length == 0) {
+            assert false;
             this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, 100);
+        }
+
 
         float currentSpeed = (float) car.velocity.dot(car.forward());
 
@@ -399,6 +402,8 @@ public class Curve {
         if (s == -1)
             s = distances[0];
         s = MathUtils.clip(s, 0, distances[0]);
+        if(this.tangents.size() == 0)
+            this.calculateTangents();
 
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
@@ -426,8 +431,11 @@ public class Curve {
     public float maxSpeedAt(float s) {
         s = MathUtils.clip(s, 0, distances[0]);
 
-        if (maxSpeeds.length == 0)
+        if (maxSpeeds.length == 0){
+            assert false;
             this.calculateMaxSpeeds(CarData.MAX_VELOCITY, CarData.MAX_VELOCITY, 100);
+        }
+
 
         for (int i = 0; i < (points.size() - 1); i++) {
             if (distances[i] >= s && s >= distances[i + 1]) {
@@ -557,6 +565,8 @@ public class Curve {
 
         assert curvatures.length == distances.length : curvatures.length + " " + distances.length;
 
+        if(tangents.size() == 0)
+            this.calculateTangents();
         for (int i = 1; i < curvatures.length; i++) {
             float ds = distances[i - 1] - distances[i];
             Vector3 t = tangents.get(i).add(tangents.get(i - 1)).normalized();

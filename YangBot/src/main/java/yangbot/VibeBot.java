@@ -57,7 +57,7 @@ public class VibeBot implements Bot {
         CarData car = input.car;
         BallData ball = input.ball;
         {
-            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(ball, RLConstants.tickRate, 4.5f));
+            gameData.update(input.car, new ImmutableBallData(input.ball), input.allCars, input.gameInfo, dt, renderer, YangBotJNAInterop.getBallPrediction(ball, RLConstants.tickRate, 5f));
         }
 
         drawDebugLines(input, gameData.getCarData());

@@ -30,6 +30,7 @@ public abstract class BakeablePathSegment extends PathSegment {
         this.followPathManeuver.arrivalTime = -1;
         this.arrivalSpeed = endSpeed;
         this.arrivalTime = arrivalTime;
+        this.allowBoost |= this.arrivalSpeed > DriveManeuver.max_throttle_speed;
     }
 
     protected BakeablePathSegment(PathBuilder builder, float endSpeed, float arrivalTime) {
@@ -148,13 +149,13 @@ public abstract class BakeablePathSegment extends PathSegment {
             this.timeEstimate = this.bakedPath.calculateMaxSpeeds(
                     MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY),
                     this.arrivalSpeed < 0 ? -1 : this.arrivalSpeed,
-                    this.allowBoost || this.arrivalSpeed > DriveManeuver.max_throttle_speed ? this.startBoost : 0);
+                    this.allowBoost ? this.startBoost : 0);
             this.bakedEndSpeed = -1;
         }else if(this.bakedPath.maxSpeeds.length == 0){
             this.timeEstimate = this.bakedPath.calculateMaxSpeeds(
                     MathUtils.clip(this.getStartSpeed(), 0, CarData.MAX_VELOCITY),
                     this.arrivalSpeed < 0 ? -1 : this.arrivalSpeed,
-                    this.allowBoost || this.arrivalSpeed > DriveManeuver.max_throttle_speed ? this.startBoost : 0);
+                    this.allowBoost ? this.startBoost : 0);
             this.bakedEndSpeed = -1;
         }
         assert Float.isFinite(this.bakedPath.length);

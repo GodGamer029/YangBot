@@ -351,7 +351,7 @@ public class IdleAbstraction extends Abstraction {
             this.pathTarget = idleTarget;
 
             float targetArrivalSpeed = this.targetSpeed;
-            if (Math.abs(idleTarget.y) > RLConstants.goalDistance * 0.8f)
+            if (Math.abs(idleTarget.y) > RLConstants.goalDistance * 0.8f && Math.signum(idleTarget.y) == teamSign)
                 targetArrivalSpeed = Math.min(targetArrivalSpeed, 1100); // We don't want to faceplant the goal wall
 
             targetArrivalSpeed = MathUtils.clip(targetArrivalSpeed, 200, CarData.MAX_VELOCITY);

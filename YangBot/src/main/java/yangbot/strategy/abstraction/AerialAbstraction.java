@@ -6,7 +6,6 @@ import yangbot.input.GameData;
 import yangbot.input.RLConstants;
 import yangbot.strategy.manuever.AerialGroundPrepManeuver;
 import yangbot.strategy.manuever.AerialManeuver;
-import yangbot.strategy.manuever.DriveManeuver;
 import yangbot.util.AdvancedRenderer;
 import yangbot.util.Tuple;
 import yangbot.util.YangBallPrediction;
@@ -44,6 +43,7 @@ public class AerialAbstraction extends Abstraction {
     public void setTargetSlice(YangBallPrediction.YangPredictionFrame targetSlice) {
         assert Math.abs(this.arrivalTime - targetSlice.absoluteTime) < 0.05f;
         this.targetSlice = targetSlice;
+        this.targetOrientPos = targetSlice.ballData.position;
         this.nextOptimizeAt = this.arrivalTime - targetSlice.relativeTime;
     }
 
@@ -155,6 +155,7 @@ public class AerialAbstraction extends Abstraction {
         this.arrivalTime = targetSlice.absoluteTime;
         this.targetPos = newFrame.get().getValue();
         this.targetOrientPos = targetSlice.ballData.position;
+        this.aerialManeuver.setTargetOrientation(Matrix3x3.lookAt(targetOrientPos.sub(this.targetPos), new Vector3(0, 0, -1)));
         return RunState.CONTINUE;
     }
 
@@ -176,7 +177,7 @@ public class AerialAbstraction extends Abstraction {
                 if(this.groundPrepManeuver.isDone() || this.timer > MAX_TIME_GROUND_ADJUSTMENTS){
                     this.state = State.FLY; // fallthrough to fly case
                     if (this.targetOrientPos != null)
-                        this.aerialManeuver.setTarget_orientation(Matrix3x3.lookAt(targetOrientPos.sub(this.targetPos), car.up()));
+                        this.aerialManeuver.setTargetOrientation(Matrix3x3.lookAt(targetOrientPos.sub(this.targetPos), new Vector3(0, 0, -1)));
                 }else
                     return RunState.CONTINUE;
             }

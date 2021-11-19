@@ -50,7 +50,7 @@ public class LowGravityKickoffManeuver extends Maneuver {
             }
         }
 
-        aerialManeuver.setTarget_orientation(Matrix3x3.lookAt(ball.position.sub(car.position).normalized(), new Vector3(0, 0, 1)));
+        aerialManeuver.setTargetOrientation(Matrix3x3.lookAt(ball.position.sub(car.position).normalized(), new Vector3(0, 0, 1)));
         aerialManeuver.step(dt, controlsOutput);
         if (aerialManeuver.isDone())
             this.setIsDone(true);

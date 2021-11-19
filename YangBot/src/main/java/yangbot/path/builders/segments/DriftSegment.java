@@ -1,6 +1,7 @@
 package yangbot.path.builders.segments;
 
 import yangbot.input.ControlsOutput;
+import yangbot.input.GameData;
 import yangbot.input.Physics3D;
 import yangbot.path.builders.PathSegment;
 import yangbot.strategy.manuever.DriftControllerManeuver;
@@ -34,7 +35,7 @@ public class DriftSegment extends PathSegment {
         assert startPos.z < 100;
 
         final float angle = (float) Math.abs(startTangent.flatten().normalized().angleBetween(endTangent.flatten().normalized()) * (180f / Math.PI));
-        isEasySlide = angle < 80;
+        isEasySlide = angle < 20;
 
         var powerslide = PowerslideUtil.getPowerslide(startSpeed, startPos.flatten(), startTangent.flatten().normalized(), endTangent.flatten().normalized());
         this.endPos = powerslide.finalPos.withZ(startPos.z).add(endTangent.withZ(0).mul(15));
@@ -54,7 +55,8 @@ public class DriftSegment extends PathSegment {
 
     @Override
     public boolean canInterrupt() {
-        return isEasySlide;
+        var car = GameData.current().getCarData();
+        return isEasySlide || Math.abs(car.velocity.dot(car.right())) < 20;
     }
 
     @Override

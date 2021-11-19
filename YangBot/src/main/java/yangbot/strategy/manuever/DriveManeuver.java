@@ -8,6 +8,9 @@ import yangbot.util.Tuple;
 import yangbot.util.math.MathUtils;
 import yangbot.util.math.vector.Vector3;
 
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class DriveManeuver extends Maneuver {
 
     public static final float min_speed = 10f;
@@ -100,25 +103,25 @@ public class DriveManeuver extends Maneuver {
                     if(input >= 2300.f)
                         return 0.00088f;
                     // 1750 - 2300
-                    return MathUtils.lerp(0.0011f, 0.00088f, (input - 1750f) / 550f);
+                    return MathUtils.lerpUNSAFE(0.0011f, 0.00088f, (input - 1750f) / 550f);
                 }else{
                     // 1500 - 1750
-                    return MathUtils.lerp(0.00138f, 0.0011f, (input - 1500f) / 250f);
+                    return MathUtils.lerpUNSAFE(0.00138f, 0.0011f, (input - 1500f) / 250f);
                 }
             }else{
                 // 1000 - 1500
-                return MathUtils.lerp(0.00235f, 0.00138f, (input - 1000f) / 500f);
+                return MathUtils.lerpUNSAFE(0.00235f, 0.00138f, (input - 1000f) / 500f);
             }
         }else{
-            if(input == 0.f)
-                return 0.0069f;
             // 0 - 1000
             if(input >= 500f){
                 // 500 - 1000
-                return MathUtils.lerp(0.00398f, 0.00235f, (input - 500f) / 500f);
+                return MathUtils.lerpUNSAFE(0.00398f, 0.00235f, (input - 500f) / 500f);
             }else{
+                if(input == 0.f)
+                    return 0.0069f;
                 // 0 - 500
-                return MathUtils.lerp(0.0069f, 0.00398f, input / 500f);
+                return MathUtils.lerpUNSAFE(0.0069f, 0.00398f, input / 500f);
             }
         }
     }

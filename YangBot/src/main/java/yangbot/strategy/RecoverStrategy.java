@@ -105,7 +105,9 @@ public class RecoverStrategy extends Strategy {
         renderer.drawCentered3dCube(Color.RED, car.position, 50);
         renderer.drawLine3d(Color.YELLOW, impactPosition, impactPosition.add(impactNormal.mul(150)));
 
-        if (speedflipPossible && simulationTime <= 0.15f && Math.abs(car.velocity.dot(car.right())) < 100 && Math.abs(car.angularVelocity.dot(new Vector3(0, 0, 1))) < 1) {
+        if (speedflipPossible && simulationTime <= 0.15f &&
+                Math.abs(car.velocity.dot(car.right())) < 300 &&
+                Math.abs(car.angularVelocity.z) < 0.75f) {
             double backWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, -1, 0, -1)).sub(impactPosition));
             double frontWheelsHeight = impactNormal.dot(car.hitbox.removeOffset(car.hitbox.permutatePoint(car.position, 1, 0, -1)).sub(impactPosition));
             if (backWheelsHeight <= 10 && backWheelsHeight > 0 && frontWheelsHeight > backWheelsHeight + 15 && frontWheelsHeight < backWheelsHeight + 50) {
